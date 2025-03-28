@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "479297677978",
+    "project_id": "bladiway-b2d7b",
+    "storage_bucket": "bladiway-b2d7b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:479297677978:android:513a78863124d48cb44d23",
+        "android_client_info": {
+          "package_name": "com.example.bladiway"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALwxhy7jbf6fU9rmgZGj4dCSWGusVk7RI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
