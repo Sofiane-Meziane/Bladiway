@@ -1,16 +1,5 @@
 import 'package:flutter/material.dart';
-
-class OnboardingModel {
-  final String title;
-  final String description;
-  final String imagePath;
-
-  const OnboardingModel({
-    required this.title,
-    required this.description,
-    required this.imagePath,
-  });
-}
+import 'package:bladiway/src/features/authentication/controllers/presentation_controller.dart';
 
 class PresentationPage extends StatefulWidget {
   const PresentationPage({super.key});
@@ -20,56 +9,23 @@ class PresentationPage extends StatefulWidget {
 }
 
 class _PresentationPageState extends State<PresentationPage> {
-  late final PageController _pageController;
-  int _currentPage = 0;
-
-  static const List<OnboardingModel> _pages = [
-    OnboardingModel(
-      title: 'Voyagez en bonne compagnie',
-      description:
-          'Rencontrez des personnes sympas et rendez vos trajets plus agréables et conviviaux.',
-      imagePath: 'assets/images/links.png',
-    ),
-    OnboardingModel(
-      title: 'Réduire l\'empreinte carbone',
-      description:
-          'Réduisez vos émissions de carbone en partageant des trajets avec d\'autres',
-      imagePath: 'assets/images/Nature.png',
-    ),
-    OnboardingModel(
-      title: 'Économisez sur vos trajets',
-      description:
-          'Partagez vos déplacements et réduisez considérablement vos frais de transport.',
-      imagePath: 'assets/images/savemoney.png',
-    ),
-  ];
+  late final PresentationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
-    _pageController.addListener(_handlePageChange);
+    _controller = PresentationController();
+    _controller.addListener(_refreshView);
   }
 
-  void _handlePageChange() {
-    final newPage = _pageController.page?.round() ?? 0;
-    if (newPage != _currentPage) {
-      setState(() => _currentPage = newPage);
-    }
-  }
-
-  void _navigateToPage(int index) {
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+  void _refreshView() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _pageController.removeListener(_handlePageChange);
-    _pageController.dispose();
+    _controller.removeListener(_refreshView);
+    _controller.dispose();
     super.dispose();
   }
 
@@ -98,24 +54,23 @@ class _PresentationPageState extends State<PresentationPage> {
               const SizedBox(height: 20),
               Expanded(
                 child: PageView.builder(
-                  controller: _pageController,
+                  controller: _controller.pageController,
                   physics: const BouncingScrollPhysics(),
-                  onPageChanged:
-                      (index) => setState(() => _currentPage = index),
-                  itemCount: _pages.length,
+                  onPageChanged: _controller.setCurrentPage,
+                  itemCount: _controller.pages.length,
                   itemBuilder:
                       (context, index) =>
-                          _buildPageContent(_pages[index], size),
+                          _buildPageContent(_controller.pages[index], size),
                 ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_pages.length, (index) {
+                children: List.generate(_controller.pages.length, (index) {
                   return GestureDetector(
-                    onTap: () => _navigateToPage(index),
+                    onTap: () => _controller.navigateToPage(index),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: _buildDot(index == _currentPage),
+                      child: _buildDot(index == _controller.currentPage),
                     ),
                   );
                 }),

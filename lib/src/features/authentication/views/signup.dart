@@ -9,6 +9,7 @@ class SignUpScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<SignUpController>(context, listen: false);
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(
@@ -17,12 +18,12 @@ class SignUpScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
+            color: primaryColor,
           ),
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
+        iconTheme: IconThemeData(color: primaryColor),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -37,7 +38,7 @@ class SignUpScreen extends StatelessWidget {
                   controller: controller.nomController,
                   decoration: InputDecoration(
                     labelText: 'Nom',
-                    prefixIcon: const Icon(Icons.person),
+                    prefixIcon: Icon(Icons.person, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
                   validator: controller.validateNom,
@@ -49,7 +50,7 @@ class SignUpScreen extends StatelessWidget {
                   controller: controller.prenomController,
                   decoration: InputDecoration(
                     labelText: 'Prénom',
-                    prefixIcon: const Icon(Icons.person_outline),
+                    prefixIcon: Icon(Icons.person_outline, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
                   validator: controller.validatePrenom,
@@ -62,7 +63,7 @@ class SignUpScreen extends StatelessWidget {
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: const Icon(Icons.email),
+                    prefixIcon: Icon(Icons.email, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
                   validator: controller.validateEmail,
@@ -72,13 +73,13 @@ class SignUpScreen extends StatelessWidget {
                 // Phone Field
                 IntlPhoneField(
                   controller: controller.phoneController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Numéro de téléphone',
                     border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.green),
+                      borderSide: BorderSide(color: primaryColor),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.green, width: 2),
+                      borderSide: BorderSide(color: primaryColor, width: 2),
                     ),
                   ),
                   initialCountryCode: 'DZ',
@@ -91,10 +92,10 @@ class SignUpScreen extends StatelessWidget {
                   controller: controller.dateNaissanceController,
                   decoration: InputDecoration(
                     labelText: 'Date de naissance',
-                    prefixIcon: const Icon(Icons.calendar_today),
+                    prefixIcon: Icon(Icons.calendar_today, color: primaryColor),
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_month),
+                      icon: Icon(Icons.calendar_month, color: primaryColor),
                       onPressed: () => controller.selectDate(context),
                     ),
                   ),
@@ -108,7 +109,7 @@ class SignUpScreen extends StatelessWidget {
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     labelText: 'Genre',
-                    prefixIcon: const Icon(Icons.people),
+                    prefixIcon: Icon(Icons.people, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
                   items:
@@ -133,13 +134,14 @@ class SignUpScreen extends StatelessWidget {
                       obscureText: !controller.isPasswordVisible,
                       decoration: InputDecoration(
                         labelText: 'Mot de passe',
-                        prefixIcon: const Icon(Icons.lock),
+                        prefixIcon: Icon(Icons.lock, color: primaryColor),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
                           icon: Icon(
                             controller.isPasswordVisible
                                 ? Icons.visibility
                                 : Icons.visibility_off,
+                            color: primaryColor,
                           ),
                           onPressed: controller.togglePasswordVisibility,
                         ),
@@ -153,7 +155,7 @@ class SignUpScreen extends StatelessWidget {
                 // Sign Up Button
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),

@@ -8,6 +8,7 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<LoginController>(context, listen: false);
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -15,10 +16,10 @@ class LoginScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
+          iconTheme: IconThemeData(color: primaryColor),
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.green),
+            icon: Icon(Icons.arrow_back, color: primaryColor),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -37,7 +38,7 @@ class LoginScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: primaryColor,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -45,11 +46,12 @@ class LoginScreen extends StatelessWidget {
                     Image.asset(
                       'assets/logo.png',
                       height: 120,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.account_circle,
-                        size: 120,
-                        color: Colors.green,
-                      ),
+                      errorBuilder:
+                          (context, error, stackTrace) => Icon(
+                            Icons.account_circle,
+                            size: 120,
+                            color: primaryColor,
+                          ),
                     ),
                     const SizedBox(height: 40),
                     TextFormField(
@@ -59,12 +61,13 @@ class LoginScreen extends StatelessWidget {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Email ou numéro de téléphone',
-                        prefixIcon: const Icon(Icons.person),
+                        prefixIcon: Icon(Icons.person, color: primaryColor),
                         border: const OutlineInputBorder(),
                         hintText: 'exemple@email.com ou +33612345678',
                       ),
                       validator: controller.validateLoginIdentifier,
-                      onFieldSubmitted: (_) => controller.passwordFocus.requestFocus(),
+                      onFieldSubmitted:
+                          (_) => controller.passwordFocus.requestFocus(),
                     ),
                     const SizedBox(height: 20),
                     Consumer<LoginController>(
@@ -75,11 +78,14 @@ class LoginScreen extends StatelessWidget {
                           obscureText: controller.obscurePassword,
                           decoration: InputDecoration(
                             labelText: 'Mot de passe',
-                            prefixIcon: const Icon(Icons.lock),
+                            prefixIcon: Icon(Icons.lock, color: primaryColor),
                             suffixIcon: IconButton(
-                              icon: Icon(controller.obscurePassword 
-                                  ? Icons.visibility_off 
-                                  : Icons.visibility),
+                              icon: Icon(
+                                controller.obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                color: primaryColor,
+                              ),
                               onPressed: controller.togglePasswordVisibility,
                             ),
                             border: const OutlineInputBorder(),
@@ -92,20 +98,20 @@ class LoginScreen extends StatelessWidget {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {},
-                        child: const Text(
+                        child: Text(
                           'Mot de passe oublié?',
-                          style: TextStyle(color: Colors.green),
+                          style: TextStyle(color: primaryColor),
                         ),
                       ),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
-                        ), // <-- Virgule ajoutée ici
+                        ),
                       ),
                       onPressed: () => controller.submitForm(context),
                       child: const Text(
@@ -116,15 +122,15 @@ class LoginScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     TextButton(
                       onPressed: () => Navigator.pushNamed(context, '/signup'),
-                      child: const Text.rich(
+                      child: Text.rich(
                         TextSpan(
                           text: 'Vous n\'avez pas de compte? ',
-                          style: TextStyle(color: Colors.grey),
+                          style: const TextStyle(color: Colors.grey),
                           children: [
                             TextSpan(
                               text: 'S\'inscrire',
                               style: TextStyle(
-                                color: Colors.green,
+                                color: primaryColor,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
