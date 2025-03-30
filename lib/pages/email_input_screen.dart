@@ -6,6 +6,7 @@ class ResetPasswordEmailScreen extends StatefulWidget {
   const ResetPasswordEmailScreen({super.key, required this.onEmailSubmit});
 
   @override
+  // ignore: library_private_types_in_public_api
   _ResetPasswordEmailScreenState createState() =>
       _ResetPasswordEmailScreenState();
 }

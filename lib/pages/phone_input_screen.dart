@@ -8,6 +8,7 @@ class ResetPasswordPhoneScreen extends StatefulWidget {
   const ResetPasswordPhoneScreen({super.key, required this.onPhoneSubmit});
 
   @override
+  // ignore: library_private_types_in_public_api
   _ResetPasswordPhoneScreenState createState() =>
       _ResetPasswordPhoneScreenState();
 }

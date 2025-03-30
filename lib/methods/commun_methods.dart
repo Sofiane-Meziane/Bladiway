@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 class CommunMethods {
   Future<bool> checkConnectivity(BuildContext context) async {
     var connectionResults = await Connectivity().checkConnectivity();
-    print("Résultat de la connectivité dans l'émulateur : $connectionResults");
 
     // Vérifier si la liste contient uniquement 'none'
     if (connectionResults.contains(ConnectivityResult.none) &&

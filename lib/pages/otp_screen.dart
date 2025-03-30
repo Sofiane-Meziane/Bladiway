@@ -5,6 +5,7 @@ class OTPScreen extends StatefulWidget {
   const OTPScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _OTPScreenState createState() => _OTPScreenState();
 }
 
@@ -156,6 +157,7 @@ class _OTPScreenState extends State<OTPScreen> {
                         ),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(
+                            // ignore: deprecated_member_use
                             color: colorScheme.onSurface.withOpacity(0.3),
                             width: 2,
                           ),
