@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:bladiway/src/features/authentication/controllers/presentation_controller.dart';
 
+// Modèle de données pour une page d'introduction
+class OnboardingPage {
+  final String title;
+  final String description;
+  final String imagePath;
+
+  const OnboardingPage({
+    required this.title,
+    required this.description,
+    required this.imagePath,
+  });
+}
+
+// Écran principal de présentation
 class PresentationPage extends StatefulWidget {
   const PresentationPage({super.key});
 
@@ -9,79 +22,115 @@ class PresentationPage extends StatefulWidget {
 }
 
 class _PresentationPageState extends State<PresentationPage> {
-  late final PresentationController _controller;
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  // Liste des pages à afficher
+  final List<OnboardingPage> _pages = const [
+    OnboardingPage(
+      title: 'Voyagez en bonne compagnie',
+      description:
+          'Rencontrez des personnes sympas et rendez vos trajets plus agréables et conviviaux.',
+      imagePath: 'assets/images/links.png',
+    ),
+    OnboardingPage(
+      title: 'Réduire l\'empreinte carbone',
+      description:
+          'Réduisez vos émissions de carbone en partageant des trajets avec d\'autres',
+      imagePath: 'assets/images/Nature.png',
+    ),
+    OnboardingPage(
+      title: 'Économisez sur vos trajets',
+      description:
+          'Partagez vos déplacements et réduisez considérablement vos frais de transport.',
+      imagePath: 'assets/images/savemoney.png',
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _controller = PresentationController();
-    _controller.addListener(_refreshView);
+    _pageController.addListener(_handlePageChange);
   }
 
-  void _refreshView() {
-    if (mounted) setState(() {});
+  // Met à jour la page courante lors du défilement
+  void _handlePageChange() {
+    final newPage = _pageController.page?.round() ?? 0;
+    if (newPage != _currentPage) {
+      setState(() => _currentPage = newPage);
+    }
+  }
+
+  // Navigue vers une page spécifique
+  void _navigateToPage(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_refreshView);
-    _controller.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Column(
             children: [
               const SizedBox(height: 20),
+              // Titre de l'application
               Text(
                 "BladiWay",
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: colorScheme.primary,
+                  color: theme.colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 20),
+              // Vue paginée
               Expanded(
                 child: PageView.builder(
-                  controller: _controller.pageController,
+                  controller: _pageController,
                   physics: const BouncingScrollPhysics(),
-                  onPageChanged: _controller.setCurrentPage,
-                  itemCount: _controller.pages.length,
+                  itemCount: _pages.length,
                   itemBuilder:
                       (context, index) =>
-                          _buildPageContent(_controller.pages[index], size),
+                          _buildPageContent(_pages[index], size),
                 ),
               ),
+              // Indicateurs de page
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_controller.pages.length, (index) {
+                children: List.generate(_pages.length, (index) {
                   return GestureDetector(
-                    onTap: () => _controller.navigateToPage(index),
+                    onTap: () => _navigateToPage(index),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: _buildDot(index == _controller.currentPage),
+                      child: _buildDot(index == _currentPage),
                     ),
                   );
                 }),
               ),
+              // Boutons d'action
               const SizedBox(height: 30),
-              _buildActionButton(
+              _ActionButton(
                 label: "S'inscrire",
                 onPressed: () => Navigator.pushNamed(context, '/signup'),
               ),
               const SizedBox(height: 12),
-              _buildActionButton(
+              _ActionButton(
                 label: "Se connecter",
                 onPressed: () => Navigator.pushNamed(context, '/login'),
                 isSecondary: true,
@@ -94,9 +143,8 @@ class _PresentationPageState extends State<PresentationPage> {
     );
   }
 
-  Widget _buildPageContent(OnboardingModel page, Size size) {
-    final theme = Theme.of(context);
-
+  // Construction du contenu d'une page
+  Widget _buildPageContent(OnboardingPage page, Size size) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -105,13 +153,12 @@ class _PresentationPageState extends State<PresentationPage> {
           child: Image.asset(
             page.imagePath,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Icon(
-                Icons.broken_image_outlined,
-                size: 100,
-                color: theme.colorScheme.onSurface,
-              );
-            },
+            errorBuilder:
+                (context, error, stackTrace) => Icon(
+                  Icons.broken_image_outlined,
+                  size: 100,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
           ),
         ),
         const SizedBox(height: 24),
@@ -120,7 +167,7 @@ class _PresentationPageState extends State<PresentationPage> {
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: theme.colorScheme.primary,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
         const SizedBox(height: 12),
@@ -132,7 +179,7 @@ class _PresentationPageState extends State<PresentationPage> {
             style: TextStyle(
               fontSize: 16,
               height: 1.4,
-              color: theme.colorScheme.onSurfaceVariant,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -140,25 +187,23 @@ class _PresentationPageState extends State<PresentationPage> {
     );
   }
 
+  // Construction d'un point indicateur
   Widget _buildDot(bool isActive) {
-    final theme = Theme.of(context);
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
       width: isActive ? 12 : 8,
       height: isActive ? 12 : 8,
       decoration: BoxDecoration(
         color:
             isActive
-                ? theme.colorScheme.primary
-                : theme.colorScheme.surfaceContainerHighest,
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
         shape: BoxShape.circle,
         boxShadow:
             isActive
                 ? [
                   BoxShadow(
-                    color: theme.colorScheme.primary.withAlpha(76),
+                    color: Theme.of(context).colorScheme.primary.withAlpha(76),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -167,27 +212,34 @@ class _PresentationPageState extends State<PresentationPage> {
       ),
     );
   }
+}
 
-  Widget _buildActionButton({
-    required String label,
-    required VoidCallback onPressed,
-    bool isSecondary = false,
-  }) {
-    final theme = Theme.of(context);
+// Composant personnalisé pour les boutons
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+  final bool isSecondary;
 
+  const _ActionButton({
+    required this.label,
+    required this.onPressed,
+    this.isSecondary = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor:
             isSecondary
-                ? theme.colorScheme.secondaryContainer
-                : theme.colorScheme.primary,
+                ? Theme.of(context).colorScheme.secondaryContainer
+                : Theme.of(context).colorScheme.primary,
         foregroundColor:
             isSecondary
-                ? theme.colorScheme.onSecondaryContainer
-                : theme.colorScheme.onPrimary,
+                ? Theme.of(context).colorScheme.onSecondaryContainer
+                : Theme.of(context).colorScheme.onPrimary,
         minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        elevation: 3,
       ),
       onPressed: onPressed,
       child: Text(
