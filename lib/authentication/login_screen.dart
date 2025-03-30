@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bladiway/pages/email_input_screen.dart'; 
-import 'package:bladiway/pages/phone_input_screen.dart'; 
-import 'package:bladiway/pages/reset_pass_screen.dart'; 
+import 'package:bladiway/pages/email_input_screen.dart';
+import 'package:bladiway/pages/phone_input_screen.dart';
+import 'package:bladiway/pages/reset_pass_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,18 +13,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Clé pour valider le formulaire
   final _formKey = GlobalKey<FormState>();
-
-  // Contrôleurs pour les champs de texte
   final _loginIdentifierController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // Focus nodes pour gérer le focus entre les champs
   final _loginIdentifierFocus = FocusNode();
   final _passwordFocus = FocusNode();
-
-  // État pour la visibilité du mot de passe
   bool _obscurePassword = true;
 
   @override
@@ -33,7 +26,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _setupFocusListeners();
   }
 
-  // Configurer les listeners pour afficher le clavier
   void _setupFocusListeners() {
     _loginIdentifierFocus.addListener(() {
       if (_loginIdentifierFocus.hasFocus) {
@@ -47,7 +39,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  // Validation de l'identifiant (email ou téléphone)
   String? _validateLoginIdentifier(String? value) {
     if (value == null || value.isEmpty) {
       return 'Veuillez entrer votre identifiant';
@@ -61,21 +52,18 @@ class _LoginScreenState extends State<LoginScreen> {
         : 'Identifiant invalide';
   }
 
-  // Validation du mot de passe
   String? _validatePassword(String? value) {
     return (value == null || value.isEmpty)
         ? 'Veuillez entrer votre mot de passe'
         : null;
   }
 
-  // Basculer la visibilité du mot de passe
   void _togglePasswordVisibility() {
     setState(() {
       _obscurePassword = !_obscurePassword;
     });
   }
 
-  // Soumettre le formulaire
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       FocusScope.of(context).unfocus();
@@ -86,7 +74,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Afficher les options de réinitialisation du mot de passe
   void _showPasswordResetOptions() {
     showModalBottomSheet(
       context: context,
@@ -95,12 +82,14 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Construire le modal des options de réinitialisation
   Widget _buildPasswordResetOptions() {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color:
+            Theme.of(
+              context,
+            ).colorScheme.surface, // Utilisation de la couleur surface du thème
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(25),
           topRight: Radius.circular(25),
         ),
@@ -113,24 +102,35 @@ class _LoginScreenState extends State<LoginScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Choisis une méthode !',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color:
+                      Theme.of(
+                        context,
+                      ).colorScheme.onSurface, // Couleur adaptée au thème
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.black54),
+                icon: Icon(
+                  Icons.close,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Sélectionne l’une des options ci-dessous pour réinitialiser ton mot de passe.',
-            style: TextStyle(fontSize: 16, color: Colors.black54),
+            style: TextStyle(
+              fontSize: 16,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ),
           ),
           const SizedBox(height: 24),
           _buildOptionTile(
@@ -158,7 +158,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Construire une tuile d'option pour le modal
   Widget _buildOptionTile({
     required IconData icon,
     required String title,
@@ -171,7 +170,9 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).colorScheme.secondary.withOpacity(
+            0.2,
+          ), // Couleur secondaire atténuée
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -179,10 +180,14 @@ class _LoginScreenState extends State<LoginScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, size: 24, color: Colors.black87),
+              child: Icon(
+                icon,
+                size: 24,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(width: 16),
             Column(
@@ -197,7 +202,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 Text(
                   subtitle,
-                  style: const TextStyle(color: Colors.black54, fontSize: 14),
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -207,7 +217,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Réinitialisation via email
   void _resetViaEmail() {
     Navigator.push(
       context,
@@ -244,7 +253,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Réinitialisation via téléphone
   void _resetViaPhone() {
     Navigator.push(
       context,
@@ -291,7 +299,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    // Libérer les ressources pour éviter les fuites de mémoire
     _loginIdentifierController.dispose();
     _passwordController.dispose();
     _loginIdentifierFocus.dispose();
@@ -301,18 +308,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          iconTheme: IconThemeData(color: primaryColor),
+          iconTheme: IconThemeData(
+            color: Theme.of(context).colorScheme.primary,
+          ),
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: primaryColor),
+            icon: Icon(
+              Icons.arrow_back,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -326,18 +336,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 20),
-                    // Titre
                     Text(
                       "Connexion",
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: primaryColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
-                    // Logo ou icône par défaut
                     Image.asset(
                       'assets/logo.png',
                       height: 120,
@@ -345,11 +353,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           (context, error, stackTrace) => Icon(
                             Icons.account_circle,
                             size: 120,
-                            color: primaryColor,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                     ),
                     const SizedBox(height: 40),
-                    // Champ identifiant
                     TextFormField(
                       controller: _loginIdentifierController,
                       focusNode: _loginIdentifierFocus,
@@ -357,7 +364,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Email ou numéro de téléphone',
-                        prefixIcon: Icon(Icons.person, color: primaryColor),
+                        prefixIcon: Icon(
+                          Icons.person,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                         border: const OutlineInputBorder(),
                         hintText: 'exemple@email.com ou +33612345678',
                       ),
@@ -365,20 +375,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
                     ),
                     const SizedBox(height: 20),
-                    // Champ mot de passe
                     TextFormField(
                       controller: _passwordController,
                       focusNode: _passwordFocus,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         labelText: 'Mot de passe',
-                        prefixIcon: Icon(Icons.lock, color: primaryColor),
+                        prefixIcon: Icon(
+                          Icons.lock,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: primaryColor,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           onPressed: _togglePasswordVisibility,
                         ),
@@ -386,46 +398,54 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       validator: _validatePassword,
                     ),
-                    // Bouton mot de passe oublié
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: _showPasswordResetOptions,
                         child: Text(
                           'Mot de passe oublié?',
-                          style: TextStyle(color: primaryColor),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Bouton de connexion
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
                       ),
                       onPressed: _submitForm,
-                      child: const Text(
+                      child: Text(
                         "Se connecter",
-                        style: TextStyle(fontSize: 18, color: Colors.white),
+                        style: TextStyle(
+                          fontSize: 18,
+                          color:
+                              Theme.of(context)
+                                  .colorScheme
+                                  .onPrimary, // Couleur du texte adaptée au primary
+                        ),
                       ),
                     ),
-                    
-                    // Lien vers inscription
                     TextButton(
                       onPressed: () => Navigator.pushNamed(context, '/signup'),
                       child: Text.rich(
                         TextSpan(
                           text: 'Vous n\'avez pas de compte? ',
-                          style: const TextStyle(color: Colors.grey),
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
+                          ),
                           children: [
                             TextSpan(
                               text: 'S\'inscrire',
                               style: TextStyle(
-                                color: primaryColor,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
