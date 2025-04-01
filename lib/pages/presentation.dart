@@ -91,7 +91,7 @@ class _PresentationPageState extends State<PresentationPage> {
               const SizedBox(height: 20),
               // Titre de l'application
               Text(
-                "BladiWay",
+                "Bladiway",
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,

@@ -74,6 +74,8 @@ flutter:
     - assets/images/links.png
     - assets/images/logo4.png
     - assets/images/economiser.jpg
+    - assets/images/Bladiway_logo.png
+    - assets/images/blaadi.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -104,11 +106,10 @@ flutter:
 flutter_native_splash:
   color: "#f7f6f1"
   color_dark: "#272727"
-  image: assets/images/logo4.png
-  image_dark: assets/images/logo4.png
-
+  image: assets/images/blaadi.jpg
+  image_dark: assets/images/blaadi.jpg
   android_12:
-    image: assets/images/logo4.png
+    image: assets/images/blaadi.jpg
     icon_background_color: "#f7f6f1"
-    image_dark: assets/images/logo4.png
+    image_dark: assets/images/blaadi.jpg
     icon_background_color_dark: "#272727"

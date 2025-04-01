@@ -343,19 +343,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.primary,
                       ),
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.center, 
                     ),
                     const SizedBox(height: 20),
-                    Image.asset(
-                      'assets/logo.png',
-                      height: 120,
-                      errorBuilder:
-                          (context, error, stackTrace) => Icon(
-                            Icons.account_circle,
-                            size: 120,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    ),
+                    //can put in image here !!
+                    
                     const SizedBox(height: 40),
                     TextFormField(
                       controller: _loginIdentifierController,
