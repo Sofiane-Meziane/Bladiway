@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Ajout de Firebase Auth
 
 class OTPScreen extends StatefulWidget {
   const OTPScreen({super.key});
@@ -10,52 +11,92 @@ class OTPScreen extends StatefulWidget {
 }
 
 class _OTPScreenState extends State<OTPScreen> {
-  // Liste des contrôleurs pour les 6 champs OTP
   final List<TextEditingController> _otpControllers = List.generate(
     6,
     (_) => TextEditingController(),
   );
-
-  // Liste des focus nodes pour gérer le focus entre les champs
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  final FirebaseAuth _auth = FirebaseAuth.instance; // Instance de Firebase Auth
 
-  // Gestion de la navigation entre les champs OTP
   void _onOTPChanged(int index, String value) {
     if (value.length == 1) {
       if (index < 5) {
-        // Passe au champ suivant
         FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
       } else {
-        // Dernier champ, retire le focus
         FocusScope.of(context).unfocus();
       }
     } else if (value.isEmpty && index > 0) {
-      // Retourne au champ précédent si vide
       FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
     }
   }
 
-  // Vérification de l'OTP
-  void _verifyOTP() {
+  // Méthode corrigée pour vérifier l'OTP
+  Future<void> _verifyOTP() async {
+    // Récupérer le code OTP complet depuis les contrôleurs
     String otp = _otpControllers.map((controller) => controller.text).join();
-    if (otp.length == 6) {
-      // TODO: Implémenter la logique de vérification OTP
-      debugPrint('Verifying OTP: $otp');
-      // Exemple: Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      // Afficher une erreur si l'OTP est incomplet
+
+    if (otp.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez saisir le code OTP complet'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Veuillez entrer un code OTP complet')),
+      );
+      return;
+    }
+
+    try {
+      // Récupérer le verificationId passé en argument depuis la navigation
+      final String? verificationId =
+          ModalRoute.of(context)?.settings.arguments as String?;
+
+      if (verificationId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur: ID de vérification manquant')),
+        );
+        return;
+      }
+
+      // Créer les credentials avec le verificationId et le code OTP
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: otp,
+      );
+
+      // Tenter la connexion avec les credentials
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+
+      if (userCredential.user != null) {
+        // Succès : naviguer vers l'écran d'accueil
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'invalid-verification-code':
+          errorMessage = 'Code OTP incorrect';
+          break;
+        case 'session-expired':
+          errorMessage =
+              'La session a expiré. Veuillez demander un nouveau code';
+          break;
+        default:
+          errorMessage = 'Une erreur est survenue. Veuillez réessayer';
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Une erreur inattendue est survenue')),
       );
     }
   }
 
-  // Renvoyer le code OTP
   void _resendOTP() {
     // TODO: Implémenter la logique de renvoi OTP
+    // Cela nécessiterait de récupérer le numéro de téléphone depuis l'écran précédent
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Code OTP renvoyé'),
@@ -66,7 +107,6 @@ class _OTPScreenState extends State<OTPScreen> {
 
   @override
   void dispose() {
-    // Libérer les contrôleurs et focus nodes pour éviter les fuites de mémoire
     for (var controller in _otpControllers) {
       controller.dispose();
     }
@@ -98,7 +138,6 @@ class _OTPScreenState extends State<OTPScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 40),
-              // Titre
               Text(
                 'Vérification OTP',
                 style: TextStyle(
@@ -109,7 +148,6 @@ class _OTPScreenState extends State<OTPScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              // Instructions
               Text(
                 'Entrez le code de 6 chiffres envoyé à votre numéro de téléphone',
                 style: TextStyle(
@@ -119,7 +157,6 @@ class _OTPScreenState extends State<OTPScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
-              // Champs OTP
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(6, (index) {
@@ -157,16 +194,12 @@ class _OTPScreenState extends State<OTPScreen> {
                         ),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(
-                            // ignore: deprecated_member_use
                             color: colorScheme.onSurface.withOpacity(0.3),
                             width: 2,
                           ),
                         ),
-                        errorBorder: UnderlineInputBorder(
-                          borderSide: const BorderSide(
-                            color: Colors.red,
-                            width: 2,
-                          ),
+                        errorBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
                       ),
                       onChanged: (value) => _onOTPChanged(index, value),
@@ -175,7 +208,6 @@ class _OTPScreenState extends State<OTPScreen> {
                 }),
               ),
               const SizedBox(height: 40),
-              // Bouton de vérification
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
@@ -186,7 +218,7 @@ class _OTPScreenState extends State<OTPScreen> {
                   ),
                   elevation: 3,
                 ),
-                onPressed: _verifyOTP,
+                onPressed: _verifyOTP, // Appel direct sans paramètres
                 child: const Text(
                   'Vérifier',
                   style: TextStyle(
@@ -197,7 +229,6 @@ class _OTPScreenState extends State<OTPScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              // Bouton pour renvoyer le code
               TextButton(
                 onPressed: _resendOTP,
                 child: Text(

@@ -46,6 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '479297677978',
     projectId: 'bladiway-b2d7b',
     authDomain: 'bladiway-b2d7b.firebaseapp.com',
+    databaseURL: 'https://bladiway-b2d7b-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'bladiway-b2d7b.firebasestorage.app',
     measurementId: 'G-L16YTSHZ0R',
   );
@@ -55,6 +56,7 @@ class DefaultFirebaseOptions {
     appId: '1:479297677978:android:513a78863124d48cb44d23',
     messagingSenderId: '479297677978',
     projectId: 'bladiway-b2d7b',
+    databaseURL: 'https://bladiway-b2d7b-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'bladiway-b2d7b.firebasestorage.app',
   );
 
@@ -63,6 +65,7 @@ class DefaultFirebaseOptions {
     appId: '1:479297677978:ios:7e848be408f7136fb44d23',
     messagingSenderId: '479297677978',
     projectId: 'bladiway-b2d7b',
+    databaseURL: 'https://bladiway-b2d7b-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'bladiway-b2d7b.firebasestorage.app',
     iosBundleId: 'com.example.bladiway',
   );
@@ -72,6 +75,7 @@ class DefaultFirebaseOptions {
     appId: '1:479297677978:ios:7e848be408f7136fb44d23',
     messagingSenderId: '479297677978',
     projectId: 'bladiway-b2d7b',
+    databaseURL: 'https://bladiway-b2d7b-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'bladiway-b2d7b.firebasestorage.app',
     iosBundleId: 'com.example.bladiway',
   );
@@ -82,7 +86,9 @@ class DefaultFirebaseOptions {
     messagingSenderId: '479297677978',
     projectId: 'bladiway-b2d7b',
     authDomain: 'bladiway-b2d7b.firebaseapp.com',
+    databaseURL: 'https://bladiway-b2d7b-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'bladiway-b2d7b.firebasestorage.app',
     measurementId: 'G-F94RH48S96',
   );
+
 }

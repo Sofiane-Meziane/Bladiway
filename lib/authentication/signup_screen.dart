@@ -2,20 +2,17 @@ import 'package:bladiway/methods/commun_methods.dart';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Ajout de Firebase Auth
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _SignUpScreenState createState() => _SignUpScreenState();
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  // Clé pour valider le formulaire
   final _formKey = GlobalKey<FormState>();
-
-  // Contrôleurs pour les champs de texte
   final _nomController = TextEditingController();
   final _prenomController = TextEditingController();
   final _emailController = TextEditingController();
@@ -24,20 +21,69 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   CommunMethods cMethods = CommunMethods();
 
-  // Variables d'état
-  bool _isPasswordVisible = false; // Visibilité du mot de passe
-  // ignore: unused_field
-  String? _selectedGenre; // Genre sélectionné
-  String? _phoneError; // Erreur pour le champ téléphone
-  final List<String> _genres = ['Homme', 'Femme']; // Options de genre
+  // Instance de Firebase Auth
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  String? _verificationId;
+  String? _fullPhoneNumber; // Nouvelle variable pour le numéro complet
 
-  // Méthode pour vérifier la connectivité réseau
-  checkIfTheNetworkIsAvailable(context)
-  {
+  bool _isPasswordVisible = false;
+  String? _selectedGenre;
+  String? _phoneError;
+  final List<String> _genres = ['Homme', 'Femme'];
+
+  checkIfTheNetworkIsAvailable(context) {
     cMethods.checkConnectivity(context);
   }
 
-  // Méthode pour sélectionner une date
+  // Méthode corrigée pour l'authentification par téléphone
+  Future<void> phoneAuthentication(String phoneNumber) async {
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          // Connexion automatique si la vérification est immédiate
+          await _auth.signInWithCredential(credential);
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          String errorMessage;
+          switch (e.code) {
+            case 'invalid-phone-number':
+              errorMessage = 'Le numéro de téléphone fourni n\'est pas valide';
+              break;
+            case 'too-many-requests':
+              errorMessage = 'Trop de tentatives. Réessayez plus tard';
+              break;
+            default:
+              errorMessage = 'Une erreur est survenue. Veuillez réessayer';
+          }
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(errorMessage)));
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          // Stockage de l'ID de vérification pour la validation OTP
+          setState(() {
+            _verificationId = verificationId;
+          });
+          // Navigation vers l'écran OTP avec le verificationId
+          Navigator.pushNamed(context, '/otp', arguments: verificationId);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          setState(() {
+            _verificationId = verificationId;
+          });
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Une erreur inattendue est survenue')),
+      );
+    }
+  }
+
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -59,7 +105,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  // Validation du numéro de téléphone
   String? _validatePhone(String? value) {
     if (value == null || value.isEmpty) {
       setState(() {
@@ -73,16 +118,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return null;
   }
 
-  // Soumission du formulaire
-  void _submitForm() {
+  void _submitForm() async {
     if (_formKey.currentState!.validate() && _phoneError == null) {
-      Navigator.pushReplacementNamed(context, '/otp');
+      if (_fullPhoneNumber != null) {
+        print('Numéro envoyé à Firebase : $_fullPhoneNumber');
+        await phoneAuthentication(_fullPhoneNumber!);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Veuillez entrer un numéro de téléphone valide'),
+          ),
+        );
+      }
     }
   }
 
   @override
   void dispose() {
-    // Libérer les contrôleurs pour éviter les fuites de mémoire
     _nomController.dispose();
     _prenomController.dispose();
     _emailController.dispose();
@@ -118,7 +170,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Champ Nom
                 TextFormField(
                   controller: _nomController,
                   decoration: InputDecoration(
@@ -131,8 +182,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           value!.isEmpty ? 'Veuillez entrer votre nom' : null,
                 ),
                 const SizedBox(height: 16),
-
-                // Champ Prénom
                 TextFormField(
                   controller: _prenomController,
                   decoration: InputDecoration(
@@ -147,8 +196,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               : null,
                 ),
                 const SizedBox(height: 16),
-
-                // Champ Email
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -168,8 +215,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Champ Numéro de téléphone
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -180,7 +225,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         border: const OutlineInputBorder(),
                       ),
                       initialCountryCode: 'DZ',
-                      onChanged: (phone) => _validatePhone(phone.number),
+                      onChanged: (phone) {
+                        setState(() {
+                          _fullPhoneNumber = phone.completeNumber;
+                        });
+                        _validatePhone(phone.number);
+                      },
                     ),
                     if (_phoneError != null)
                       Padding(
@@ -196,8 +246,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Champ Date de naissance
                 TextFormField(
                   controller: _dateNaissanceController,
                   decoration: InputDecoration(
@@ -218,8 +266,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               : null,
                 ),
                 const SizedBox(height: 16),
-
-                // Menu déroulant Genre
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     labelText: 'Genre',
@@ -243,8 +289,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               : null,
                 ),
                 const SizedBox(height: 16),
-
-                // Champ Mot de passe
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
@@ -275,8 +319,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
-
-                // Bouton d'inscription
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
@@ -286,11 +328,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                   onPressed: () async {
-                    // Attendre la vérification de la connectivité
                     await checkIfTheNetworkIsAvailable(context);
-                    // Appeler la soumission du formulaire si tout est valide
                     _submitForm();
-                  }, 
+                  },
                   child: const Text(
                     "S'inscrire",
                     style: TextStyle(fontSize: 18, color: Colors.white),
