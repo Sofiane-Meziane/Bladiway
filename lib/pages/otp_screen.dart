@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Ajout de Firebase Auth
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class OTPScreen extends StatefulWidget {
   const OTPScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _OTPScreenState createState() => _OTPScreenState();
 }
 
@@ -16,7 +16,7 @@ class _OTPScreenState extends State<OTPScreen> {
     (_) => TextEditingController(),
   );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
-  final FirebaseAuth _auth = FirebaseAuth.instance; // Instance de Firebase Auth
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   void _onOTPChanged(int index, String value) {
     if (value.length == 1) {
@@ -30,9 +30,7 @@ class _OTPScreenState extends State<OTPScreen> {
     }
   }
 
-  // Méthode corrigée pour vérifier l'OTP
   Future<void> _verifyOTP() async {
-    // Récupérer le code OTP complet depuis les contrôleurs
     String otp = _otpControllers.map((controller) => controller.text).join();
 
     if (otp.length != 6) {
@@ -43,66 +41,151 @@ class _OTPScreenState extends State<OTPScreen> {
     }
 
     try {
-      // Récupérer le verificationId passé en argument depuis la navigation
-      final String? verificationId =
-          ModalRoute.of(context)?.settings.arguments as String?;
+      // Récupérer les arguments passés depuis SignUpScreen
+      final Map<String, dynamic>? arguments =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
-      if (verificationId == null) {
+      if (arguments == null ||
+          arguments['verificationId'] == null ||
+          arguments['email'] == null ||
+          arguments['password'] == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur: ID de vérification manquant')),
+          const SnackBar(content: Text('Erreur: Données manquantes')),
         );
         return;
       }
 
-      // Créer les credentials avec le verificationId et le code OTP
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: otp,
-      );
+      final String verificationId = arguments['verificationId'];
+      final String email = arguments['email'];
+      final String password = arguments['password'];
+      final String phoneNumber = arguments['phoneNumber'];
+      final String nom = arguments['nom'];
+      final String prenom = arguments['prenom'];
+      final String dateNaissance = arguments['dateNaissance'];
+      final String? genre = arguments['genre'];
 
-      // Tenter la connexion avec les credentials
-      UserCredential userCredential = await _auth.signInWithCredential(
-        credential,
-      );
+      // Étape 1 : Créer l'utilisateur avec email/mot de passe
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-      if (userCredential.user != null) {
-        // Succès : naviguer vers l'écran d'accueil
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+      User? user = userCredential.user;
+
+      if (user != null) {
+        try {
+          // Étape 2 : Créer le credential avec l'OTP
+          PhoneAuthCredential credential = PhoneAuthProvider.credential(
+            verificationId: verificationId,
+            smsCode: otp,
+          );
+
+          // Étape 3 : Lier le credential du téléphone à l'utilisateur
+          await user.linkWithCredential(credential);
+
+          // Étape 4 : Enregistrer les données dans la base de données
+          DatabaseReference usersRef = FirebaseDatabase.instance
+              .ref()
+              .child('users')
+              .child(user.uid);
+
+          Map<String, dynamic> userDataMap = {
+            'nom': nom,
+            'prenom': prenom,
+            'email': email,
+            'phone': phoneNumber,
+            'dateNaissance': dateNaissance,
+            'genre': genre,
+            'id': user.uid,
+            'blockStatus': 'no',
+            'phoneVerified': true,
+          };
+
+          await usersRef.set(userDataMap);
+
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        } on FirebaseAuthException catch (e) {
+          // Si la liaison échoue (OTP incorrect), supprimer l'utilisateur
+          await user.delete();
+          String errorMessage;
+          switch (e.code) {
+            case 'invalid-verification-code':
+              errorMessage = 'Code OTP incorrect';
+              break;
+            case 'session-expired':
+              errorMessage =
+                  'La session a expiré. Veuillez demander un nouveau code';
+              break;
+            default:
+              errorMessage = 'Une erreur est survenue : ${e.code}';
+          }
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(errorMessage)));
         }
       }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage;
-      switch (e.code) {
-        case 'invalid-verification-code':
-          errorMessage = 'Code OTP incorrect';
-          break;
-        case 'session-expired':
-          errorMessage =
-              'La session a expiré. Veuillez demander un nouveau code';
-          break;
-        default:
-          errorMessage = 'Une erreur est survenue. Veuillez réessayer';
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Une erreur inattendue est survenue')),
+        SnackBar(content: Text('Erreur inattendue : ${e.toString()}')),
       );
     }
   }
 
-  void _resendOTP() {
-    // TODO: Implémenter la logique de renvoi OTP
-    // Cela nécessiterait de récupérer le numéro de téléphone depuis l'écran précédent
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Code OTP renvoyé'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
-    );
+  void _resendOTP() async {
+    final Map<String, dynamic>? arguments =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    if (arguments == null || arguments['phoneNumber'] == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Numéro de téléphone manquant pour renvoi'),
+        ),
+      );
+      return;
+    }
+
+    final String phoneNumber = arguments['phoneNumber'];
+
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {},
+        verificationFailed: (FirebaseAuthException e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Échec du renvoi : ${e.message}')),
+          );
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          if (mounted) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/otp',
+              arguments: {
+                'verificationId': verificationId,
+                'phoneNumber': arguments['phoneNumber'],
+                'nom': arguments['nom'],
+                'prenom': arguments['prenom'],
+                'email': arguments['email'],
+                'password': arguments['password'],
+                'dateNaissance': arguments['dateNaissance'],
+                'genre': arguments['genre'],
+              },
+            );
+          }
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {},
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Code OTP renvoyé'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors du renvoi : ${e.toString()}')),
+      );
+    }
   }
 
   @override
@@ -218,7 +301,7 @@ class _OTPScreenState extends State<OTPScreen> {
                   ),
                   elevation: 3,
                 ),
-                onPressed: _verifyOTP, // Appel direct sans paramètres
+                onPressed: _verifyOTP,
                 child: const Text(
                   'Vérifier',
                   style: TextStyle(
