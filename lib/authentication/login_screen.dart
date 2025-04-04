@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bladiway/pages/email_input_screen.dart';
 import 'package:bladiway/pages/phone_input_screen.dart';
-import 'package:bladiway/pages/reset_pass_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

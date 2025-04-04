@@ -45,6 +45,7 @@ dependencies:
   cloud_firestore: ^5.6.6
   image_picker: ^1.1.2
   firebase_storage: ^12.4.5
+  flutter_launcher_icons: ^0.14.3
   
   
 
@@ -78,9 +79,13 @@ flutter:
     - assets/images/savemoney.png
     - assets/images/links.png
     - assets/images/economiser.jpg
-    - assets/images/bladiway_logo.png
-    - assets/images/Bladiway_logo.jpg
     - assets/images/default_profile.png
+    - assets/images/small_logo_without_back.png
+    - assets/images/logo_without_back.png
+    - assets/images/logo_with_back.png
+    - assets/images/1024.png
+    - assets/images/icon.png
+
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -108,19 +113,23 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-flutter_native_splash:
-  color: "#f7f6f1"
-  color_dark: "#272727"
-  image: assets/images/bladiway_logo.png
-  image_dark: assets/images/bladiway_logo.png
+flutter_icons:
   android: true
-  ios: true
+  image_path: "assets/images/logo_without_back.png"
+  android_adaptive_icon_background: "#FFFFFF"
+  android_adaptive_icon_foreground: "assets/images/icon.png"
+
+flutter_native_splash:
+
+  color: "#FFFFFF"
+  color_dark: "#272727"
+  image: assets/images/1024.png
+  image_dark: assets/images/1024.png
 
   android_12:
-    image: assets/images/bladiway_logo.png
-    icon_background_color: "#f7f6f1"
-    image_dark: assets/images/bladiway_logo.png
-    icon_background_color_dark: "#272727"
+    color: "#FFFFFF"
+    color_dark: "#272727"
+    image: assets/images/1024.png
+    image_dark: assets/images/1024.png
 
-  fullscreen: true  # Supprime la barre de statut pour un splash screen plus propre
-  web: false
+
