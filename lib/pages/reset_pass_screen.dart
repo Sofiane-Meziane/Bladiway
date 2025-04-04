@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ResetPasswordVerificationScreen extends StatefulWidget {
+  final String verificationId;
   final Function(String, String) onPasswordReset;
 
   const ResetPasswordVerificationScreen({
     super.key,
+    required this.verificationId,
     required this.onPasswordReset,
   });
 
@@ -22,6 +25,53 @@ class _ResetPasswordVerificationScreenState
       TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Vérifie le code de vérification et réinitialise le mot de passe
+  Future<void> _verifyCodeAndResetPassword() async {
+    if (_formKey.currentState!.validate()) {
+      final verificationCode = verificationCodeController.text.trim();
+      final newPassword = passwordController.text.trim();
+
+      try {
+        // Créer le credential avec le code de vérification
+        PhoneAuthCredential credential = PhoneAuthProvider.credential(
+          verificationId: widget.verificationId,
+          smsCode: verificationCode,
+        );
+
+        // Signer avec le credential
+        UserCredential userCredential = await _auth.signInWithCredential(
+          credential,
+        );
+
+        // Mettre à jour le mot de passe
+        await userCredential.user!.updatePassword(newPassword);
+
+        // Appeler la fonction de callback pour redirection et message
+        widget.onPasswordReset(verificationCode, newPassword);
+      } on FirebaseAuthException catch (e) {
+        String errorMessage;
+        switch (e.code) {
+          case 'invalid-verification-code':
+            errorMessage = 'Code de vérification invalide';
+            break;
+          case 'session-expired':
+            errorMessage = 'La session a expiré. Veuillez réessayer.';
+            break;
+          default:
+            errorMessage = 'Erreur : ${e.message}';
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur inattendue : $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,14 +106,14 @@ class _ResetPasswordVerificationScreenState
                 ),
                 const SizedBox(height: 40),
                 Text(
-                  'Code de verification:',
+                  'Code de vérification:',
                   style: TextStyle(fontSize: 14, color: colorScheme.onSurface),
                 ),
                 const SizedBox(height: 8),
                 _buildTextField(
                   context,
                   controller: verificationCodeController,
-                  hintText: 'Code de verification',
+                  hintText: 'Code de vérification',
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer le code de vérification';
@@ -94,14 +144,14 @@ class _ResetPasswordVerificationScreenState
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Confirmer le mot de pass:',
+                  'Confirmer le mot de passe:',
                   style: TextStyle(fontSize: 14, color: colorScheme.onSurface),
                 ),
                 const SizedBox(height: 8),
                 _buildTextField(
                   context,
                   controller: confirmPasswordController,
-                  hintText: 'Confirmer Mot de passe',
+                  hintText: 'Confirmer le mot de passe',
                   obscureText: true,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -118,14 +168,7 @@ class _ResetPasswordVerificationScreenState
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        widget.onPasswordReset(
-                          verificationCodeController.text,
-                          passwordController.text,
-                        );
-                      }
-                    },
+                    onPressed: _verifyCodeAndResetPassword,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colorScheme.primary,
                       foregroundColor: colorScheme.onPrimary,

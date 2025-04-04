@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bladiway/pages/email_input_screen.dart';
 import 'package:bladiway/pages/phone_input_screen.dart';
 import 'package:bladiway/pages/reset_pass_screen.dart';
@@ -8,7 +10,6 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _LoginScreenState createState() => _LoginScreenState();
 }
 
@@ -19,6 +20,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _loginIdentifierFocus = FocusNode();
   final _passwordFocus = FocusNode();
   bool _obscurePassword = true;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -64,13 +67,84 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      FocusScope.of(context).unfocus();
+  Future<String?> _getEmailFromPhone(String phoneNumber) async {
+    try {
+      final querySnapshot =
+          await _firestore
+              .collection('users')
+              .where('phone', isEqualTo: phoneNumber)
+              .limit(1)
+              .get();
+      if (querySnapshot.docs.isNotEmpty) {
+        return querySnapshot.docs.first.data()['email'];
+      }
+      return null;
+    } catch (e) {
+      print('Erreur lors de la récupération de l\'email : $e');
+      return null;
+    }
+  }
+
+  Future<void> _signInWithEmail(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'Aucun utilisateur trouvé avec cet email';
+          break;
+        case 'wrong-password':
+          errorMessage = 'Mot de passe incorrect';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Email invalide';
+          break;
+        default:
+          errorMessage = 'Erreur de connexion : ${e.message}';
+      }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Connexion en cours...')));
-      // TODO: Implémenter la logique de connexion ici
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur inattendue : $e')));
+    }
+  }
+
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      FocusScope.of(context).unfocus();
+      String identifier = _loginIdentifierController.text.trim();
+      String password = _passwordController.text.trim();
+
+      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+      final phoneRegex = RegExp(
+        r'^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$',
+      );
+
+      if (emailRegex.hasMatch(identifier)) {
+        await _signInWithEmail(identifier, password);
+      } else if (phoneRegex.hasMatch(identifier)) {
+        String? email = await _getEmailFromPhone(identifier);
+        if (email != null) {
+          await _signInWithEmail(email, password);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Aucun utilisateur trouvé avec ce numéro'),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Identifiant invalide')));
+      }
     }
   }
 
@@ -85,10 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildPasswordResetOptions() {
     return Container(
       decoration: BoxDecoration(
-        color:
-            Theme.of(
-              context,
-            ).colorScheme.surface, // Utilisation de la couleur surface du thème
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(25),
           topRight: Radius.circular(25),
@@ -107,10 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color:
-                      Theme.of(
-                        context,
-                      ).colorScheme.onSurface, // Couleur adaptée au thème
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               IconButton(
@@ -170,9 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.secondary.withOpacity(
-            0.2,
-          ), // Couleur secondaire atténuée
+          color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -222,33 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
       MaterialPageRoute(
         builder:
-            (context) => ResetPasswordEmailScreen(
-              onEmailSubmit: (email) {
-                // TODO: Envoyer le code de vérification à l'email
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) => ResetPasswordVerificationScreen(
-                          onPasswordReset: (verificationCode, newPassword) {
-                            // TODO: Vérifier le code et mettre à jour le mot de passe
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Mot de passe mis à jour avec succès',
-                                ),
-                              ),
-                            );
-                            Navigator.popUntil(
-                              context,
-                              ModalRoute.withName('/login'),
-                            );
-                          },
-                        ),
-                  ),
-                );
-              },
-            ),
+            (context) => ResetPasswordEmailScreen(onEmailSubmit: (email) {}),
       ),
     );
   }
@@ -256,44 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _resetViaPhone() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder:
-            (context) => ResetPasswordPhoneScreen(
-              onPhoneSubmit: (phone) {
-                if (phone.isNotEmpty) {
-                  // TODO: Envoyer le code de vérification au numéro
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => ResetPasswordVerificationScreen(
-                            onPasswordReset: (verificationCode, newPassword) {
-                              // TODO: Vérifier le code et mettre à jour le mot de passe
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Mot de passe mis à jour avec succès',
-                                  ),
-                                ),
-                              );
-                              Navigator.popUntil(
-                                context,
-                                ModalRoute.withName('/login'),
-                              );
-                            },
-                          ),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Numéro de téléphone invalide'),
-                    ),
-                  );
-                }
-              },
-            ),
-      ),
+      MaterialPageRoute(builder: (context) => const ResetPasswordPhoneScreen()),
     );
   }
 
@@ -343,11 +346,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.primary,
                       ),
-                      textAlign: TextAlign.center, 
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
-                    //can put in image here !!
-                    
                     const SizedBox(height: 40),
                     TextFormField(
                       controller: _loginIdentifierController,
@@ -416,10 +417,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         "Se connecter",
                         style: TextStyle(
                           fontSize: 18,
-                          color:
-                              Theme.of(context)
-                                  .colorScheme
-                                  .onPrimary, // Couleur du texte adaptée au primary
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ),

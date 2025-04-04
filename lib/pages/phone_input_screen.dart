@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl_phone_field/phone_number.dart';
+import 'package:bladiway/pages/reset_pass_screen.dart';
 
 class ResetPasswordPhoneScreen extends StatefulWidget {
-  final Function(String) onPhoneSubmit;
-
-  const ResetPasswordPhoneScreen({super.key, required this.onPhoneSubmit});
+  const ResetPasswordPhoneScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _ResetPasswordPhoneScreenState createState() =>
       _ResetPasswordPhoneScreenState();
 }
 
 class _ResetPasswordPhoneScreenState extends State<ResetPasswordPhoneScreen> {
-  // Clé pour valider le formulaire
   final _formKey = GlobalKey<FormState>();
-
-  // Contrôleur pour le champ téléphone
   final _phoneController = TextEditingController();
-
-  // Variable pour stocker le numéro de téléphone courant
   PhoneNumber? _currentPhoneNumber;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Validation du numéro de téléphone
   String? _validatePhone(PhoneNumber? phone) {
@@ -31,23 +28,106 @@ class _ResetPasswordPhoneScreenState extends State<ResetPasswordPhoneScreen> {
         : null;
   }
 
-  // Mise à jour du numéro de téléphone lors d'un changement
+  // Mise à jour du numéro de téléphone lors d’un changement
   void _onPhoneChanged(PhoneNumber phone) {
     setState(() {
       _currentPhoneNumber = phone;
     });
   }
 
+  // Vérifie si le numéro de téléphone existe dans Firestore
+  Future<bool> _checkPhoneExists(String phoneNumber) async {
+    try {
+      final querySnapshot =
+          await _firestore
+              .collection('users')
+              .where('phone', isEqualTo: phoneNumber)
+              .limit(1)
+              .get();
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Erreur lors de la vérification du numéro : $e');
+      return false;
+    }
+  }
+
+  // Envoie un code de vérification via Firebase Authentication
+  Future<void> _sendVerificationCode(String phoneNumber) async {
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) {
+          // Auto-résolution si possible (cas rare)
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          String errorMessage;
+          switch (e.code) {
+            case 'invalid-phone-number':
+              errorMessage = 'Numéro de téléphone invalide';
+              break;
+            default:
+              errorMessage = 'Erreur lors de l\'envoi du code : ${e.message}';
+          }
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(errorMessage)));
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          // Code envoyé avec succès
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Code de vérification envoyé')),
+          );
+          // Redirection vers la page de réinitialisation
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => ResetPasswordVerificationScreen(
+                    verificationId: verificationId,
+                    onPasswordReset: (verificationCode, newPassword) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Mot de passe réinitialisé avec succès',
+                          ),
+                        ),
+                      );
+                      Navigator.pushReplacementNamed(context, '/login');
+                    },
+                  ),
+            ),
+          );
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          // Timeout pour la récupération automatique
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur inattendue : $e')));
+    }
+  }
+
   // Soumission du numéro de téléphone
-  void _submitPhone() {
+  void _submitPhone() async {
     if (_formKey.currentState!.validate() && _currentPhoneNumber != null) {
-      widget.onPhoneSubmit(_currentPhoneNumber!.completeNumber);
+      final phoneNumber = _currentPhoneNumber!.completeNumber;
+      final phoneExists = await _checkPhoneExists(phoneNumber);
+      if (phoneExists) {
+        await _sendVerificationCode(phoneNumber);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aucun utilisateur trouvé avec ce numéro'),
+          ),
+        );
+      }
     }
   }
 
   @override
   void dispose() {
-    // Libérer le contrôleur pour éviter les fuites de mémoire
     _phoneController.dispose();
     super.dispose();
   }
@@ -75,7 +155,6 @@ class _ResetPasswordPhoneScreenState extends State<ResetPasswordPhoneScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Titre
                 Text(
                   'Changer de mot de passe',
                   style: TextStyle(
@@ -85,15 +164,11 @@ class _ResetPasswordPhoneScreenState extends State<ResetPasswordPhoneScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // Label du champ téléphone
                 Text(
                   'Votre numéro de téléphone:',
                   style: TextStyle(fontSize: 14, color: colorScheme.onSurface),
                 ),
                 const SizedBox(height: 8),
-
-                // Champ numéro de téléphone
                 IntlPhoneField(
                   controller: _phoneController,
                   decoration: InputDecoration(
@@ -115,8 +190,6 @@ class _ResetPasswordPhoneScreenState extends State<ResetPasswordPhoneScreen> {
                   validator: _validatePhone,
                 ),
                 const SizedBox(height: 24),
-
-                // Bouton de confirmation
                 SizedBox(
                   width: double.infinity,
                   height: 50,

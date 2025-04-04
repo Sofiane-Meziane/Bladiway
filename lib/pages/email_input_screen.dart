@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ResetPasswordEmailScreen extends StatefulWidget {
-  final Function(String) onEmailSubmit;
-
-  const ResetPasswordEmailScreen({super.key, required this.onEmailSubmit});
+  const ResetPasswordEmailScreen({super.key, required Null Function(dynamic email) onEmailSubmit});
 
   @override
-  // ignore: library_private_types_in_public_api
   _ResetPasswordEmailScreenState createState() =>
       _ResetPasswordEmailScreenState();
 }
 
 class _ResetPasswordEmailScreenState extends State<ResetPasswordEmailScreen> {
-  // Contrôleur pour le champ email
   final _emailController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Validation de l'email
   String? _validateEmail(String? value) {
@@ -26,17 +26,72 @@ class _ResetPasswordEmailScreenState extends State<ResetPasswordEmailScreen> {
     return null;
   }
 
+  // Vérifie si l'email existe dans Firestore
+  Future<bool> _checkEmailExists(String email) async {
+    try {
+      final querySnapshot =
+          await _firestore
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Erreur lors de la vérification de l\'email : $e');
+      return false;
+    }
+  }
+
+  // Envoie un email de réinitialisation via Firebase Authentication
+  Future<void> _sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('E-mail de réinitialisation envoyé')),
+      );
+      // Retour direct à la page de connexion après l'envoi de l'e-mail
+      Navigator.pushReplacementNamed(context, '/login');
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'Aucun utilisateur trouvé avec cet email';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Email invalide';
+          break;
+        default:
+          errorMessage = 'Erreur lors de l\'envoi de l\'email : ${e.message}';
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur inattendue : $e')));
+    }
+  }
+
   // Soumission de l'email
-  void _submitEmail() {
-    final email = _emailController.text;
+  void _submitEmail() async {
+    final email = _emailController.text.trim();
     if (_validateEmail(email) == null) {
-      widget.onEmailSubmit(email);
+      final emailExists = await _checkEmailExists(email);
+      if (emailExists) {
+        await _sendPasswordResetEmail(email);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aucun utilisateur trouvé avec cet email'),
+          ),
+        );
+      }
     }
   }
 
   @override
   void dispose() {
-    // Libérer le contrôleur pour éviter les fuites de mémoire
     _emailController.dispose();
     super.dispose();
   }
@@ -62,7 +117,6 @@ class _ResetPasswordEmailScreenState extends State<ResetPasswordEmailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Titre
               Text(
                 'Changer de mot de passe',
                 style: TextStyle(
@@ -72,20 +126,16 @@ class _ResetPasswordEmailScreenState extends State<ResetPasswordEmailScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // Label du champ email
               Text(
-                'Votre gmail:',
+                'Votre email:',
                 style: TextStyle(fontSize: 14, color: colorScheme.onSurface),
               ),
               const SizedBox(height: 8),
-
-              // Champ email
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: 'Gmail',
+                  hintText: 'Email',
                   hintStyle: TextStyle(color: theme.hintColor),
                   filled: true,
                   fillColor: colorScheme.surface,
@@ -110,8 +160,6 @@ class _ResetPasswordEmailScreenState extends State<ResetPasswordEmailScreen> {
                 validator: _validateEmail,
               ),
               const SizedBox(height: 24),
-
-              // Bouton de confirmation
               SizedBox(
                 width: double.infinity,
                 height: 50,

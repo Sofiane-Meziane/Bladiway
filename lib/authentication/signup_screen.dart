@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -24,7 +24,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   CommunMethods cMethods = CommunMethods();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final DatabaseReference _database = FirebaseDatabase.instance.ref();
+  final CollectionReference _usersCollection = FirebaseFirestore.instance.collection('users');
   String? _fullPhoneNumber;
   bool _isPasswordVisible = false;
   String? _selectedGenre;
@@ -40,14 +40,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   /// Vérifie si le numéro de téléphone est déjà utilisé dans la base de données
   Future<bool> _checkPhoneNumberAvailability(String phoneNumber) async {
     try {
-      DataSnapshot snapshot =
-          await _database
-              .child('users')
-              .orderByChild('phone')
-              .equalTo(phoneNumber)
-              .get();
+      final querySnapshot = await _usersCollection
+          .where('phone', isEqualTo: phoneNumber)
+          .get();
 
-      if (snapshot.exists) {
+      if (querySnapshot.docs.isNotEmpty) {
         setState(() {
           _phoneError = 'Ce numéro de téléphone est déjà utilisé';
         });
@@ -78,53 +75,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<bool> _checkEmailAvailability(String email) async {
     final String trimmedEmail = email.trim(); // Supprimer les espaces vides
 
-    // 1. Validation initiale (format et non vide) - Optionnelle car Firebase valide aussi
-    // Note: Cette vérification regex donne un retour immédiat pour les erreurs de format simples.
     if (trimmedEmail.isEmpty ||
         !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(trimmedEmail)) {
       setState(() {
-        // Si le validator du TextFormField gère déjà le format,
-        // cette partie pourrait être redondante ou simplifiée.
-        // Gardons-la pour l'instant pour correspondre à l'original.
         _emailError = 'Veuillez entrer un email valide';
       });
-      print(
-        "Validation échouée (format/vide): $trimmedEmail",
-      ); // Log pour debug
-      return false; // Format invalide ou email vide
+      print("Validation échouée (format/vide): $trimmedEmail");
+      return false;
     }
 
-    // 2. Vérification auprès de Firebase
     try {
-      print("Vérification Firebase pour: $trimmedEmail"); // Log pour debug
+      print("Vérification Firebase pour: $trimmedEmail");
       final methods = await _auth.fetchSignInMethodsForEmail(trimmedEmail);
 
-      // 3. Analyse du résultat
       if (methods.isNotEmpty) {
-        // L'email est déjà associé à un compte
-        print("Email déjà utilisé: $trimmedEmail"); // Log pour debug
+        print("Email déjà utilisé: $trimmedEmail");
         setState(() {
           _emailError = 'Cet email est déjà utilisé';
         });
-        return false; // Email non disponible
+        return false;
       } else {
-        // L'email est disponible
-        print("Email disponible: $trimmedEmail"); // Log pour debug
-        // On ne met à null ici que si on est sûr qu'aucune autre erreur
-        // (comme le téléphone) n'est présente ou si l'UI le gère.
-        // Il est peut-être préférable de le laisser à startSignUpProcess
-        // ou de le gérer différemment. Pour l'instant, gardons la logique
-        // d'effacer si l'email *spécifiquement* est OK.
+        print("Email disponible: $trimmedEmail");
         setState(() {
           _emailError = null;
         });
-        return true; // Email disponible
+        return true;
       }
     } on FirebaseAuthException catch (e) {
-      // 4. Gestion des erreurs spécifiques de Firebase Auth
-      print(
-        'Erreur FirebaseAuthException dans _checkEmailAvailability (${e.code}): ${e.message}',
-      );
+      print('Erreur FirebaseAuthException dans _checkEmailAvailability (${e.code}): ${e.message}');
       setState(() {
         if (e.code == 'invalid-email') {
           _emailError = 'Le format de l\'email est invalide (selon Firebase)';
@@ -134,14 +112,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _emailError = 'Erreur Firebase (Email): ${e.message ?? e.code}';
         }
       });
-      return false; // Erreur Firebase
+      return false;
     } catch (e) {
-      // 5. Gestion des autres erreurs inattendues
       print('Erreur inattendue dans _checkEmailAvailability : $e');
       setState(() {
         _emailError = 'Erreur inattendue (Email).';
       });
-      return false; // Erreur inattendue
+      return false;
     }
   }
 
@@ -154,9 +131,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (BuildContext context) =>
-              LoadingDialog(messageText: 'Vérification en cours...'),
+      builder: (BuildContext context) => LoadingDialog(messageText: 'Vérification en cours...'),
     );
 
     try {
@@ -202,9 +177,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           print('Échec de la vérification : ${e.code} - ${e.message}');
           if (mounted) {
             Navigator.pop(context);
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(_getErrorMessage(e.code))));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_getErrorMessage(e.code))));
           }
         },
         codeSent: (String verificationId, int? resendToken) {
@@ -235,9 +208,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la vérification : ${e.toString()}'),
-          ),
+          SnackBar(content: Text('Erreur lors de la vérification : ${e.toString()}')),
         );
       }
       print('Erreur dans startPhoneVerification : $e');
@@ -263,13 +234,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
       initialDate: DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
-      builder:
-          (context, child) => Theme(
-            data: ThemeData.light().copyWith(
-              colorScheme: const ColorScheme.light(primary: Colors.green),
-            ),
-            child: child!,
-          ),
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(primary: Colors.green),
+        ),
+        child: child!,
+      ),
     );
     if (picked != null) {
       setState(() {
@@ -322,9 +292,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     prefixIcon: Icon(Icons.person, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  validator:
-                      (value) =>
-                          value!.isEmpty ? 'Veuillez entrer votre nom' : null,
+                  validator: (value) => value!.isEmpty ? 'Veuillez entrer votre nom' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -334,11 +302,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     prefixIcon: Icon(Icons.person_outline, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  validator:
-                      (value) =>
-                          value!.isEmpty
-                              ? 'Veuillez entrer votre prénom'
-                              : null,
+                  validator: (value) => value!.isEmpty ? 'Veuillez entrer votre prénom' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -352,17 +316,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   validator: (value) {
                     if (value!.isEmpty) return 'Veuillez entrer votre email';
-                    final emailRegex = RegExp(
-                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                    );
-                    return emailRegex.hasMatch(value)
-                        ? null
-                        : 'Veuillez entrer un email valide';
+                    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                    return emailRegex.hasMatch(value) ? null : 'Veuillez entrer un email valide';
                   },
                   onChanged: (value) {
                     setState(() {
-                      _emailError =
-                          null; // Réinitialiser l'erreur au changement
+                      _emailError = null; // Réinitialiser l'erreur au changement
                     });
                   },
                 ),
@@ -405,11 +364,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   readOnly: true,
                   onTap: _selectDate,
-                  validator:
-                      (value) =>
-                          value!.isEmpty
-                              ? 'Veuillez sélectionner votre date de naissance'
-                              : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'Veuillez sélectionner votre date de naissance' : null,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -418,21 +374,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     prefixIcon: Icon(Icons.people, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  items:
-                      _genres
-                          .map(
-                            (genre) => DropdownMenuItem(
-                              value: genre,
-                              child: Text(genre),
-                            ),
-                          )
-                          .toList(),
+                  items: _genres.map((genre) => DropdownMenuItem(value: genre, child: Text(genre))).toList(),
                   onChanged: (value) => setState(() => _selectedGenre = value),
-                  validator:
-                      (value) =>
-                          value == null
-                              ? 'Veuillez sélectionner votre genre'
-                              : null,
+                  validator: (value) => value == null ? 'Veuillez sélectionner votre genre' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -444,24 +388,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                         color: primaryColor,
                       ),
-                      onPressed:
-                          () => setState(
-                            () => _isPasswordVisible = !_isPasswordVisible,
-                          ),
+                      onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                     ),
                   ),
                   validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Veuillez entrer un mot de passe';
-                    }
-                    return value.length < 8
-                        ? 'Le mot de passe doit contenir au moins 8 caractères'
-                        : null;
+                    if (value!.isEmpty) return 'Veuillez entrer un mot de passe';
+                    return value.length < 8 ? 'Le mot de passe doit contenir au moins 8 caractères' : null;
                   },
                 ),
                 const SizedBox(height: 24),
@@ -469,9 +404,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   onPressed: () async {
                     await checkIfTheNetworkIsAvailable(context);
@@ -492,10 +425,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       children: [
                         TextSpan(
                           text: 'Connectez-vous',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),

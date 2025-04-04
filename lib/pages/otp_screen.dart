@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class OTPScreen extends StatefulWidget {
   const OTPScreen({super.key});
@@ -17,6 +17,7 @@ class _OTPScreenState extends State<OTPScreen> {
   );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   void _onOTPChanged(int index, String value) {
     if (value.length == 1) {
@@ -67,7 +68,6 @@ class _OTPScreenState extends State<OTPScreen> {
       // Étape 1 : Créer l'utilisateur avec email/mot de passe
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
-
       User? user = userCredential.user;
 
       if (user != null) {
@@ -81,13 +81,8 @@ class _OTPScreenState extends State<OTPScreen> {
           // Étape 3 : Lier le credential du téléphone à l'utilisateur
           await user.linkWithCredential(credential);
 
-          // Étape 4 : Enregistrer les données dans la base de données
-          DatabaseReference usersRef = FirebaseDatabase.instance
-              .ref()
-              .child('users')
-              .child(user.uid);
-
-          Map<String, dynamic> userDataMap = {
+          // Étape 4 : Enregistrer les données dans Cloud Firestore
+          await _firestore.collection('users').doc(user.uid).set({
             'nom': nom,
             'prenom': prenom,
             'email': email,
@@ -97,9 +92,7 @@ class _OTPScreenState extends State<OTPScreen> {
             'id': user.uid,
             'blockStatus': 'no',
             'phoneVerified': true,
-          };
-
-          await usersRef.set(userDataMap);
+          });
 
           if (mounted) {
             Navigator.pushReplacementNamed(context, '/home');
