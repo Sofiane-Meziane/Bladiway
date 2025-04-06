@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 class CommunMethods {
   Future<bool> checkConnectivity(BuildContext context) async {
     var connectionResults = await Connectivity().checkConnectivity();
-
-    // Vérifier si la liste contient uniquement 'none'
     if (connectionResults.contains(ConnectivityResult.none) &&
         connectionResults.length == 1) {
       if (context.mounted) {
@@ -16,7 +14,7 @@ class CommunMethods {
       }
       return false;
     }
-    return true; // Une connexion est détectée
+    return true;
   }
 
   void displaySnackBar(String messageText, BuildContext context) {

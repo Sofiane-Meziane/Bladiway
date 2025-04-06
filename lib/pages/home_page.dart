@@ -24,16 +24,13 @@ class _HomePageState extends State<HomePage> {
     });
 
     // Ajout de la navigation vers la page des paramètres
-    if (index == 4) {
-      // 4 est l'index de l'onglet Paramètres
+    if (index == 3) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ParametresPage()),
       );
-      // Rétablir l'index précédent après navigation pour éviter
-      // que l'onglet Paramètres reste sélectionné après retour
       setState(() {
-        _selectedIndex = 0; // Ou garder l'index précédent si vous préférez
+        _selectedIndex = 0;
       });
     }
   }
@@ -41,7 +38,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
       body: Column(
         children: [
           Stack(
@@ -50,9 +46,12 @@ class _HomePageState extends State<HomePage> {
                 clipper: HeaderClipper(),
                 child: Container(
                   height: 270,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        const Color(0xFF64B5F6),
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -71,57 +70,66 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
+                            GestureDetector(
+                              onTap: () {
+                              Navigator.pushNamed(context, '/profile');
+                              },
+                              child: CircleAvatar(
                               radius: 20,
                               backgroundColor: Colors.white,
                               backgroundImage:
-                                  userPhotoUrl.isNotEmpty
-                                      ? NetworkImage(userPhotoUrl)
-                                      : null,
+                                userPhotoUrl.isNotEmpty
+                                  ? NetworkImage(userPhotoUrl)
+                                  : null,
                               child:
-                                  userPhotoUrl.isEmpty
-                                      ? const Icon(
-                                        Icons.person,
-                                        color: Colors.blue,
-                                        size: 24,
-                                      )
-                                      : null,
+                                userPhotoUrl.isEmpty
+                                  ? const Icon(
+                                    Icons.person,
+                                    color: Colors.blue,
+                                    size: 24,
+                                  )
+                                  : null,
+                              ),
                             ),
                             const SizedBox(width: 16),
-                            const Text(
+                            Text(
                               'Bienvenue à notre plateforme',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.white70,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimary.withOpacity(0.7),
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
                           ],
                         ),
-                        const Icon(
+                        Icon(
                           Icons.notifications_none,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           size: 28,
                         ),
                       ],
                     ),
                     const SizedBox(height: 30),
-                    const Text(
+                    Text(
                       'Bladiway',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         letterSpacing: 1.5,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Bonjour, $userName',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
-                        color: Colors.white70,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary.withOpacity(0.7),
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -162,9 +170,11 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.blue.shade700,
-        unselectedItemColor: Colors.grey,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withOpacity(0.5),
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -178,7 +188,6 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.check_circle),
             label: 'Réservations',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Paramètres',
@@ -258,7 +267,7 @@ class _HomePageState extends State<HomePage> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
+            color: Theme.of(context).colorScheme.onBackground,
           ),
         ),
         const SizedBox(height: 10),
@@ -294,7 +303,7 @@ class _HomePageState extends State<HomePage> {
       width: 100,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
@@ -306,9 +315,19 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
         ],
       ),
     );
