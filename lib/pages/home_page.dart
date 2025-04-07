@@ -180,6 +180,7 @@ class _HomePageState extends State<HomePage> {
                     buttonText: 'Réserver',
                     color1: const Color(0xFF1976D2),
                     color2: const Color(0xFF42A5F5),
+                    onPressed: () {}, // Laisser vide pour l'instant
                   ),
                   const SizedBox(height: 16),
                   buildCard(
@@ -188,6 +189,7 @@ class _HomePageState extends State<HomePage> {
                     buttonText: 'Ajouter un trajet',
                     color1: const Color(0xFF2E7D32),
                     color2: const Color(0xFF66BB6A),
+                    onPressed: () => Navigator.pushNamed(context, '/info_trajet'),
                   ),
                   const SizedBox(height: 16),
                   buildStatisticsSection(),
@@ -234,6 +236,7 @@ class _HomePageState extends State<HomePage> {
     required String buttonText,
     required Color color1,
     required Color color2,
+    required VoidCallback onPressed,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -273,7 +276,7 @@ class _HomePageState extends State<HomePage> {
           Align(
             alignment: Alignment.bottomRight,
             child: TextButton(
-              onPressed: () {},
+              onPressed: onPressed, // Utiliser le callback passé en paramètre
               style: TextButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: color1,

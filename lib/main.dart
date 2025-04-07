@@ -1,3 +1,4 @@
+import 'package:bladiway/pages/info_trajet.dart';
 import 'package:bladiway/pages/otp_screen.dart';
 import 'package:bladiway/pages/presentation.dart';
 import 'package:flutter/material.dart';
@@ -82,7 +83,8 @@ class MyApp extends StatelessWidget {
         '/settings': (context) => const ParametresPage(),
         '/profile': (context) => const ProfileScreen(),
         '/presentation': (context) => const PresentationPage(),
-        '/otp': (context) => const OTPScreen(), // Added forward slash
+        '/otp': (context) => const OTPScreen(),
+        '/info_trajet': (context) => const InfoTrajet(),
       },
     );
   }
