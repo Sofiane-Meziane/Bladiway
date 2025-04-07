@@ -1,3 +1,5 @@
+import 'package:bladiway/pages/otp_screen.dart';
+import 'package:bladiway/pages/presentation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,8 +9,8 @@ import 'pages/settings_screen.dart';
 import 'pages/profile_screen.dart';
 import 'authentication/login_screen.dart';
 import 'authentication/signup_screen.dart';
-import 'providers/theme_provider.dart'; // Assurez-vous de créer ce fichier dans un dossier "providers"
-
+import 'providers/theme_provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -32,6 +34,16 @@ class MyApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
+      locale: const Locale('fr', 'FR'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('fr', 'FR'),
+        // Ajoutez d'autres locales si nécessaire, comme Locale('en', 'US')
+      ],
       theme: ThemeData(
         brightness: Brightness.light,
         colorScheme: ColorScheme.light(
@@ -60,7 +72,7 @@ class MyApp extends StatelessWidget {
           if (snapshot.hasData) {
             return const HomePage();
           }
-          return const LoginScreen();
+          return const PresentationPage();
         },
       ),
       routes: {
@@ -69,6 +81,8 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/settings': (context) => const ParametresPage(),
         '/profile': (context) => const ProfileScreen(),
+        '/presentation': (context) => const PresentationPage(),
+        '/otp': (context) => const OTPScreen(), // Added forward slash
       },
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:bladiway/methods/commun_methods.dart';
 import 'package:bladiway/widgets/loading_dialog.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +6,8 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -24,7 +27,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   CommunMethods cMethods = CommunMethods();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final CollectionReference _usersCollection = FirebaseFirestore.instance.collection('users');
+  final CollectionReference _usersCollection = FirebaseFirestore.instance
+      .collection('users');
+
   String? _fullPhoneNumber;
   bool _isPasswordVisible = false;
   String? _selectedGenre;
@@ -32,17 +37,82 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _emailError;
   final List<String> _genres = ['Homme', 'Femme'];
 
-  /// Vérifie la disponibilité du réseau (supposée implémentée dans CommunMethods)
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
+  String? _imageError;
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+          _imageError = null;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _imageError = 'Erreur lors de la sélection de l\'image';
+      });
+      print('Erreur lors de la sélection de l\'image: $e');
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Choisir une image de profil'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                GestureDetector(
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('Prendre une photo'),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Divider(),
+                ),
+                GestureDetector(
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('Choisir depuis la galerie'),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   checkIfTheNetworkIsAvailable(context) {
     cMethods.checkConnectivity(context);
   }
 
-  /// Vérifie si le numéro de téléphone est déjà utilisé dans la base de données
   Future<bool> _checkPhoneNumberAvailability(String phoneNumber) async {
     try {
-      final querySnapshot = await _usersCollection
-          .where('phone', isEqualTo: phoneNumber)
-          .get();
+      final querySnapshot =
+          await _usersCollection.where('phone', isEqualTo: phoneNumber).get();
 
       if (querySnapshot.docs.isNotEmpty) {
         setState(() {
@@ -70,10 +140,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  /// Vérifie si l'email est déjà utilisé avec Firebase Auth.
-  /// Met à jour l'état _emailError via setState et retourne true si l'email est disponible, false sinon.
   Future<bool> _checkEmailAvailability(String email) async {
-    final String trimmedEmail = email.trim(); // Supprimer les espaces vides
+    final String trimmedEmail = email.trim();
 
     if (trimmedEmail.isEmpty ||
         !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(trimmedEmail)) {
@@ -102,7 +170,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         return true;
       }
     } on FirebaseAuthException catch (e) {
-      print('Erreur FirebaseAuthException dans _checkEmailAvailability (${e.code}): ${e.message}');
+      print(
+        'Erreur FirebaseAuthException dans _checkEmailAvailability (${e.code}): ${e.message}',
+      );
       setState(() {
         if (e.code == 'invalid-email') {
           _emailError = 'Le format de l\'email est invalide (selon Firebase)';
@@ -122,24 +192,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  /// Lance le processus d'inscription
   Future<void> startSignUpProcess() async {
-    if (!_formKey.currentState!.validate() || _phoneError != null) {
+    if (_imageFile == null) {
+      setState(() {
+        _imageError = 'Veuillez sélectionner une image de profil';
+      });
+      return;
+    }
+
+    if (!_formKey.currentState!.validate() ||
+        _phoneError != null ||
+        _imageError != null) {
       return;
     }
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) => LoadingDialog(messageText: 'Vérification en cours...'),
+      builder:
+          (BuildContext context) =>
+              LoadingDialog(messageText: 'Vérification en cours...'),
     );
 
     try {
       setState(() {
         _emailError = null;
         _phoneError = null;
+        _imageError = null;
       });
 
+      print('Début de la vérification des disponibilités...');
       final results = await Future.wait([
         _checkEmailAvailability(_emailController.text.trim()),
         _checkPhoneNumberAvailability(_fullPhoneNumber!),
@@ -148,12 +230,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
       bool isEmailAvailable = results[0];
       bool isPhoneAvailable = results[1];
 
+      print('Email disponible: $isEmailAvailable');
+      print('Numéro disponible: $isPhoneAvailable');
+
       if (!isEmailAvailable || !isPhoneAvailable) {
         Navigator.pop(context);
         return;
       }
 
       if (_fullPhoneNumber != null && _fullPhoneNumber!.isNotEmpty) {
+        print('Lancement de la vérification OTP...');
         await startPhoneVerification(_fullPhoneNumber!);
       } else {
         throw Exception('Numéro de téléphone requis');
@@ -166,24 +252,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  /// Lance la vérification par OTP
   Future<void> startPhoneVerification(String phoneNumber) async {
     try {
       print('Début de la vérification téléphonique pour : $phoneNumber');
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {},
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          print('Vérification automatique réussie');
+        },
         verificationFailed: (FirebaseAuthException e) {
           print('Échec de la vérification : ${e.code} - ${e.message}');
           if (mounted) {
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_getErrorMessage(e.code))));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(_getErrorMessage(e.code))));
           }
         },
         codeSent: (String verificationId, int? resendToken) {
-          print('Code SMS envoyé, verificationId : $verificationId');
+          print('Code SMS envoyé avec verificationId : $verificationId');
           if (mounted) {
             Navigator.pop(context);
+            print('Navigation vers OTPScreen...');
             Navigator.pushNamed(
               context,
               '/otp',
@@ -196,8 +286,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 'password': _passwordController.text.trim(),
                 'dateNaissance': _dateNaissanceController.text.trim(),
                 'genre': _selectedGenre,
+                'imageFile': _imageFile,
               },
             );
+          } else {
+            print('Widget non monté, navigation annulée');
           }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
@@ -208,14 +301,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la vérification : ${e.toString()}')),
+          SnackBar(
+            content: Text('Erreur lors de la vérification : ${e.toString()}'),
+          ),
         );
       }
       print('Erreur dans startPhoneVerification : $e');
     }
   }
 
-  /// Retourne un message d'erreur personnalisé basé sur le code d'erreur
   String _getErrorMessage(String code) {
     switch (code) {
       case 'invalid-phone-number':
@@ -227,23 +321,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  /// Affiche le sélecteur de date
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
+      locale: const Locale('fr', 'FR'), // Ajout de la locale française
       initialDate: DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
-      builder: (context, child) => Theme(
-        data: ThemeData.light().copyWith(
-          colorScheme: const ColorScheme.light(primary: Colors.green),
-        ),
-        child: child!,
-      ),
+      builder:
+          (context, child) => Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(primary: Colors.green),
+            ),
+            child: child!,
+          ),
     );
     if (picked != null) {
       setState(() {
-        _dateNaissanceController.text = DateFormat('dd/MM/yyyy').format(picked);
+        _dateNaissanceController.text = DateFormat(
+          'dd/MM/yyyy',
+          'fr_FR',
+        ).format(picked); // Locale ajoutée
       });
     }
   }
@@ -285,6 +383,80 @@ class _SignUpScreenState extends State<SignUpScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: _showImageSourceDialog,
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: primaryColor,
+                                  width: 2,
+                                ),
+                              ),
+                              child:
+                                  _imageFile != null
+                                      ? ClipOval(
+                                        child: Image.file(
+                                          _imageFile!,
+                                          width: 120,
+                                          height: 120,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                      : Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: Colors.grey[600],
+                                      ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_imageError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            _imageError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                        child: Text(
+                          "Photo de profil",
+                          style: TextStyle(color: primaryColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 TextFormField(
                   controller: _nomController,
                   decoration: InputDecoration(
@@ -292,7 +464,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     prefixIcon: Icon(Icons.person, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  validator: (value) => value!.isEmpty ? 'Veuillez entrer votre nom' : null,
+                  validator:
+                      (value) =>
+                          value!.isEmpty ? 'Veuillez entrer votre nom' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -302,7 +476,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     prefixIcon: Icon(Icons.person_outline, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  validator: (value) => value!.isEmpty ? 'Veuillez entrer votre prénom' : null,
+                  validator:
+                      (value) =>
+                          value!.isEmpty
+                              ? 'Veuillez entrer votre prénom'
+                              : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -316,12 +494,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   validator: (value) {
                     if (value!.isEmpty) return 'Veuillez entrer votre email';
-                    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                    return emailRegex.hasMatch(value) ? null : 'Veuillez entrer un email valide';
+                    final emailRegex = RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    );
+                    return emailRegex.hasMatch(value)
+                        ? null
+                        : 'Veuillez entrer un email valide';
                   },
                   onChanged: (value) {
                     setState(() {
-                      _emailError = null; // Réinitialiser l'erreur au changement
+                      _emailError = null;
                     });
                   },
                 ),
@@ -364,8 +546,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   readOnly: true,
                   onTap: _selectDate,
-                  validator: (value) =>
-                      value!.isEmpty ? 'Veuillez sélectionner votre date de naissance' : null,
+                  validator:
+                      (value) =>
+                          value!.isEmpty
+                              ? 'Veuillez sélectionner votre date de naissance'
+                              : null,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -374,9 +559,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     prefixIcon: Icon(Icons.people, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  items: _genres.map((genre) => DropdownMenuItem(value: genre, child: Text(genre))).toList(),
+                  items:
+                      _genres
+                          .map(
+                            (genre) => DropdownMenuItem(
+                              value: genre,
+                              child: Text(genre),
+                            ),
+                          )
+                          .toList(),
                   onChanged: (value) => setState(() => _selectedGenre = value),
-                  validator: (value) => value == null ? 'Veuillez sélectionner votre genre' : null,
+                  validator:
+                      (value) =>
+                          value == null
+                              ? 'Veuillez sélectionner votre genre'
+                              : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -388,15 +585,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: primaryColor,
                       ),
-                      onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                      onPressed:
+                          () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
                     ),
                   ),
                   validator: (value) {
-                    if (value!.isEmpty) return 'Veuillez entrer un mot de passe';
-                    return value.length < 8 ? 'Le mot de passe doit contenir au moins 8 caractères' : null;
+                    if (value!.isEmpty) {
+                      return 'Veuillez entrer un mot de passe';
+                    }
+                    return value.length < 8
+                        ? 'Le mot de passe doit contenir au moins 8 caractères'
+                        : null;
                   },
                 ),
                 const SizedBox(height: 24),
@@ -404,7 +610,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: () async {
                     await checkIfTheNetworkIsAvailable(context);
@@ -425,7 +633,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       children: [
                         TextSpan(
                           text: 'Connectez-vous',
-                          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),

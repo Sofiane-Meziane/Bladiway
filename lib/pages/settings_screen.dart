@@ -219,7 +219,11 @@ class ParametresPage extends StatelessWidget {
       try {
         await FirebaseAuth.instance.signOut();
         CommunMethods().displaySnackBar("Déconnexion réussie", context);
-        Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/presentation',
+          (Route<dynamic> route) => false,
+        );
       } catch (e) {
         CommunMethods().displaySnackBar(
           "Erreur lors de la déconnexion : $e",

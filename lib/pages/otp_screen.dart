@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class OTPScreen extends StatefulWidget {
   const OTPScreen({super.key});
@@ -18,6 +20,7 @@ class _OTPScreenState extends State<OTPScreen> {
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   void _onOTPChanged(int index, String value) {
     if (value.length == 1) {
@@ -28,6 +31,18 @@ class _OTPScreenState extends State<OTPScreen> {
       }
     } else if (value.isEmpty && index > 0) {
       FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
+    }
+  }
+
+  Future<String?> _uploadProfileImage(String userId, File imageFile) async {
+    try {
+      final storageRef = _storage.ref().child('profile_images/$userId.jpg');
+      await storageRef.putFile(imageFile);
+      final downloadUrl = await storageRef.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Erreur lors du téléchargement de l\'image: $e');
+      return null;
     }
   }
 
@@ -42,46 +57,75 @@ class _OTPScreenState extends State<OTPScreen> {
     }
 
     try {
-      // Récupérer les arguments passés depuis SignUpScreen
       final Map<String, dynamic>? arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
-      if (arguments == null ||
-          arguments['verificationId'] == null ||
-          arguments['email'] == null ||
-          arguments['password'] == null) {
+      if (arguments == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur: Arguments manquants')),
+        );
+        return;
+      }
+
+      print('Arguments reçus dans OTPScreen : $arguments');
+
+      final String? verificationId = arguments['verificationId'];
+      final String? email = arguments['email'];
+      final String? password = arguments['password'];
+      final String? phoneNumber = arguments['phoneNumber'];
+      final String? nom = arguments['nom'];
+      final String? prenom = arguments['prenom'];
+      final String? dateNaissance = arguments['dateNaissance'];
+      final String? genre = arguments['genre'];
+      final File? imageFile = arguments['imageFile'];
+
+      if (verificationId == null ||
+          email == null ||
+          password == null ||
+          phoneNumber == null ||
+          nom == null ||
+          prenom == null ||
+          dateNaissance == null ||
+          genre == null ||
+          imageFile == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Erreur: Données manquantes')),
         );
         return;
       }
 
-      final String verificationId = arguments['verificationId'];
-      final String email = arguments['email'];
-      final String password = arguments['password'];
-      final String phoneNumber = arguments['phoneNumber'];
-      final String nom = arguments['nom'];
-      final String prenom = arguments['prenom'];
-      final String dateNaissance = arguments['dateNaissance'];
-      final String? genre = arguments['genre'];
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            content: Row(
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 20),
+                const Text("Vérification en cours..."),
+              ],
+            ),
+          );
+        },
+      );
 
-      // Étape 1 : Créer l'utilisateur avec email/mot de passe
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
       User? user = userCredential.user;
 
       if (user != null) {
         try {
-          // Étape 2 : Créer le credential avec l'OTP
           PhoneAuthCredential credential = PhoneAuthProvider.credential(
             verificationId: verificationId,
             smsCode: otp,
           );
 
-          // Étape 3 : Lier le credential du téléphone à l'utilisateur
           await user.linkWithCredential(credential);
 
-          // Étape 4 : Enregistrer les données dans Cloud Firestore
+          String? profileImageUrl;
+          profileImageUrl = await _uploadProfileImage(user.uid, imageFile);
+        
           await _firestore.collection('users').doc(user.uid).set({
             'nom': nom,
             'prenom': prenom,
@@ -92,13 +136,16 @@ class _OTPScreenState extends State<OTPScreen> {
             'id': user.uid,
             'blockStatus': 'no',
             'phoneVerified': true,
+            'profileImageUrl': profileImageUrl,
           });
+
+          if (mounted) Navigator.pop(context);
 
           if (mounted) {
             Navigator.pushReplacementNamed(context, '/home');
           }
         } on FirebaseAuthException catch (e) {
-          // Si la liaison échoue (OTP incorrect), supprimer l'utilisateur
+          if (mounted) Navigator.pop(context);
           await user.delete();
           String errorMessage;
           switch (e.code) {
@@ -118,6 +165,7 @@ class _OTPScreenState extends State<OTPScreen> {
         }
       }
     } catch (e) {
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur inattendue : ${e.toString()}')),
       );
@@ -162,6 +210,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 'password': arguments['password'],
                 'dateNaissance': arguments['dateNaissance'],
                 'genre': arguments['genre'],
+                'imageFile': arguments['imageFile'],
               },
             );
           }

@@ -1,12 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-
-// Méthodes communes (pour les SnackBars, etc.)
-import '../methods/commun_methods.dart';
-// Widgets réutilisables (SettingsHeader, SettingsCard, etc.)
-import '../widgets/settings_widgets.dart';
+import 'package:bladiway/methods/commun_methods.dart';
+import 'package:bladiway/widgets/settings_widgets.dart';
+import 'package:bladiway/methods/user_data_notifier.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -33,6 +34,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _isEditing = false;
   bool _isSaving = false;
   String? _uid;
+  String? _profileImageUrl; // URL de la photo de profil actuelle
+  File? _newProfileImage; // Nouvelle image sélectionnée
+
+  final ImagePicker _picker = ImagePicker();
 
   // Animation pour le champ "Genre" lors de l'édition
   late AnimationController _animationController;
@@ -40,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   @override
   void initState() {
@@ -85,7 +91,13 @@ class _ProfileScreenState extends State<ProfileScreen>
             _phoneController.text = data['phone']?.replaceAll('+', '') ?? '';
             _dateNaissanceController.text = data['dateNaissance'] ?? '';
             _selectedGenre = data['genre'];
+            _profileImageUrl = data['profileImageUrl'];
           });
+          // Mettre à jour le ValueNotifier avec les données initiales
+          userDataNotifier.updateUserData(
+            _prenomController.text,
+            _profileImageUrl ?? '',
+          );
         }
       }
     } catch (e) {
@@ -108,22 +120,69 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  /// Sélectionne une nouvelle image de profil
+  Future<void> _pickImage() async {
+    if (!_isEditing) return;
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 85,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _newProfileImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      CommunMethods().displaySnackBar(
+        'Erreur lors de la sélection de l\'image: $e',
+        context,
+      );
+    }
+  }
+
+  /// Télécharge l'image sur Firebase Storage et retourne l'URL
+  Future<String?> _uploadProfileImage() async {
+    if (_newProfileImage == null) return null;
+    try {
+      final storageRef = _storage.ref().child('profile_images/$_uid.jpg');
+      await storageRef.putFile(_newProfileImage!);
+      final downloadUrl = await storageRef.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      CommunMethods().displaySnackBar(
+        'Erreur lors du téléchargement de l\'image: $e',
+        context,
+      );
+      return null;
+    }
+  }
+
   /// Sauvegarde les modifications sur Firestore et FirebaseAuth (email)
   Future<void> _saveUserData() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
     try {
+      // Télécharger la nouvelle image si sélectionnée
+      String? newProfileImageUrl;
+      if (_newProfileImage != null) {
+        newProfileImageUrl = await _uploadProfileImage();
+      }
+
       final updatedData = {
         'nom': _nomController.text.trim(),
         'prenom': _prenomController.text.trim(),
         'dateNaissance': _dateNaissanceController.text.trim(),
         'genre': _selectedGenre,
         'updatedAt': DateTime.now(),
+        if (newProfileImageUrl != null) 'profileImageUrl': newProfileImageUrl,
       };
       await _firestore.collection('users').doc(_uid).update(updatedData);
 
-      // Mise à jour de l'email si l'utilisateur l'a modifié
+      // Mise à jour de l'email si modifié
       final User? currentUser = _auth.currentUser;
       if (currentUser != null &&
           currentUser.email != _emailController.text.trim()) {
@@ -132,6 +191,18 @@ class _ProfileScreenState extends State<ProfileScreen>
           'email': _emailController.text.trim(),
         });
       }
+
+      // Mettre à jour l'URL de l'image dans l'état local et dans le ValueNotifier
+      if (newProfileImageUrl != null) {
+        setState(() {
+          _profileImageUrl = newProfileImageUrl;
+          _newProfileImage = null;
+        });
+      }
+      userDataNotifier.updateUserData(
+        _prenomController.text.trim(),
+        newProfileImageUrl ?? _profileImageUrl ?? '',
+      );
 
       CommunMethods().displaySnackBar('Profil mis à jour avec succès', context);
       _toggleEditMode();
@@ -189,12 +260,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     String? Function(String?)? validator,
   }) {
     final brightness = Theme.of(context).brightness;
-
-    // Couleur de fond des TextFields en fonction du mode clair / sombre
     final fillColor =
         brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[200];
-
-    // Couleur de la bordure en fonction du mode
     final borderColor =
         brightness == Brightness.dark ? Colors.grey[600]! : Colors.grey[300]!;
 
@@ -243,7 +310,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// Dropdown pour le genre, avec animation
   Widget _buildGenreDropdown() {
     final brightness = Theme.of(context).brightness;
-
     final fillColor =
         brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[200];
     final borderColor =
@@ -279,11 +345,54 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// Widget pour afficher la photo de profil
+  Widget _buildProfilePhoto() {
+    return Center(
+      child: Stack(
+        alignment: Alignment.bottomRight,
+        children: [
+          CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.grey[300],
+            backgroundImage:
+                _newProfileImage != null
+                    ? FileImage(_newProfileImage!)
+                    : (_profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                        ? NetworkImage(_profileImageUrl!)
+                        : null),
+            child:
+                _profileImageUrl == null || _profileImageUrl!.isEmpty
+                    ? const Icon(Icons.person, size: 50, color: Colors.grey)
+                    : null,
+          ),
+          if (_isEditing)
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      // Fond dégradé pour un rendu plus moderne, adapté au mode clair / sombre
       body: SafeArea(
         child:
             _isLoading
@@ -293,13 +402,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 )
                 : SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: 80),
+                  
                   child: Column(
                     children: [
-                      // En-tête style "Paramètres"
                       const SettingsHeader(title: 'Mon profil'),
-      
-                      // Contenu du profil
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: _buildProfilePhoto(),
+                      ),
                       Form(
                         key: _formKey,
                         child: Padding(
@@ -309,7 +419,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                           child: Column(
                             children: [
-                              // Informations personnelles
                               SettingsCard(
                                 title: 'Informations personnelles',
                                 icon: Icons.person,
@@ -374,8 +483,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 ],
                               ),
                               const SizedBox(height: 16),
-      
-                              // Détails personnels
                               SettingsCard(
                                 title: 'Détails personnels',
                                 icon: Icons.info,
@@ -427,7 +534,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 ),
       ),
-      // Bouton flottant (édition / sauvegarde)
       floatingActionButton: FloatingActionButton(
         onPressed:
             _isSaving ? null : (_isEditing ? _saveUserData : _toggleEditMode),

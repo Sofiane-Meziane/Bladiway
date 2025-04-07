@@ -325,7 +325,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Icons.arrow_back,
               color: Theme.of(context).colorScheme.primary,
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pushNamed(context, '/presentation'),
           ),
         ),
         body: SafeArea(

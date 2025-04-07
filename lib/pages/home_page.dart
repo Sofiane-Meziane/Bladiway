@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-// Importation de la page paramètres
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:bladiway/methods/user_data_notifier.dart';
 import 'settings_screen.dart';
 
 class HomePage extends StatefulWidget {
@@ -15,23 +17,44 @@ class _HomePageState extends State<HomePage> {
   int proposedTrips = 5;
   int kilometersTraveled = 320;
 
-  String userName = 'Massinissa';
-  String userPhotoUrl = '';
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData(); // Appel initial pour charger les données
+  }
+
+  /// Fonction pour récupérer les données de l'utilisateur depuis Firestore
+  Future<void> _fetchUserData() async {
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        DocumentSnapshot userDoc =
+            await _firestore.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          final name = userDoc['prenom'] ?? 'Utilisateur';
+          final photoUrl = userDoc['profileImageUrl'] ?? '';
+          // Mettre à jour le ValueNotifier avec les données initiales
+          userDataNotifier.updateUserData(name, photoUrl);
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de la récupération des données utilisateur : $e');
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
 
-    // Ajout de la navigation vers la page des paramètres
     if (index == 3) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ParametresPage()),
       );
-      setState(() {
-        _selectedIndex = 0;
-      });
     }
   }
 
@@ -62,78 +85,85 @@ class _HomePageState extends State<HomePage> {
                 top: 50,
                 left: 16,
                 right: 16,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: ValueListenableBuilder<Map<String, String>>(
+                  valueListenable: userDataNotifier,
+                  builder: (context, userData, child) {
+                    final name = userData['name'] ?? 'Utilisateur';
+                    final photoUrl = userData['photoUrl'] ?? '';
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            GestureDetector(
-                              onTap: () {
-                              Navigator.pushNamed(context, '/profile');
-                              },
-                              child: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.white,
-                              backgroundImage:
-                                userPhotoUrl.isNotEmpty
-                                  ? NetworkImage(userPhotoUrl)
-                                  : null,
-                              child:
-                                userPhotoUrl.isEmpty
-                                  ? const Icon(
-                                    Icons.person,
-                                    color: Colors.blue,
-                                    size: 24,
-                                  )
-                                  : null,
-                              ),
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushNamed(context, '/profile');
+                                  },
+                                  child: CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: Colors.white,
+                                    backgroundImage:
+                                        photoUrl.isNotEmpty
+                                            ? NetworkImage(photoUrl)
+                                            : null,
+                                    child:
+                                        photoUrl.isEmpty
+                                            ? const Icon(
+                                              Icons.person,
+                                              color: Colors.blue,
+                                              size: 24,
+                                            )
+                                            : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  'Bienvenue à notre plateforme',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimary.withOpacity(0.7),
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 16),
-                            Text(
-                              'Bienvenue à notre plateforme',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimary.withOpacity(0.7),
-                                fontWeight: FontWeight.w400,
-                              ),
+                            Icon(
+                              Icons.notifications_none,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              size: 28,
                             ),
                           ],
                         ),
-                        Icon(
-                          Icons.notifications_none,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          size: 28,
+                        const SizedBox(height: 30),
+                        Text(
+                          'Bladiway',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Bonjour, $name',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimary.withOpacity(0.7),
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 30),
-                    Text(
-                      'Bladiway',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Bonjour, $userName',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onPrimary.withOpacity(0.7),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -197,6 +227,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Widget pour construire les cartes de trajets
   Widget buildCard({
     required String title,
     required String subtitle,
@@ -258,6 +289,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Widget pour construire la section des statistiques
   Widget buildStatisticsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +299,7 @@ class _HomePageState extends State<HomePage> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onBackground,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 10),
@@ -298,6 +330,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Widget pour construire une carte de statistique
   Widget buildStatCard(String label, String value, IconData icon, Color color) {
     return Container(
       width: 100,
