@@ -1,6 +1,9 @@
+import 'package:bladiway/pages/car_add.dart';
 import 'package:bladiway/pages/info_trajet.dart';
 import 'package:bladiway/pages/otp_screen.dart';
 import 'package:bladiway/pages/presentation.dart';
+import 'package:bladiway/pages/scanner_permis.dart';
+import 'package:bladiway/pages/verification_conducteur.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -85,6 +88,9 @@ class MyApp extends StatelessWidget {
         '/presentation': (context) => const PresentationPage(),
         '/otp': (context) => const OTPScreen(),
         '/info_trajet': (context) => const InfoTrajet(),
+        '/add_car': (context) => const CarRegistrationScreen(),
+        '/verifier_Conducteur': (context) => const PermissionAddCarPage(),
+        '/scan_permission': (context) => const LicenseVerificationScreen(),
       },
     );
   }

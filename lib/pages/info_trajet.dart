@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'maps.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InfoTrajet extends StatefulWidget {
   const InfoTrajet({Key? key}) : super(key: key);
@@ -18,6 +19,7 @@ class _InfoTrajetState extends State<InfoTrajet>
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
+  final user = FirebaseAuth.instance.currentUser;
 
   // Nouveaux contrôleurs pour les informations d'itinéraire
   final TextEditingController _descriptionController = TextEditingController();
@@ -28,10 +30,10 @@ class _InfoTrajetState extends State<InfoTrajet>
   TimeOfDay _selectedTime = TimeOfDay.now();
 
   // Valeurs des menus déroulants
-  String _selectedLuggage = 'No Autorisé';
-  String _selectedSmoking = 'No Autorisé';
-  String _selectedAnimal = 'No Autorisé';
-  String _selectedAirConditioning = 'No Autorisé';
+  String _selectedLuggage = 'Non Autorisé';
+  String _selectedSmoking = 'Non Autorisé';
+  String _selectedAnimal = 'Non Autorisé';
+  String _selectedAirConditioning = 'Non Autorisé';
   String _selectedPaymentMethod = 'Espèces';
 
   // Nouveau menu déroulant pour le type de route
@@ -417,6 +419,21 @@ class _InfoTrajetState extends State<InfoTrajet>
             ),
 
             const SizedBox(height: 24),
+            // Bouton Partager
+            ElevatedButton(
+              onPressed: _saveTrip,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Partager'),
+            ),
+
+            const SizedBox(height: 12),
 
             // Bouton Annuler
             ElevatedButton(
@@ -430,21 +447,6 @@ class _InfoTrajetState extends State<InfoTrajet>
                 ),
               ),
               child: const Text('Annuler'),
-            ),
-            const SizedBox(height: 12),
-
-            // Bouton Partager
-            ElevatedButton(
-              onPressed: _saveTrip,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Partager'),
             ),
           ],
         ),
@@ -519,7 +521,7 @@ class _InfoTrajetState extends State<InfoTrajet>
     String currentValue,
     void Function(String?) onChanged,
   ) {
-    final List<String> dropdownOptions = ['Autorisé', 'No Autorisé'];
+    final List<String> dropdownOptions = ['Autorisé', 'Non Autorisé'];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -606,7 +608,7 @@ class _InfoTrajetState extends State<InfoTrajet>
           SnackBar(
             backgroundColor: Theme.of(context).colorScheme.error,
             content: Text(
-              'Vous ne pouvez pas sélectionner une heure passée aujourd/hui',
+              'Vous ne pouvez pas sélectionner une heure passée aujourd’hui',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onError,
@@ -770,21 +772,6 @@ class _InfoTrajetState extends State<InfoTrajet>
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                    foregroundColor: Theme.of(context).colorScheme.onError,
-                    minimumSize: const Size(double.infinity, 40),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text('Retourner'),
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
                     _saveToFirestore();
                   },
                   style: ElevatedButton.styleFrom(
@@ -796,6 +783,22 @@ class _InfoTrajetState extends State<InfoTrajet>
                     ),
                   ),
                   child: const Text('Confirmer'),
+                ),
+
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    foregroundColor: Theme.of(context).colorScheme.onError,
+                    minimumSize: const Size(double.infinity, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Retourner'),
                 ),
               ],
             ),
@@ -829,7 +832,19 @@ class _InfoTrajetState extends State<InfoTrajet>
   // Méthode pour sauvegarder dans Firestore
   Future<void> _saveToFirestore() async {
     try {
+      // Vérifier que l'utilisateur est connecté
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vous devez être connecté pour ajouter un trajet'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       await FirebaseFirestore.instance.collection('trips').add({
+        'userId': user!.uid, // Ajouter l'ID de l'utilisateur
         'départ': _departureController.text,
         'arrivée': _arrivalController.text,
         'date': _dateController.text,

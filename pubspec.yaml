@@ -54,6 +54,9 @@ dependencies:
   geocoding: ^3.0.0
   google_fonts: ^6.2.1
   flutter_polyline_points: ^2.0.0
+  path: ^1.8.0
+  path_provider: ^2.0.11
+  camera: ^0.10.0+4
 
 
 
@@ -107,6 +110,8 @@ flutter:
     - assets/images/logo_with_back.png
     - assets/images/1024.png
     - assets/images/icon.png
+    - assets/images/licenceVerification.jpg
+    - assets/images/drivinglicence.jpg
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -125,7 +125,8 @@ class _OTPScreenState extends State<OTPScreen> {
 
           String? profileImageUrl;
           profileImageUrl = await _uploadProfileImage(user.uid, imageFile);
-        
+
+          // Ajout du champ isValidated initialisé à false
           await _firestore.collection('users').doc(user.uid).set({
             'nom': nom,
             'prenom': prenom,
@@ -137,6 +138,7 @@ class _OTPScreenState extends State<OTPScreen> {
             'blockStatus': 'no',
             'phoneVerified': true,
             'profileImageUrl': profileImageUrl,
+            'isValidated': false, // Nouveau champ ajouté ici
           });
 
           if (mounted) Navigator.pop(context);

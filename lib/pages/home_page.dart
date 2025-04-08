@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bladiway/methods/user_data_notifier.dart';
 import 'settings_screen.dart';
+// Import de la page de vérification
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -58,6 +59,76 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Fonction pour vérifier si l'utilisateur peut ajouter un trajet
+  Future<void> _checkAddTripPermission() async {
+    User? user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vous devez être connecté pour continuer'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Récupérer le document de l'utilisateur
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Utilisateur non trouvé')),
+        );
+        return;
+      }
+
+      // Récupérer les données sous forme de Map pour vérifier les champs
+      Map<String, dynamic>? userData = userDoc.data() as Map<String, dynamic>?;
+
+      // Vérifier si le permis est scanné (champs recto_permis et verso_permis existent et non nuls)
+      bool hasLicense = userData != null &&
+          userData.containsKey('recto_permis') &&
+          userData.containsKey('verso_permis') &&
+          userData['recto_permis'] != null &&
+          userData['verso_permis'] != null;
+
+      // Vérifier si l'utilisateur a ajouté au moins une voiture
+      QuerySnapshot carsSnapshot = await _firestore
+          .collection('cars')
+          .where('id_proprietaire', isEqualTo: user.uid)
+          .limit(1)
+          .get();
+      bool hasCar = carsSnapshot.docs.isNotEmpty;
+
+      // Vérifier si l'administrateur a validé (champ isValidated existe et est true)
+      bool isValidated = userData != null &&
+          userData.containsKey('isValidated') &&
+          userData['isValidated'] == true;
+
+      if (hasLicense && hasCar) {
+        if (isValidated) {
+          // Toutes les conditions sont remplies, naviguer vers info_trajet
+          Navigator.pushNamed(context, '/info_trajet');
+        } else {
+          // Informations saisies mais non validées
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vos informations sont en cours de validation'),
+            ),
+          );
+        }
+      } else {
+        // Rediriger vers la page de vérification
+        Navigator.pushNamed(context, '/verifier_Conducteur');
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification des conditions : $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la vérification')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,18 +176,16 @@ class _HomePageState extends State<HomePage> {
                                   child: CircleAvatar(
                                     radius: 20,
                                     backgroundColor: Colors.white,
-                                    backgroundImage:
-                                        photoUrl.isNotEmpty
-                                            ? NetworkImage(photoUrl)
-                                            : null,
-                                    child:
-                                        photoUrl.isEmpty
-                                            ? const Icon(
-                                              Icons.person,
-                                              color: Colors.blue,
-                                              size: 24,
-                                            )
-                                            : null,
+                                    backgroundImage: photoUrl.isNotEmpty
+                                        ? NetworkImage(photoUrl)
+                                        : null,
+                                    child: photoUrl.isEmpty
+                                        ? const Icon(
+                                            Icons.person,
+                                            color: Colors.blue,
+                                            size: 24,
+                                          )
+                                        : null,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -124,9 +193,10 @@ class _HomePageState extends State<HomePage> {
                                   'Bienvenue à notre plateforme',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimary.withOpacity(0.7),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary
+                                        .withOpacity(0.7),
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
@@ -155,9 +225,10 @@ class _HomePageState extends State<HomePage> {
                           'Bonjour, $name',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onPrimary.withOpacity(0.7),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimary
+                                .withOpacity(0.7),
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -189,7 +260,7 @@ class _HomePageState extends State<HomePage> {
                     buttonText: 'Ajouter un trajet',
                     color1: const Color(0xFF2E7D32),
                     color2: const Color(0xFF66BB6A),
-                    onPressed: () => Navigator.pushNamed(context, '/info_trajet'),
+                    onPressed: _checkAddTripPermission, // Nouvelle fonction
                   ),
                   const SizedBox(height: 16),
                   buildStatisticsSection(),
@@ -204,9 +275,8 @@ class _HomePageState extends State<HomePage> {
         onTap: _onItemTapped,
         backgroundColor: Theme.of(context).colorScheme.surface,
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(
-          context,
-        ).colorScheme.onSurface.withOpacity(0.5),
+        unselectedItemColor:
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -276,7 +346,7 @@ class _HomePageState extends State<HomePage> {
           Align(
             alignment: Alignment.bottomRight,
             child: TextButton(
-              onPressed: onPressed, // Utiliser le callback passé en paramètre
+              onPressed: onPressed,
               style: TextButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: color1,

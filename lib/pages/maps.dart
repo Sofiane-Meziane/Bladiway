@@ -9,10 +9,10 @@ class MapsScreen extends StatefulWidget {
   final Function(String) onLocationSelected;
 
   const MapsScreen({
-    Key? key,
+    super.key,
     required this.isForDeparture,
     required this.onLocationSelected,
-  }) : super(key: key);
+  });
 
   @override
   _MapsScreenState createState() => _MapsScreenState();
@@ -468,8 +468,8 @@ class _MapsScreenState extends State<MapsScreen> {
             heroTag: "myLocation",
             backgroundColor: Theme.of(context).colorScheme.surface,
             foregroundColor: Theme.of(context).colorScheme.primary,
-            child: const Icon(Icons.my_location),
             onPressed: _getCurrentLocation,
+            child: const Icon(Icons.my_location),
           ),
           const SizedBox(height: 100), // Space for the bottom panel
         ],
