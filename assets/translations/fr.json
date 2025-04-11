@@ -126,7 +126,7 @@
 
 
 
-    "login": {
+    "loginn": {
       "title": "Connexion",
       "identifier_label": "Email ou numéro de téléphone",
       "identifier_hint": "Entrez votre email ou téléphone",

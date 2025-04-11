@@ -667,30 +667,18 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                             'Contacter',
                                             theme.colorScheme.primary,
                                             () {
-                                              if (addedBy != null) {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder:
-                                                        (context) => ChatPage(
-                                                          reservationId:
-                                                              reservationId,
-                                                          otherUserId: addedBy,
-                                                        ),
-                                                  ),
-                                                );
-                                              } else {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Erreur: Informations manquantes pour le chat',
-                                                    ),
-                                                  ),
-                                                );
-                                              }
-                                            },
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder:
+                                                      (context) => ChatPage(
+                                                        reservationId:
+                                                            reservationId,
+                                                        otherUserId: addedBy,
+                                                      ),
+                                                ),
+                                              );
+                                                                                        },
                                           ),
                                           _buildActionButton(
                                             context,
