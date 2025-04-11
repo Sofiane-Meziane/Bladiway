@@ -23,7 +23,7 @@ class PermissionAddCarPage extends StatefulWidget {
 
 class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
   final PageController _pageController = PageController();
-  int _currentPage = 0;
+  final int _currentPage = 0;
 
   // Liste des pages à afficher (ici, une seule page pour cette tâche spécifique)
   final List<PermissionPage> _pages = const [

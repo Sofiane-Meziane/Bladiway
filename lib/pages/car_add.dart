@@ -70,7 +70,7 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
     String model = _modelController.text;
     String plate = _plateController.text;
     String vin = _vinController.text;
-    String id_proprietaire = user.uid;
+    String idProprietaire = user.uid;
 
     showDialog(
       context: context,
@@ -91,7 +91,7 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
       _selectedColor!,
       plate,
       vin,
-      id_proprietaire,
+      idProprietaire,
     );
 
     // Vérifier si toutes les informations sont saisies après l'enregistrement

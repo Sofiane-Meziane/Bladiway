@@ -47,7 +47,6 @@ dependencies:
   image_picker: ^1.1.2
   firebase_storage: ^12.4.5
   flutter_launcher_icons: ^0.14.3
-  flutter_localization: ^0.3.2
   google_maps_flutter: ^2.5.0
   geolocator: ^13.0.4
   permission_handler: ^11.4.0
@@ -57,6 +56,7 @@ dependencies:
   path: ^1.8.0
   path_provider: ^2.0.11
   camera: ^0.10.0+4
+  easy_localization: ^3.0.3
 
 
 
@@ -71,6 +71,7 @@ dependencies:
 
   flutter_localizations:
     sdk: flutter
+  url_launcher: ^6.3.1
   
   
 
@@ -112,6 +113,7 @@ flutter:
     - assets/images/icon.png
     - assets/images/licenceVerification.jpg
     - assets/images/drivinglicence.jpg
+    - assets/translations/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -139,6 +141,12 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  # Fichiers de traduction pour easy_localization
+    - assets/translations/fr.json
+    - assets/translations/en.json
+    - assets/translations/ar.json
+    - assets/translations/fr_DZ.json
 
 flutter_icons:
   android: true

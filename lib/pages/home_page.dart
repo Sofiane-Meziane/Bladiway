@@ -1,3 +1,4 @@
+import 'package:bladiway/pages/reservations_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -56,7 +57,21 @@ class _HomePageState extends State<HomePage> {
         context,
         MaterialPageRoute(builder: (context) => const ParametresPage()),
       );
-    }
+    }else if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ReservationsScreen()),
+      );
+    }/* else if (index == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MesTrajetsScreen()),
+      );
+    } else if (index == 0) {
+      // Reste sur la page d'accueil
+
+
+    }*/
   }
 
   /// Fonction pour vérifier si l'utilisateur peut ajouter un trajet

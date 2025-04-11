@@ -1,0 +1,313 @@
+{
+  "help_center": {
+    "title": "Axxam n twizi",
+    "header_title": "Tebɣiḍ tallelt?",
+    "header_subtitle": "Af-d tiririt i yisteqsiyen-inek neɣ nermes tarabbut n tallelt-nneɣ",
+    "faq_title": "Isteqsiyen ittwasestaqsayen s waṭas",
+    "search_hint": "Nadi ɣef yiwen usteqsi...",
+    "contact_support": "Nermes tallelt",
+    "contact_form_title": "Nermes tallelt",
+    "contact_form_subtitle": "Ur tufiḍ ara tiririt i usteqsi-inek? Azen-aɣ-d tuzint daɣen ad ak-d-nerr deg wakud aqrib.",
+    "email_label": "Imayl-inek *",
+    "email_hint": "amedya@imayl.com",
+    "email_required": "Ma ulac aɣilif sekcem imayl-inek",
+    "message_label": "Tuzint-inek *",
+    "message_hint": "Seglem-d ugur-inek s lsas...",
+    "message_required": "Ma ulac aɣilif aru tuzint",
+    "send_button": "Azen",
+    "feedback_question": "Tella-d tefses temrarut-agi?",
+    "feedback_thanks": "Tanemmirt ɣef tekti-inek!",
+    "feedback_sorry": "Suref-aɣ imi temrarut-agi ur telli d tafessast. Tzemreḍ ad aɣ-termeseḍ!",
+    "error_email_required": "Imayl ilaq.",
+    "error_email_invalid": "Ma ulac aɣilif sekcem imayl igerrzen.",
+    "error_message_required": "Ma ulac aɣilif aru tuzint.",
+    "error_sending": "Tella-d tuccḍa deg tuzzna n tuzint. Ma ulac aɣilif εreḍ tikelt-nniḍen.",
+    "success_message": "Tuzint tettwazen! Ad ak-d-nerr akken kan."
+  },
+  "faq": {
+    "cancel_trip": {
+      "question": "Amek ara sefsxeɣ aḥewwes?",
+      "answer": "I usefsex n uḥewwes, ruḥ ɣer \"Iḥewwsen-inu\" daɣen fren taɣuri \"Sefsex\"."
+    },
+    "cancel_reservation": {
+      "question": "Amek ara sefsxeɣ taḥerzi-inu?",
+      "answer": "Tzemreḍ ad tesefsxeḍ taḥerzi-inek seg ugezdu \"Tiḥerziyin\". Sit ɣef tqeffalt \"Sefsex\" i d-yezgan rrif n tḥerzi-inek."
+    },
+    "contact_support": {
+      "question": "Amek ara rmseɣ tallelt?",
+      "answer": "Azen-aɣ-d tuzint s tɣerɣert yellan deg ukessar n usebter-a neɣ ɣef support@bladiway.com."
+    },
+    "change_language": {
+      "question": "Amek ara beddleɣ ismenyifen n tutlayt-inu?",
+      "answer": "Ddu ɣer Iɣewwaren > Tutlayt."
+    }
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  "Homme": "Argaz",
+  "Femme": "Tamṭṭut",
+  "Erreur lors de la sélection de l'image": "Tuccḍa deg ufran n tugna",
+  "Choisir une image de profil": "Fren tugna n umaɣnu",
+  "Prendre une photo": "Ṭṭef tugna",
+  "Choisir depuis la galerie": "Fren seg ugalez",
+  "Ce numéro de téléphone est déjà utilisé": "Uṭṭun-a n tiliɣri ittusqdec yakan",
+  "Permission refusée pour accéder à la base de données": "Tasiregt tugit i ukcam ɣer taffa n isefka",
+  "Erreur Firebase : ": "Tuccḍa n Firebase: ",
+  "Erreur inattendue : ": "Tuccḍa ur nettwaṛǧi: ",
+  "Veuillez entrer un email valide": "Ttxil-k sekcem email ameɣtu",
+  "Cet email est déjà utilisé": "Email-a ittusqdec yakan",
+  "Le format de l'email est invalide (selon Firebase)": "Talɣa n email mači d tameɣtut (ɣef Firebase)",
+  "Trop de tentatives. Réessayez plus tard.": "Aṭas n tɛekkemiyin. Ɛreḍ tikkelt nniḍen.",
+  "Erreur Firebase (Email): ": "Tuccḍa n Firebase (Email): ",
+  "Erreur inattendue (Email).": "Tuccḍa ur nettwaṛǧi (Email).",
+  "Veuillez sélectionner une image de profil": "Ttxil-k fren tugna n umaɣnu",
+  "Vérification en cours...": "Asenqed iteddu...",
+  "Numéro de téléphone requis": "Ilaq wuṭṭun n tiliɣri",
+  "Erreur lors de la vérification : ": "Tuccḍa deg usenqed: ",
+  "Numéro de téléphone invalide": "Uṭṭun n tiliɣri mači d ameɣtu",
+  "Trop de tentatives. Réessayez plus tard": "Aṭas n tɛekkemiyin. Ɛreḍ tikkelt nniḍen",
+  "Une erreur est survenue : ": "Tella-d tuccḍa: ",
+  "Créer un compte": "Snulfu amiḍan",
+  "Photo de profil": "Tugna n umaɣnu",
+  "Nom": "Isem aɣerfan",
+  "Veuillez entrer votre nom": "Ttxil-k sekcem isem-ik aɣerfan",
+  "Prénom": "Isem",
+  "Veuillez entrer votre prénom": "Ttxil-k sekcem isem-ik",
+  "Email": "Email",
+  "Veuillez entrer votre email": "Ttxil-k sekcem email-ik",
+  "Numéro de téléphone": "Uṭṭun n tiliɣri",
+  "Date de naissance": "Azemz n tlalit",
+  "Veuillez sélectionner votre date de naissance": "Ttxil-k fren azemz n tlalit-ik",
+  "Genre": "Tawsit",
+  "Veuillez sélectionner votre genre": "Ttxil-k fren tawsit-ik",
+  "Mot de passe": "Awal uffir",
+  "Veuillez entrer un mot de passe": "Ttxil-k sekcem awal uffir",
+  "Le mot de passe doit contenir au moins 8 caractères": "Awal uffir ilaq ad yesɛu ma drus 8 n yisekkilen",
+  "S'inscrire": "Jerred",
+  "Vous avez déjà un compte? ": "Tesɛiḍ yakan amiḍan? ",
+  "Connectez-vous": "Kcem",
+
+
+
+
+
+
+
+
+
+
+"login": {
+"title": "Qqen",
+"identifier_label": "Isem n Useqdac neɣ Tansa Imayl",
+"identifier_hint": "Sekcem isem n useqdac neɣ tansa imayl",
+"enter_identifier": "Ttxil-k sekcem isem n useqdac neɣ tansa imayl",
+"invalid_identifier": "Isem n useqdac neɣ tansa imayl d armeɣtu",
+"enter_password": "Ttxil-k sekcem awal uffir",
+"password": "Awal Uffir",
+"forgot_password": "Tettuḍ awal uffir?",
+"choose_method": "Fren tarrayt",
+"select_reset_option": "Fren tarrayt n uwennez",
+"email": "Imayl",
+"reset_via_email": "Wennez s imayl",
+"phone": "Tilifun",
+"reset_via_phone": "Wennez s tilifun",
+"user_not_found": "Ur yettwaf ara useqdac",
+"wrong_password": "Awal uffir d armeɣtu",
+"invalid_email": "Tansa imayl d tarmeɣtut",
+"error": "Tuccḍa",
+"unexpected_error": "Tuccḍa ur nettwarǧi ara",
+"no_user_found_phone": "Ur yettwaf ara useqdac s wuṭṭun-a n tilifun",
+"login_button": "Qqen",
+"no_account": "Ur tesɛiḍ ara amiḍan?",
+"signup": "Jerred"
+},
+
+
+
+
+
+
+
+
+    "appbar": {
+    "title": "Turagt n Unehhar"
+    },
+    "form": {
+    "license_number": "Uṭṭun n Turagt",
+    "expiration_date": "Azemz n Tagara"
+    },
+    "validation": {
+    "license_number": "Ttxil-k sekcem uṭṭun n turagt",
+    "expiration_date": "Ttxil-k sekcem azemz n tagara"
+    },
+    "upload": {
+    "select_front": "Fren Tugna n Zdat",
+    "select_back": "Fren Tugna n Deffir",
+    "front_selected": "Tugna n Zdat Tettwafren",
+    "back_selected": "Tugna n Deffir Tettwafren"
+    },
+    "error": {
+    "select_both_images": "Ttxil-k fren tugniwin n zdat d deffir",
+    "not_logged_in": "Tesriḍ ad teqqneḍ akken ad tkemmleḍ",
+    "license_update_failed": "Aleqqem n turagt ur yeddi ara",
+    "validation_check_failed": "Asenqed n usentem ur yeddi ara"
+    },
+    "success": {
+    "license_updated": "Turagt tettwaleqqem akken iwata!"
+    },
+    "info": {
+    "waiting_admin_validation": "Araju n usentem sɣur unebdal"
+    },
+    "uploading": {
+    "image_error": "Tuccḍa deg usali n tugna"
+    },
+    "button": {
+    "update_license_info": "Leqqem Isalen n Turagt",
+    "back": "Uɣal"
+    
+    },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+"form.make": "Tawuri n Tkarrust",
+"form.model": "Anaw n Tkarrust",
+"form.year": "Aseggwas n Usefsi",
+"form.color": "Ini",
+"form.plate": "Uṭṭun n Tferkit",
+"form.vin": "VIN",
+"validation.make": "Ttxil-k sekcem tawuri n tkarrust",
+"validation.model": "Ttxil-k sekcem anaw n tkarrust",
+"validation.year": "Ttxil-k fren aseggwas n usefsi",
+"validation.color": "Ttxil-k fren ini n tkarrust",
+"validation.plate": "Ttxil-k sekcem uṭṭun n tferkit",
+"validation.vin": "Ttxil-k sekcem VIN",
+"button.register_car": "Sejjel Takarrust",
+"button.back": "Uɣal",
+"error.registration": "Tuccḍa deg usejjel n tkarrust",
+"error.not_logged_in": "Tesriḍ ad teqqneḍ akken ad tkemmleḍ",
+"registering": "Asejjel n tkarrust...",
+"success.registration": "Takarrust tettwasejjel akken iwata!",
+"appbar.add_car": "Rnu Takarrust",
+
+
+
+
+
+
+
+
+
+
+
+  "Complétez votre profil pour publier un trajet": "Kemmel amaɣnu-inek akken ad tessufɣeḍ yiwen n tikli",
+  "Pour publier un trajet, vous devez scanner votre permis de conduire et ajouter au moins une voiture.": "I usuffeɣ n tikli, ilaq ad tessiḍneḍ ttesriḥ-inek n tsuqet daɣen ad ternuḍ ma drus yiwen n tkeṛṛust.",
+  "Bladiway": "Bladiway",
+  "Scanner le permis": "Siḍen ttesriḥ",
+  "Ajouter une voiture": "Rnu takeṛṛust",
+
+
+
+
+
+  "Nom": "Isem",
+  "Prénom": "Issem n umuḍan",
+  "Email": "Imezwer",
+  "Téléphone": "Telifoun",
+  "Date de naissance": "Aseggas n tasekra",
+  "Genre": "Iznater",
+  "Sauvegarder": "Asgar",
+  "Modifier": "Anar",
+  "Annuler": "Amar",
+  "Erreur": "Tsamert",
+  "Chargement": "Tazert",
+ "Homme":"argaz",
+ "femme":"tamettut",
+  "Informations personnelles": "Talɣut tudmawant",
+  "Détails personnels": "Tilɣa tudmawanin",
+
+
+  "Bienvenue à notre plateforme": "Ansuf ɣer tamedyant nneɣ",
+  "Bonjour": "Azul",
+  "Trouvez votre trajet idéal 🚗": "Af-d amezruy-ik yellan 🚗",
+  "Découvrez facilement les meilleurs trajets adaptés à vos besoins.": "Afeḍ isaffen ifazen i wakken i tzedghed.",
+  "Réserver": "Sɛel tura",
+  "Proposez votre trajet 🛣️": "Sumer afus n umezruy-ik 🛣️",
+  "Partagez votre route et faites des économies.": "Bḍu abrid-ik u skar.",
+  "Ajouter un trajet": "Rnu amezruy",
+  "Vos statistiques": "Iɣewwaṛen inek",
+  "Trajets": "Imezruyen",
+  "Proposés": "Yettusumeren",
+  "Km parcourus": "Km yuran",
+  "Accueil": "Agejdan",
+  "Mes trajets": "Imezruyen inu",
+  "Réservations": "Tiseɣtayin",
+  "Paramètres": "Iɣewwaṛen",
+  "Bonjour, {}": "Azul, {}",
+  "Vous devez être connecté pour continuer": "Ilaq ad tettconnectiḍ akken ad tkemmel",
+  "Utilisateur non trouvé": "Aseqdac ur nufi ara",
+  "Vos informations sont en cours de validation": "Isalen-inek ttwassent i validité",
+  "Erreur lors de la vérification": "Tuccḍa deg usenqed",
+
+  "settings": {
+    "title": "Iɣewwaren",
+    "account": "Amiḍan",
+    "my_profile": "Amawal inu",
+    "preferences": "Ismenyifen",
+    "notifications": "Ilɣa",
+    "dark_mode": "Askar aberkan",
+    "dark_mode_enabled": "Askar aberkan yettwarmel",
+    "dark_mode_disabled": "Askar aberkan yettwagel",
+    "language": "Tutlayt",
+    "select_language": "Fren tutlayt",
+    "help": "Tallelt",
+    "help_center": "Ammas n tallelt",
+    "account_management": "Asefru n umiḍan",
+    "logout": "Ffeɣ",
+    "logout_confirmation": "Tebɣiḍ ad teffeɣ s tidet?",
+    "logout_success": "Tffeɣt akken iwata",
+    "logout_error": "Tella tuccḍa deg useffeɣ"
+  },
+
+  "common": {
+    "cancel": "Sefsex"
+  }
+}
