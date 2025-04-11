@@ -5,7 +5,7 @@ import 'maps.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class InfoTrajet extends StatefulWidget {
-  const InfoTrajet({Key? key}) : super(key: key);
+  const InfoTrajet({super.key});
 
   @override
   _InfoTrajetState createState() => _InfoTrajetState();
@@ -34,7 +34,7 @@ class _InfoTrajetState extends State<InfoTrajet>
   String _selectedSmoking = 'Non Autorisé';
   String _selectedAnimal = 'Non Autorisé';
   String _selectedAirConditioning = 'Non Autorisé';
-  String _selectedPaymentMethod = 'Espèces';
+  final String _selectedPaymentMethod = 'Espèces';
 
   // Nouveau menu déroulant pour le type de route
   String _selectedRouteType = 'Autoroute';

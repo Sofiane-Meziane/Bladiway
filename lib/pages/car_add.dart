@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CarRegistrationScreen extends StatefulWidget {
   const CarRegistrationScreen({super.key});
@@ -37,17 +38,17 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? _validatePlate(String? value) {
-    if (value!.isEmpty) return 'Veuillez entrer le numéro de plaque';
+    if (value!.isEmpty) return tr('validation.plate');
     return null;
   }
 
   String? _validateColor(String? value) {
-    if (value == null) return 'Veuillez sélectionner la couleur de la voiture';
+    if (value == null) return tr('validation.color');
     return null;
   }
 
   String? _validateYear(String? value) {
-    if (value == null) return 'Veuillez sélectionner l\'année de fabrication';
+    if (value == null) return tr('validation.year');
     return null;
   }
 
@@ -59,8 +60,8 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
     User? user = _auth.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vous devez être connecté pour continuer'),
+        SnackBar(
+          content: Text(tr('error.not_logged_in')),
         ),
       );
       return;
@@ -70,16 +71,15 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
     String model = _modelController.text;
     String plate = _plateController.text;
     String vin = _vinController.text;
-    String id_proprietaire = user.uid;
+    String idProprietaire = user.uid;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (BuildContext context) => const AlertDialog(
-            title: Text('Enregistrement en cours'),
-            content: CircularProgressIndicator(),
-          ),
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(tr('registering')),
+        content: const CircularProgressIndicator(),
+      ),
     );
 
     await Future.delayed(const Duration(seconds: 2));
@@ -91,7 +91,7 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
       _selectedColor!,
       plate,
       vin,
-      id_proprietaire,
+      idProprietaire,
     );
 
     // Vérifier si toutes les informations sont saisies après l'enregistrement
@@ -99,7 +99,7 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Voiture enregistrée avec succès!')),
+      SnackBar(content: Text(tr('success.registration'))),
     );
   }
 
@@ -135,8 +135,8 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
     } catch (e) {
       print('Erreur lors de l\'enregistrement de la voiture: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erreur lors de l\'enregistrement de la voiture'),
+        SnackBar(
+          content: Text(tr('error.registration')),
         ),
       );
     }
@@ -145,23 +145,19 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
   /// Vérifie si toutes les informations (permis + voiture) sont saisies
   Future<void> _checkAndUpdateValidationStatus(User user) async {
     try {
-      DocumentSnapshot userDoc =
-          await _firestore.collection('users').doc(user.uid).get();
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
       bool hasLicense =
           userDoc['recto_permis'] != null && userDoc['verso_permis'] != null;
-      QuerySnapshot carsSnapshot =
-          await _firestore
-              .collection('cars')
-              .where('id_proprietaire', isEqualTo: user.uid)
-              .limit(1)
-              .get();
+      QuerySnapshot carsSnapshot = await _firestore
+          .collection('cars')
+          .where('id_proprietaire', isEqualTo: user.uid)
+          .limit(1)
+          .get();
       bool hasCar = carsSnapshot.docs.isNotEmpty;
 
       // Ne met pas à jour isValidated ici, car cela nécessite la validation admin
       if (hasLicense && hasCar) {
-        print(
-          'Toutes les informations sont saisies, en attente de validation admin.',
-        );
+        print('Toutes les informations sont saisies, en attente de validation admin.');
       }
     } catch (e) {
       print('Erreur lors de la vérification du statut : $e');
@@ -183,9 +179,9 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Ajouter une voiture',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        title: Text(
+          tr('appbar.add_car'),
+          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
@@ -202,41 +198,36 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
                 TextFormField(
                   controller: _makeController,
                   decoration: InputDecoration(
-                    labelText: 'Marque de la voiture',
+                    labelText: tr('form.make'),
                     prefixIcon: Icon(Icons.directions_car, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  validator:
-                      (value) =>
-                          value!.isEmpty ? 'Veuillez entrer la marque' : null,
+                  validator: (value) => value!.isEmpty ? tr('validation.make') : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _modelController,
                   decoration: InputDecoration(
-                    labelText: 'Modèle de la voiture',
+                    labelText: tr('form.model'),
                     prefixIcon: Icon(Icons.drive_eta, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  validator:
-                      (value) =>
-                          value!.isEmpty ? 'Veuillez entrer le modèle' : null,
+                  validator: (value) => value!.isEmpty ? tr('validation.model') : null,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: _selectedYear,
                   decoration: InputDecoration(
-                    labelText: 'Année de fabrication',
+                    labelText: tr('form.year'),
                     prefixIcon: Icon(Icons.calendar_today, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  items:
-                      _generateYears().map((year) {
-                        return DropdownMenuItem<String>(
-                          value: year,
-                          child: Text(year),
-                        );
-                      }).toList(),
+                  items: _generateYears().map((year) {
+                    return DropdownMenuItem<String>(
+                      value: year,
+                      child: Text(year),
+                    );
+                  }).toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedYear = value;
@@ -248,17 +239,16 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
                 DropdownButtonFormField<String>(
                   value: _selectedColor,
                   decoration: InputDecoration(
-                    labelText: 'Couleur',
+                    labelText: tr('form.color'),
                     prefixIcon: Icon(Icons.color_lens, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  items:
-                      _colors.map((color) {
-                        return DropdownMenuItem<String>(
-                          value: color,
-                          child: Text(color),
-                        );
-                      }).toList(),
+                  items: _colors.map((color) {
+                    return DropdownMenuItem<String>(
+                      value: color,
+                      child: Text(color),
+                    );
+                  }).toList(),
                   onChanged: (value) {
                     setState(() {
                       _selectedColor = value;
@@ -270,7 +260,7 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
                 TextFormField(
                   controller: _plateController,
                   decoration: InputDecoration(
-                    labelText: 'Numéro de plaque',
+                    labelText: tr('form.plate'),
                     prefixIcon: Icon(Icons.location_on, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
@@ -280,13 +270,11 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
                 TextFormField(
                   controller: _vinController,
                   decoration: InputDecoration(
-                    labelText: 'Numéro de série (VIN)',
+                    labelText: tr('form.vin'),
                     prefixIcon: Icon(Icons.vpn_key, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
-                  validator:
-                      (value) =>
-                          value!.isEmpty ? 'Veuillez entrer le VIN' : null,
+                  validator: (value) => value!.isEmpty ? tr('validation.vin') : null,
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
@@ -298,17 +286,17 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen> {
                     ),
                   ),
                   onPressed: startCarRegistration,
-                  child: const Text(
-                    "Enregistrer la voiture",
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  child: Text(
+                    tr('button.register_car'),
+                    style: const TextStyle(fontSize: 18, color: Colors.white),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Retour',
-                    style: TextStyle(color: Colors.grey),
+                  child: Text(
+                    tr('button.back'),
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ),
               ],

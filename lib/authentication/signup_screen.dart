@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -34,7 +36,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _selectedGenre;
   String? _phoneError;
   String? _emailError;
-  final List<String> _genres = ['Homme', 'Femme'];
+  final List<String> _genres = ['Homme'.tr(), 'Femme'.tr()];
 
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
@@ -57,7 +59,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
     } catch (e) {
       setState(() {
-        _imageError = 'Erreur lors de la sélection de l\'image';
+        _imageError = 'Erreur lors de la sélection de l\'image'.tr();
       });
       print('Erreur lors de la sélection de l\'image: $e');
     }
@@ -68,14 +70,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Choisir une image de profil'),
+          title: Text('Choisir une image de profil'.tr()),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
                 GestureDetector(
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text('Prendre une photo'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('Prendre une photo'.tr()),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -87,9 +89,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Divider(),
                 ),
                 GestureDetector(
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text('Choisir depuis la galerie'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('Choisir depuis la galerie'.tr()),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -115,7 +117,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (querySnapshot.docs.isNotEmpty) {
         setState(() {
-          _phoneError = 'Ce numéro de téléphone est déjà utilisé';
+          _phoneError = 'Ce numéro de téléphone est déjà utilisé'.tr();
         });
         return false;
       }
@@ -123,16 +125,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } on FirebaseException catch (e) {
       setState(() {
         if (e.code == 'permission-denied') {
-          _phoneError = 'Permission refusée pour accéder à la base de données';
+          _phoneError = 'Permission refusée pour accéder à la base de données'.tr();
         } else {
-          _phoneError = 'Erreur Firebase : ${e.message}';
+          _phoneError = 'Erreur Firebase : ${e.message}'.tr();
         }
       });
       print('Erreur Firebase dans _checkPhoneNumberAvailability : $e');
       return false;
     } catch (e) {
       setState(() {
-        _phoneError = 'Erreur inattendue : ${e.toString()}';
+        _phoneError = 'Erreur inattendue : ${e.toString()}'.tr();
       });
       print('Erreur inattendue dans _checkPhoneNumberAvailability : $e');
       return false;
@@ -145,7 +147,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (trimmedEmail.isEmpty ||
         !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(trimmedEmail)) {
       setState(() {
-        _emailError = 'Veuillez entrer un email valide';
+        _emailError = 'Veuillez entrer un email valide'.tr();
       });
       print("Validation échouée (format/vide): $trimmedEmail");
       return false;
@@ -158,7 +160,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (methods.isNotEmpty) {
         print("Email déjà utilisé: $trimmedEmail");
         setState(() {
-          _emailError = 'Cet email est déjà utilisé';
+          _emailError = 'Cet email est déjà utilisé'.tr();
         });
         return false;
       } else {
@@ -174,18 +176,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
       setState(() {
         if (e.code == 'invalid-email') {
-          _emailError = 'Le format de l\'email est invalide (selon Firebase)';
+          _emailError = 'Le format de l\'email est invalide (selon Firebase)'.tr();
         } else if (e.code == 'too-many-requests') {
-          _emailError = 'Trop de tentatives. Réessayez plus tard.';
+          _emailError = 'Trop de tentatives. Réessayez plus tard.'.tr();
         } else {
-          _emailError = 'Erreur Firebase (Email): ${e.message ?? e.code}';
+          _emailError = 'Erreur Firebase (Email): ${e.message ?? e.code}'.tr();
         }
       });
       return false;
     } catch (e) {
       print('Erreur inattendue dans _checkEmailAvailability : $e');
       setState(() {
-        _emailError = 'Erreur inattendue (Email).';
+        _emailError = 'Erreur inattendue (Email).'.tr();
       });
       return false;
     }
@@ -194,7 +196,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> startSignUpProcess() async {
     if (_imageFile == null) {
       setState(() {
-        _imageError = 'Veuillez sélectionner une image de profil';
+        _imageError = 'Veuillez sélectionner une image de profil'.tr();
       });
       return;
     }
@@ -210,7 +212,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       barrierDismissible: false,
       builder:
           (BuildContext context) =>
-              LoadingDialog(messageText: 'Vérification en cours...'),
+              LoadingDialog(messageText: 'Vérification en cours...'.tr()),
     );
 
     try {
@@ -241,12 +243,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
         print('Lancement de la vérification OTP...');
         await startPhoneVerification(_fullPhoneNumber!);
       } else {
-        throw Exception('Numéro de téléphone requis');
+        throw Exception('Numéro de téléphone requis'.tr());
       }
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      cMethods.displaySnackBar('Erreur inattendue : ${e.toString()}', context);
+      cMethods.displaySnackBar('Erreur inattendue : ${e.toString()}'.tr(), context);
       print('Erreur dans startSignUpProcess : $e');
     }
   }
@@ -301,7 +303,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de la vérification : ${e.toString()}'),
+            content: Text('Erreur lors de la vérification : ${e.toString()}'.tr()),
           ),
         );
       }
@@ -312,11 +314,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String _getErrorMessage(String code) {
     switch (code) {
       case 'invalid-phone-number':
-        return 'Numéro de téléphone invalide';
+        return 'Numéro de téléphone invalide'.tr();
       case 'too-many-requests':
-        return 'Trop de tentatives. Réessayez plus tard';
+        return 'Trop de tentatives. Réessayez plus tard'.tr();
       default:
-        return 'Une erreur est survenue : $code';
+        return 'Une erreur est survenue : $code'.tr();
     }
   }
 
@@ -363,7 +365,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Créer un compte',
+          'Créer un compte'.tr(),
           style: TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.bold,
@@ -449,7 +451,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
                         child: Text(
-                          "Photo de profil",
+                          "Photo de profil".tr(),
                           style: TextStyle(color: primaryColor),
                         ),
                       ),
@@ -459,26 +461,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _nomController,
                   decoration: InputDecoration(
-                    labelText: 'Nom',
+                    labelText: 'Nom'.tr(),
                     prefixIcon: Icon(Icons.person, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
                   validator:
                       (value) =>
-                          value!.isEmpty ? 'Veuillez entrer votre nom' : null,
+                          value!.isEmpty ? 'Veuillez entrer votre nom'.tr() : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _prenomController,
                   decoration: InputDecoration(
-                    labelText: 'Prénom',
+                    labelText: 'Prénom'.tr(),
                     prefixIcon: Icon(Icons.person_outline, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
                   validator:
                       (value) =>
                           value!.isEmpty
-                              ? 'Veuillez entrer votre prénom'
+                              ? 'Veuillez entrer votre prénom'.tr()
                               : null,
                 ),
                 const SizedBox(height: 16),
@@ -486,19 +488,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Email',
+                    labelText: 'Email'.tr(),
                     prefixIcon: Icon(Icons.email, color: primaryColor),
                     border: const OutlineInputBorder(),
                     errorText: _emailError,
                   ),
                   validator: (value) {
-                    if (value!.isEmpty) return 'Veuillez entrer votre email';
+                    if (value!.isEmpty) return 'Veuillez entrer votre email'.tr();
                     final emailRegex = RegExp(
                       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                     );
                     return emailRegex.hasMatch(value)
                         ? null
-                        : 'Veuillez entrer un email valide';
+                        : 'Veuillez entrer un email valide'.tr();
                   },
                   onChanged: (value) {
                     setState(() {
@@ -513,7 +515,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     IntlPhoneField(
                       controller: _phoneController,
                       decoration: InputDecoration(
-                        labelText: 'Numéro de téléphone',
+                        labelText: 'Numéro de téléphone'.tr(),
                         border: const OutlineInputBorder(),
                         errorText: _phoneError,
                       ),
@@ -522,7 +524,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         setState(() {
                           _fullPhoneNumber = phone.completeNumber;
                           if (!phone.isValidNumber()) {
-                            _phoneError = 'Numéro de téléphone invalide';
+                            _phoneError = 'Numéro de téléphone invalide'.tr();
                           } else {
                             _phoneError = null;
                           }
@@ -535,7 +537,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _dateNaissanceController,
                   decoration: InputDecoration(
-                    labelText: 'Date de naissance',
+                    labelText: 'Date de naissance'.tr(),
                     prefixIcon: Icon(Icons.calendar_today, color: primaryColor),
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
@@ -548,13 +550,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   validator:
                       (value) =>
                           value!.isEmpty
-                              ? 'Veuillez sélectionner votre date de naissance'
+                              ? 'Veuillez sélectionner votre date de naissance'.tr()
                               : null,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(
-                    labelText: 'Genre',
+                    labelText: 'Genre'.tr(),
                     prefixIcon: Icon(Icons.people, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
@@ -571,7 +573,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   validator:
                       (value) =>
                           value == null
-                              ? 'Veuillez sélectionner votre genre'
+                              ? 'Veuillez sélectionner votre genre'.tr()
                               : null,
                 ),
                 const SizedBox(height: 16),
@@ -579,7 +581,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    labelText: 'Mot de passe',
+                    labelText: 'Mot de passe'.tr(),
                     prefixIcon: Icon(Icons.lock, color: primaryColor),
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
@@ -597,10 +599,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   validator: (value) {
                     if (value!.isEmpty) {
-                      return 'Veuillez entrer un mot de passe';
+                      return 'Veuillez entrer un mot de passe'.tr();
                     }
                     return value.length < 8
-                        ? 'Le mot de passe doit contenir au moins 8 caractères'
+                        ? 'Le mot de passe doit contenir au moins 8 caractères'.tr()
                         : null;
                   },
                 ),
@@ -617,9 +619,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     await checkIfTheNetworkIsAvailable(context);
                     await startSignUpProcess();
                   },
-                  child: const Text(
-                    "S'inscrire",
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  child: Text(
+                    "S'inscrire".tr(),
+                    style: const TextStyle(fontSize: 18, color: Colors.white),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -627,11 +629,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   onPressed: () => Navigator.pushNamed(context, '/login'),
                   child: Text.rich(
                     TextSpan(
-                      text: 'Vous avez déjà un compte? ',
+                      text: 'Vous avez déjà un compte? '.tr(),
                       style: const TextStyle(color: Colors.grey),
                       children: [
                         TextSpan(
-                          text: 'Connectez-vous',
+                          text: 'Connectez-vous'.tr(),
                           style: TextStyle(
                             color: primaryColor,
                             fontWeight: FontWeight.bold,

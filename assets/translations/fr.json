@@ -1,0 +1,329 @@
+
+
+
+
+
+  {
+
+    "help_center": {
+      "title": "Centre d'aide",
+      "header_title": "Besoin d'aide ?",
+      "header_subtitle": "Trouvez des réponses à vos questions ou contactez notre équipe de support",
+      "faq_title": "Questions fréquentes",
+      "search_hint": "Rechercher une question...",
+      "contact_support": "Contacter le support",
+      "contact_form_title": "Contacter le support",
+      "contact_form_subtitle": "Vous n'avez pas trouvé de réponse à votre question ? Envoyez-nous un message et nous vous répondrons dans les plus brefs délais.",
+      "email_label": "Votre e-mail *",
+      "email_hint": "exemple@mail.com",
+      "email_required": "Veuillez entrer votre email",
+      "message_label": "Votre message *",
+      "message_hint": "Décrivez votre problème en détail...",
+      "message_required": "Veuillez entrer votre message",
+      "send_button": "Envoyer",
+      "feedback_question": "Cette réponse vous a-t-elle aidé ?",
+      "feedback_thanks": "Merci pour votre retour !",
+      "feedback_sorry": "Désolé que cette réponse n'ait pas aidé. N'hésitez pas à nous contacter !",
+      "error_email_required": "L'email est obligatoire.",
+      "error_email_invalid": "Veuillez entrer un email valide.",
+      "error_message_required": "Veuillez écrire un message.",
+      "error_sending": "Erreur lors de l'envoi du message. Veuillez réessayer.",
+      "success_message": "Message envoyé ! Nous vous répondrons prochainement."
+    },
+    "faq": {
+      "cancel_trip": {
+        "question": "Comment annuler un trajet ?",
+        "answer": "Pour annuler un trajet, allez dans \"Mes trajets\" et sélectionnez l'option \"Annuler\"."
+      },
+      "cancel_reservation": {
+        "question": "Comment annuler ma réservation ?",
+        "answer": "Vous pouvez annuler votre réservation depuis la section \"Réservations\". Appuyez sur le bouton \"Annuler\" à côté de votre réservation."
+      },
+      "contact_support": {
+        "question": "Comment contacter le support ?",
+        "answer": "Envoyez-nous un message via le formulaire au bas de cette page ou à support@bladiway.com."
+      },
+      "change_language": {
+        "question": "Comment modifier mes préférences de langue ?",
+        "answer": "Accédez à Paramètres > Langue."
+      }
+    },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"create_account": "Créer un compte",
+  "profile_photo": "Photo de profil",
+  "lastname": "Nom",
+  "firstname": "Prénom",
+  "email": "Email",
+  "phone_number": "Numéro de téléphone",
+  "birth_date": "Date de naissance",
+  "gender": "Genre",
+  "password": "Mot de passe",
+  "signup": "S'inscrire",
+  "already_have_account": "Vous avez déjà un compte?",
+  "login": "Connectez-vous",
+  "homme": "Homme",
+  "femme": "Femme",
+  "please_enter_lastname": "Veuillez entrer votre nom",
+  "please_enter_firstname": "Veuillez entrer votre prénom",
+  "please_enter_email": "Veuillez entrer votre email",
+  "please_enter_valid_email": "Veuillez entrer un email valide",
+  "please_select_birth_date": "Veuillez sélectionner votre date de naissance",
+  "please_select_gender": "Veuillez sélectionner votre genre",
+  "please_enter_password": "Veuillez entrer un mot de passe",
+  "password_min_length": "Le mot de passe doit contenir au moins 8 caractères",
+  "error_select_image": "Erreur lors de la sélection de l'image",
+  "choose_profile_image": "Choisir une image de profil",
+  "take_photo": "Prendre une photo",
+  "choose_from_gallery": "Choisir depuis la galerie",
+  "phone_already_used": "Ce numéro de téléphone est déjà utilisé",
+  "permission_denied_database": "Permission refusée pour accéder à la base de données",
+  "firebase_error": "Erreur Firebase",
+  "unexpected_error": "Erreur inattendue",
+  "firebase_error_check_phone": "Erreur Firebase dans la vérification du numéro",
+  "unexpected_error_check_phone": "Erreur inattendue dans la vérification du numéro",
+  "enter_valid_email": "Veuillez entrer un email valide",
+  "validation_failed": "Validation échouée (format/vide)",
+  "checking_firebase_for": "Vérification Firebase pour",
+  "email_already_used": "Cet email est déjà utilisé",
+  "email_available": "Email disponible",
+  "firebase_auth_error": "Erreur d'authentification Firebase",
+  "invalid_email_format": "Le format de l'email est invalide",
+  "too_many_attempts": "Trop de tentatives. Réessayez plus tard",
+  "unexpected_error_check_email": "Erreur inattendue dans la vérification de l'email",
+  "unexpected_error_email": "Erreur inattendue (Email)",
+  "select_profile_image": "Veuillez sélectionner une image de profil",
+  "verification_in_progress": "Vérification en cours...",
+  "starting_availability_check": "Début de la vérification des disponibilités...",
+  "phone_available": "Numéro disponible",
+  "starting_otp_verification": "Lancement de la vérification OTP...",
+  "phone_number_required": "Numéro de téléphone requis",
+  "error_in_signup_process": "Erreur dans le processus d'inscription",
+  "start_phone_verification": "Début de la vérification téléphonique pour",
+  "auto_verification_success": "Vérification automatique réussie",
+  "verification_failed": "Échec de la vérification",
+  "sms_code_sent": "Code SMS envoyé",
+  "navigating_to_otp_screen": "Navigation vers l'écran OTP...",
+  "widget_not_mounted_navigation_cancelled": "Widget non monté, navigation annulée",
+  "auto_retrieval_timeout": "Délai de récupération automatique expiré",
+  "verification_error": "Erreur lors de la vérification",
+  "error_in_phone_verification": "Erreur dans la vérification du téléphone",
+  "invalid_phone_number": "Numéro de téléphone invalide",
+  "too_many_attempts_try_later": "Trop de tentatives. Réessayez plus tard",
+  "an_error_occurred": "Une erreur est survenue",
+
+
+
+    "login": {
+      "title": "Connexion",
+      "identifier_label": "Email ou numéro de téléphone",
+      "identifier_hint": "Entrez votre email ou téléphone",
+      "enter_identifier": "Veuillez entrer votre email ou téléphone.",
+      "invalid_identifier": "Email ou numéro de téléphone invalide.",
+      "enter_password": "Veuillez entrer votre mot de passe.",
+      "password": "Mot de passe",
+      "forgot_password": "Mot de passe oublié ?",
+      "choose_method": "Choisissez une méthode",
+      "select_reset_option": "Sélectionnez comment vous souhaitez réinitialiser votre mot de passe",
+      "email": "Email",
+      "reset_via_email": "Réinitialiser via l'adresse email",
+      "phone": "Téléphone",
+      "reset_via_phone": "Réinitialiser via le numéro de téléphone",
+      "user_not_found": "Utilisateur non trouvé.",
+      "wrong_password": "Mot de passe incorrect.",
+      "invalid_email": "Adresse email invalide.",
+      "error": "Erreur : {}",
+      "unexpected_error": "Erreur inattendue : {}",
+      "no_user_found_phone": "Aucun utilisateur trouvé avec ce numéro de téléphone.",
+      "login_button": "Se connecter",
+      "no_account": "Pas encore de compte ? ",
+      "signup": "Créer un compte"
+    },
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  "appbar": {
+    "title": "Vérification du permis"
+  },
+  "form": {
+    "license_number": "Numéro de permis",
+    "expiration_date": "Date d'expiration"
+  },
+  "validation": {
+    "license_number": "Veuillez entrer le numéro de permis",
+    "expiration_date": "Veuillez entrer la date d'expiration"
+  },
+  "upload": {
+    "select_front": "Sélectionner l'image du recto",
+    "select_back": "Sélectionner l'image du verso",
+    "front_selected": "Recto sélectionné",
+    "back_selected": "Verso sélectionné"
+  },
+  "error": {
+    "select_both_images": "Veuillez sélectionner les deux images du permis.",
+    "not_logged_in": "Utilisateur non connecté.",
+    "license_update_failed": "Échec de la mise à jour du permis.",
+    "validation_check_failed": "Erreur lors de la vérification de validation."
+  },
+  "success": {
+    "license_updated": "Informations du permis mises à jour avec succès."
+  },
+  "info": {
+    "waiting_admin_validation": "En attente de validation par l’administrateur..."
+  },
+  "uploading": {
+    "image_error": "Erreur lors du téléversement de l’image."
+  },
+  "button": {
+    "update_license_info": "Mettre à jour le permis",
+    "back": "Retour"
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   "form.make": "Marque de la voiture",
+    "form.model": "Modèle de la voiture",
+    "form.year": "Année de fabrication",
+    "form.color": "Couleur",
+    "form.plate": "Numéro de plaque",
+    "form.vin": "Numéro de série (VIN)",
+    "validation.make": "Veuillez entrer la marque",
+    "validation.model": "Veuillez entrer le modèle",
+    "validation.year": "Veuillez sélectionner l'année de fabrication",
+    "validation.color": "Veuillez sélectionner la couleur de la voiture",
+    "validation.plate": "Veuillez entrer le numéro de plaque",
+    "validation.vin": "Veuillez entrer le VIN",
+    "button.register_car": "Enregistrer la voiture",
+    "button.back": "Retour",
+    "error.registration": "Erreur lors de l'enregistrement de la voiture",
+    "error.not_logged_in": "Vous devez être connecté pour continuer",
+    "registering": "Enregistrement en cours",
+    "success.registration": "Voiture enregistrée avec succès!",
+    "appbar.add_car": "Ajouter une voiture",
+
+
+
+
+
+
+
+
+
+
+
+
+  "Nom": "Nom",
+  "Prénom": "Prénom",
+  "Email": "Email",
+  "Téléphone": "Téléphone",
+  "Date de naissance": "Date de naissance",
+  "Genre": "Genre",
+  "Sauvegarder": "Sauvegarder",
+  "Modifier": "Modifier",
+  "Annuler": "Annuler",
+  "Erreur": "Erreur",
+  "Chargement": "Chargement",
+    "personal_info": "Informations personnelles",
+
+  "Bienvenue à notre plateforme": "Bienvenue à notre plateforme",
+  "Bonjour": "Bonjour",
+  "Trouvez votre trajet idéal 🚗": "Trouvez votre trajet idéal 🚗",
+  "Découvrez facilement les meilleurs trajets adaptés à vos besoins.": "Découvrez facilement les meilleurs trajets adaptés à vos besoins.",
+  "Réserver": "Réserver",
+  "Proposez votre trajet 🛣️": "Proposez votre trajet 🛣️",
+  "Partagez votre route et faites des économies.": "Partagez votre route et faites des économies.",
+  "Ajouter un trajet": "Ajouter un trajet",
+  "Vos statistiques": "Vos statistiques",
+  "Trajets": "Trajets",
+  "Proposés": "Proposés",
+  "Km parcourus": "Km parcourus",
+  "Accueil": "Accueil",
+  "Mes trajets": "Mes trajets",
+  "Réservations": "Réservations",
+  "Paramètres": "Paramètres",
+  "Bonjour, {}": "Bonjour, {}",
+
+  "Vous devez être connecté pour continuer": "Vous devez être connecté pour continuer",
+  "Utilisateur non trouvé": "Utilisateur non trouvé",
+  "Vos informations sont en cours de validation": "Vos informations sont en cours de validation",
+  "Erreur lors de la vérification": "Erreur lors de la vérification",
+
+  "settings": {
+    "title": "Paramètres",
+    "account": "Compte",
+    "my_profile": "Mon profil",
+    "preferences": "Préférences",
+    "notifications": "Notifications",
+    "dark_mode": "Mode sombre",
+    "dark_mode_enabled": "Mode sombre activé",
+    "dark_mode_disabled": "Mode sombre désactivé",
+    "language": "Langue",
+    "select_language": "Choisir la langue",
+    "help": "Aide",
+    "help_center": "Centre d'aide",
+    "account_management": "Gestion du compte",
+    "logout": "Se déconnecter",
+    "logout_confirmation": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "logout_success": "Déconnexion réussie",
+    "logout_error": "Une erreur est survenue lors de la déconnexion"
+  },
+
+  "common": {
+    "cancel": "Annuler"
+  }
+}

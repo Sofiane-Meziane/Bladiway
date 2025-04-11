@@ -4,13 +4,13 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:typed_data';
+import 'package:easy_localization/easy_localization.dart';
 
 class LicenseVerificationScreen extends StatefulWidget {
   const LicenseVerificationScreen({super.key});
 
   @override
-  _LicenseVerificationScreenState createState() =>
-      _LicenseVerificationScreenState();
+  _LicenseVerificationScreenState createState() => _LicenseVerificationScreenState();
 }
 
 class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
@@ -26,12 +26,12 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? _validateLicenseNumber(String? value) {
-    if (value!.isEmpty) return 'Veuillez entrer le numéro de permis';
+    if (value!.isEmpty) return 'validation.license_number'.tr();
     return null;
   }
 
   String? _validateExpirationDate(String? value) {
-    if (value!.isEmpty) return 'Veuillez entrer la date d\'expiration';
+    if (value!.isEmpty) return 'validation.expiration_date'.tr();
     return null;
   }
 
@@ -56,26 +56,19 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
       final bytes = await image.readAsBytes();
       final uploadTask = storageRef.putData(Uint8List.fromList(bytes));
       final snapshot = await uploadTask.whenComplete(() {});
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-      return downloadUrl;
+      return await snapshot.ref.getDownloadURL();
     } catch (e) {
-      print('Erreur lors du téléchargement de l\'image : $e');
-      throw Exception('Erreur lors du téléchargement de l\'image');
+      print('uploading.image_error'.tr());
+      throw Exception('uploading.image_error'.tr());
     }
   }
 
   Future<void> updateLicenseInfo() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     if (_frontImage == null || _backImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Veuillez sélectionner les deux images (recto et verso)',
-          ),
-        ),
+        SnackBar(content: Text('error.select_both_images'.tr())),
       );
       return;
     }
@@ -83,79 +76,57 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
     User? user = _auth.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vous devez être connecté pour continuer'),
-        ),
+        SnackBar(content: Text('error.not_logged_in'.tr())),
       );
       return;
     }
 
-    String frontImageUrl = await _uploadImage(
-      _frontImage!,
-      '${user.uid}_front_image.jpg',
-    );
-    String backImageUrl = await _uploadImage(
-      _backImage!,
-      '${user.uid}_back_image.jpg',
-    );
-
-    String licenseNumber = _licenseNumberController.text;
-    String expirationDate = _expirationDateController.text;
-
-    DocumentReference userDoc = _firestore.collection('users').doc(user.uid);
-
     try {
+      String frontImageUrl = await _uploadImage(_frontImage!, '${user.uid}_front_image.jpg');
+      String backImageUrl = await _uploadImage(_backImage!, '${user.uid}_back_image.jpg');
+
+      String licenseNumber = _licenseNumberController.text;
+      String expirationDate = _expirationDateController.text;
+
+      DocumentReference userDoc = _firestore.collection('users').doc(user.uid);
+
       await userDoc.set({
         'num_permis': licenseNumber,
         'date_expiration_permis': expirationDate,
         'recto_permis': frontImageUrl,
         'verso_permis': backImageUrl,
-        'isValidated': false, // Assurer que isValidated reste false ici
+        'isValidated': false,
       }, SetOptions(merge: true));
 
-      // Vérifier si toutes les informations sont saisies
       await _checkAndUpdateValidationStatus(user);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Informations sur le permis mises à jour avec succès!'),
-        ),
+        SnackBar(content: Text('success.license_updated'.tr())),
       );
     } catch (e) {
-      print('Erreur lors de la mise à jour du document utilisateur : $e');
+      print('error.license_update_failed'.tr());
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Erreur lors de la mise à jour des informations du permis',
-          ),
-        ),
+        SnackBar(content: Text('error.license_update_failed'.tr())),
       );
     }
   }
 
-  /// Vérifie si toutes les informations (permis + voiture) sont saisies
   Future<void> _checkAndUpdateValidationStatus(User user) async {
     try {
-      DocumentSnapshot userDoc =
-          await _firestore.collection('users').doc(user.uid).get();
-      bool hasLicense =
-          userDoc['recto_permis'] != null && userDoc['verso_permis'] != null;
-      QuerySnapshot carsSnapshot =
-          await _firestore
-              .collection('cars')
-              .where('id_proprietaire', isEqualTo: user.uid)
-              .limit(1)
-              .get();
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+      bool hasLicense = userDoc['recto_permis'] != null && userDoc['verso_permis'] != null;
+      QuerySnapshot carsSnapshot = await _firestore
+          .collection('cars')
+          .where('id_proprietaire', isEqualTo: user.uid)
+          .limit(1)
+          .get();
       bool hasCar = carsSnapshot.docs.isNotEmpty;
 
-      // Ne met pas à jour isValidated ici, car cela nécessite la validation admin
       if (hasLicense && hasCar) {
-        print(
-          'Toutes les informations sont saisies, en attente de validation admin.',
-        );
+        print('info.waiting_admin_validation'.tr());
       }
     } catch (e) {
-      print('Erreur lors de la vérification du statut : $e');
+      print('error.validation_check_failed'.tr());
     }
   }
 
@@ -189,9 +160,9 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Vérification du permis',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        title: Text(
+          'appbar.title'.tr(),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
@@ -208,7 +179,7 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
                 TextFormField(
                   controller: _licenseNumberController,
                   decoration: InputDecoration(
-                    labelText: 'Numéro de permis',
+                    labelText: 'form.license_number'.tr(),
                     prefixIcon: Icon(Icons.credit_card, color: primaryColor),
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
@@ -222,7 +193,7 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
                 TextFormField(
                   controller: _expirationDateController,
                   decoration: InputDecoration(
-                    labelText: 'Date d\'expiration',
+                    labelText: 'form.expiration_date'.tr(),
                     prefixIcon: Icon(Icons.calendar_today, color: primaryColor),
                     border: const OutlineInputBorder(),
                   ),
@@ -242,58 +213,18 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                GestureDetector(
+                _buildImageSelector(
                   onTap: () => _selectImage(ImageSource.gallery, true),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color:
-                          _frontImage != null
-                              ? Colors.green
-                              : primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.camera_alt, color: primaryColor),
-                        const SizedBox(width: 10),
-                        Text(
-                          _frontImage != null
-                              ? 'Recto sélectionné'
-                              : 'Sélectionner le recto du permis',
-                          style: TextStyle(color: primaryColor),
-                        ),
-                      ],
-                    ),
-                  ),
+                  hasImage: _frontImage != null,
+                  textKeyWhenSelected: 'upload.front_selected',
+                  textKeyWhenNotSelected: 'upload.select_front',
                 ),
                 const SizedBox(height: 16),
-                GestureDetector(
+                _buildImageSelector(
                   onTap: () => _selectImage(ImageSource.gallery, false),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color:
-                          _backImage != null
-                              ? Colors.green
-                              : primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.camera_alt, color: primaryColor),
-                        const SizedBox(width: 10),
-                        Text(
-                          _backImage != null
-                              ? 'Verso sélectionné'
-                              : 'Sélectionner le verso du permis',
-                          style: TextStyle(color: primaryColor),
-                        ),
-                      ],
-                    ),
-                  ),
+                  hasImage: _backImage != null,
+                  textKeyWhenSelected: 'upload.back_selected',
+                  textKeyWhenNotSelected: 'upload.select_back',
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
@@ -305,22 +236,53 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
                     ),
                   ),
                   onPressed: updateLicenseInfo,
-                  child: const Text(
-                    "Mettre à jour les informations du permis",
-                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  child: Text(
+                    "button.update_license_info".tr(),
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Retour',
-                    style: TextStyle(color: Colors.grey),
+                  child: Text(
+                    'button.back'.tr(),
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageSelector({
+    required VoidCallback onTap,
+    required bool hasImage,
+    required String textKeyWhenSelected,
+    required String textKeyWhenNotSelected,
+  }) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: hasImage ? Colors.green : primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.camera_alt, color: primaryColor),
+            const SizedBox(width: 10),
+            Text(
+              hasImage ? textKeyWhenSelected.tr() : textKeyWhenNotSelected.tr(),
+              style: TextStyle(color: primaryColor),
+            ),
+          ],
         ),
       ),
     );

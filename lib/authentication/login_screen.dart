@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bladiway/pages/email_input_screen.dart';
 import 'package:bladiway/pages/phone_input_screen.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? _validateLoginIdentifier(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Veuillez entrer votre identifiant';
+      return 'login.enter_identifier'.tr();
     }
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     final phoneRegex = RegExp(
@@ -51,12 +52,12 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     return (emailRegex.hasMatch(value) || phoneRegex.hasMatch(value))
         ? null
-        : 'Identifiant invalide';
+        : 'login.invalid_identifier'.tr();
   }
 
   String? _validatePassword(String? value) {
     return (value == null || value.isEmpty)
-        ? 'Veuillez entrer votre mot de passe'
+        ? 'login.enter_password'.tr()
         : null;
   }
 
@@ -68,12 +69,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<String?> _getEmailFromPhone(String phoneNumber) async {
     try {
-      final querySnapshot =
-          await _firestore
-              .collection('users')
-              .where('phone', isEqualTo: phoneNumber)
-              .limit(1)
-              .get();
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('phone', isEqualTo: phoneNumber)
+          .limit(1)
+          .get();
       if (querySnapshot.docs.isNotEmpty) {
         return querySnapshot.docs.first.data()['email'];
       }
@@ -94,24 +94,23 @@ class _LoginScreenState extends State<LoginScreen> {
       String errorMessage;
       switch (e.code) {
         case 'user-not-found':
-          errorMessage = 'Aucun utilisateur trouvé avec cet email';
+          errorMessage = 'login.user_not_found'.tr();
           break;
         case 'wrong-password':
-          errorMessage = 'Mot de passe incorrect';
+          errorMessage = 'login.wrong_password'.tr();
           break;
         case 'invalid-email':
-          errorMessage = 'Email invalide';
+          errorMessage = 'login.invalid_email'.tr();
           break;
         default:
-          errorMessage = 'Erreur de connexion : ${e.message}';
+          errorMessage = 'login.error'.tr(args: [e.message ?? '']);
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(errorMessage)));
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur inattendue : $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('login.unexpected_error'.tr(args: [e.toString()]))),
+      );
     }
   }
 
@@ -134,15 +133,13 @@ class _LoginScreenState extends State<LoginScreen> {
           await _signInWithEmail(email, password);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Aucun utilisateur trouvé avec ce numéro'),
-            ),
+            SnackBar(content: Text('login.no_user_found_phone'.tr())),
           );
         }
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Identifiant invalide')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('login.invalid_identifier'.tr())),
+        );
       }
     }
   }
@@ -173,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Choisis une méthode !',
+                'login.choose_method'.tr(),
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -183,9 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
               IconButton(
                 icon: Icon(
                   Icons.close,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -193,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Sélectionne l’une des options ci-dessous pour réinitialiser ton mot de passe.',
+            'login.select_reset_option'.tr(),
             style: TextStyle(
               fontSize: 16,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -202,8 +197,8 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 24),
           _buildOptionTile(
             icon: Icons.email,
-            title: 'E-Mail',
-            subtitle: 'Réinitialisation par e-mail',
+            title: 'login.email'.tr(),
+            subtitle: 'login.reset_via_email'.tr(),
             onTap: () {
               Navigator.pop(context);
               _resetViaEmail();
@@ -212,8 +207,8 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 16),
           _buildOptionTile(
             icon: Icons.phone_android,
-            title: 'Numéro de téléphone',
-            subtitle: 'Réinitialisation par téléphone',
+            title: 'login.phone'.tr(),
+            subtitle: 'login.reset_via_phone'.tr(),
             onTap: () {
               Navigator.pop(context);
               _resetViaPhone();
@@ -258,19 +253,11 @@ class _LoginScreenState extends State<LoginScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 14,
                   ),
                 ),
@@ -285,10 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _resetViaEmail() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder:
-            (context) => ResetPasswordEmailScreen(onEmailSubmit: (email) {}),
-      ),
+      MaterialPageRoute(builder: (context) => ResetPasswordEmailScreen(onEmailSubmit: (email) {})),
     );
   }
 
@@ -316,15 +300,10 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          iconTheme: IconThemeData(
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
           elevation: 0,
           leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.primary),
             onPressed: () => Navigator.pushNamed(context, '/presentation'),
           ),
         ),
@@ -339,7 +318,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const SizedBox(height: 20),
                     Text(
-                      "Connexion",
+                      "login.title".tr(),
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -347,7 +326,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 20),
                     const SizedBox(height: 40),
                     TextFormField(
                       controller: _loginIdentifierController,
@@ -355,13 +333,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        labelText: 'Email ou numéro de téléphone',
-                        prefixIcon: Icon(
-                          Icons.person,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                        labelText: 'login.identifier_label'.tr(),
+                        prefixIcon: Icon(Icons.person, color: Theme.of(context).colorScheme.primary),
                         border: const OutlineInputBorder(),
-                        hintText: 'exemple@email.com ou +33612345678',
+                        hintText: 'login.identifier_hint'.tr(),
                       ),
                       validator: _validateLoginIdentifier,
                       onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
@@ -372,16 +347,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       focusNode: _passwordFocus,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        labelText: 'Mot de passe',
-                        prefixIcon: Icon(
-                          Icons.lock,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                        labelText: 'login.password'.tr(),
+                        prefixIcon: Icon(Icons.lock, color: Theme.of(context).colorScheme.primary),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           onPressed: _togglePasswordVisibility,
@@ -395,10 +365,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: TextButton(
                         onPressed: _showPasswordResetOptions,
                         child: Text(
-                          'Mot de passe oublié?',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                          'login.forgot_password'.tr(),
+                          style: TextStyle(color: Theme.of(context).colorScheme.primary),
                         ),
                       ),
                     ),
@@ -413,7 +381,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       onPressed: _submitForm,
                       child: Text(
-                        "Se connecter",
+                        "login.login_button".tr(),
                         style: TextStyle(
                           fontSize: 18,
                           color: Theme.of(context).colorScheme.onPrimary,
@@ -424,15 +392,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => Navigator.pushNamed(context, '/signup'),
                       child: Text.rich(
                         TextSpan(
-                          text: 'Vous n\'avez pas de compte? ',
+                          text: 'login.no_account'.tr(),
                           style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           ),
                           children: [
                             TextSpan(
-                              text: 'S\'inscrire',
+                              text: 'login.signup'.tr(),
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.bold,
