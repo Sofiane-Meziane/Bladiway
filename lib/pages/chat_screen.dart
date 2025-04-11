@@ -7,7 +7,7 @@ class ChatPage extends StatefulWidget {
   final String reservationId;
   final String otherUserId;
 
-  ChatPage({required this.reservationId, required this.otherUserId});
+  const ChatPage({super.key, required this.reservationId, required this.otherUserId});
 
   @override
   _ChatPageState createState() => _ChatPageState();

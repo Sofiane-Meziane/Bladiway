@@ -37,7 +37,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     int currentSeats,
     String tripId,
   ) async {
-    final TextEditingController _seatsController = TextEditingController(
+    final TextEditingController seatsController = TextEditingController(
       text: currentSeats.toString(),
     );
 
@@ -66,7 +66,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller: _seatsController,
+                  controller: seatsController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: 'Nombre de places',
@@ -83,7 +83,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  final newSeats = int.tryParse(_seatsController.text);
+                  final newSeats = int.tryParse(seatsController.text);
                   if (newSeats == null || newSeats <= 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -667,8 +667,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                             'Contacter',
                                             theme.colorScheme.primary,
                                             () {
-                                              if (reservationId != null &&
-                                                  addedBy != null) {
+                                              if (addedBy != null) {
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(

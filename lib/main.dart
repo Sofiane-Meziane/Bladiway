@@ -4,7 +4,6 @@ import 'package:bladiway/pages/otp_screen.dart';
 import 'package:bladiway/pages/presentation.dart';
 import 'package:bladiway/pages/scanner_permis.dart';
 import 'package:bladiway/pages/verification_conducteur.dart';
-import 'package:bladiway/pages/reservations_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,8 +32,8 @@ void main() async {
         Locale('ar'),
         Locale('fr', 'DZ'), // Utilisé comme fallback pour Tamazight (Kabyle)
       ],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('fr', 'FR'),
+      path: 'assets/translations', // Chemin vers les fichiers JSON
+      fallbackLocale: Locale('fr'),
       child: ChangeNotifierProvider.value(
         value: themeProvider,
         child: const MyApp(),
@@ -51,15 +50,15 @@ class MyApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: context.localizationDelegates,
-      supportedLocales: context.supportedLocales,
+      title: 'BladiWay',
       locale: context.locale,
+      supportedLocales: context.supportedLocales,
+      localizationsDelegates: context.localizationDelegates,
       theme: ThemeData(
         brightness: Brightness.light,
-        colorScheme: ColorScheme.light(
-          primary: const Color(0xFF2196F3),
-          secondary: const Color.fromARGB(255, 197, 209, 212),
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF2196F3),
+          secondary: Color.fromARGB(255, 197, 209, 212),
           surface: Colors.white,
         ),
       ),
@@ -72,6 +71,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       themeMode: themeProvider.themeMode,
+      debugShowCheckedModeBanner: false,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
@@ -93,7 +93,6 @@ class MyApp extends StatelessWidget {
         '/add_car': (context) => const CarRegistrationScreen(),
         '/verifier_Conducteur': (context) => const PermissionAddCarPage(),
         '/scan_permission': (context) => const LicenseVerificationScreen(),
-        '/reservations': (context) => const ReservationsScreen(),
       },
     );
   }

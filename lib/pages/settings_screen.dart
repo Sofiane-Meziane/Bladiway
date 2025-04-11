@@ -79,9 +79,7 @@ class ParametresPage extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const CentreAidePage(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const CentreAidePage()),
                 );
               },
             ),
@@ -110,104 +108,78 @@ class ParametresPage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (context) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  tr('settings.select_language'),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const Divider(),
-                _buildLanguageOption(
-                  context,
-                  'Français',
-                  'FR',
-                  const Locale('fr'),
-                  currentLocale,
-                  () {
-                    context.setLocale(const Locale('fr'));
-                    CommunMethods().displaySnackBar(
-                      "Langue changée vers le français",
-                      context,
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-                _buildLanguageOption(
-                  context,
-                  'English',
-                  'EN',
-                  const Locale('en'),
-                  currentLocale,
-                  () {
-                    context.setLocale(const Locale('en'));
-                    CommunMethods().displaySnackBar(
-                      "Language changed to English",
-                      context,
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-                _buildLanguageOption(
-                  context,
-                  'العربية',
-                  'AR',
-                  const Locale('ar'),
-                  currentLocale,
-                  () {
-                    context.setLocale(const Locale('ar'));
-                    CommunMethods().displaySnackBar(
-                      "تم تغيير اللغة إلى العربية",
-                      context,
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-                _buildLanguageOption(
-                  context,
-                  'Tamazight',
-                  'KAB',
-                  const Locale('fr', 'DZ'),
-                  currentLocale,
-                  () {
-                    context.setLocale(const Locale('fr', 'DZ'));
-                    CommunMethods().displaySnackBar(
-                      "Langue changée vers Tamazight",
-                      context,
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
+      builder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tr('settings.select_language'),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-          ),
+            const Divider(),
+            _buildLanguageOption(
+              context,
+              'Français', 'FR', const Locale('fr'),
+              currentLocale,
+                  () {
+                context.setLocale(const Locale('fr'));
+                CommunMethods().displaySnackBar("Langue changée vers le français", context);
+                Navigator.pop(context);
+              },
+            ),
+            _buildLanguageOption(
+              context,
+              'English', 'EN', const Locale('en'),
+              currentLocale,
+                  () {
+                context.setLocale(const Locale('en'));
+                CommunMethods().displaySnackBar("Language changed to English", context);
+                Navigator.pop(context);
+              },
+            ),
+            _buildLanguageOption(
+              context,
+              'العربية', 'AR', const Locale('ar'),
+              currentLocale,
+                  () {
+                context.setLocale(const Locale('ar'));
+                CommunMethods().displaySnackBar("تم تغيير اللغة إلى العربية", context);
+                Navigator.pop(context);
+              },
+            ),
+            _buildLanguageOption(
+              context,
+              'Tamazight', 'KAB', const Locale('fr', 'DZ'),
+              currentLocale,
+                  () {
+                context.setLocale(const Locale('fr', 'DZ'));
+                CommunMethods().displaySnackBar("Langue changée vers Tamazight", context);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildLanguageOption(
-    BuildContext context,
-    String language,
-    String code,
-    Locale locale,
-    Locale currentLocale,
-    VoidCallback onTap,
-  ) {
-    final isSelected =
-        locale.languageCode == currentLocale.languageCode &&
-        (locale.countryCode == null ||
-            locale.countryCode == currentLocale.countryCode);
+      BuildContext context,
+      String language,
+      String code,
+      Locale locale,
+      Locale currentLocale,
+      VoidCallback onTap,
+      ) {
+    final isSelected = locale.languageCode == currentLocale.languageCode &&
+        (locale.countryCode == null || locale.countryCode == currentLocale.countryCode);
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor:
-            isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Colors.grey[200],
+        backgroundColor: isSelected
+            ? Theme.of(context).colorScheme.primary
+            : Colors.grey[200],
         radius: 16,
         child: Text(
           code,
@@ -219,10 +191,9 @@ class ParametresPage extends StatelessWidget {
         ),
       ),
       title: Text(language),
-      trailing:
-          isSelected
-              ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
-              : null,
+      trailing: isSelected
+          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+          : null,
       onTap: onTap,
     );
   }
@@ -230,28 +201,27 @@ class ParametresPage extends StatelessWidget {
   Future<void> _showLogoutConfirmation(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(tr('settings.logout')),
-            content: Text(tr('settings.logout_confirmation')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(tr('common.cancel')),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text(
-                  tr('settings.logout'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text(tr('settings.logout')),
+        content: Text(tr('settings.logout_confirmation')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(tr('common.cancel')),
           ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(
+              tr('settings.logout'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
     if (result == true) {
       try {
@@ -260,7 +230,7 @@ class ParametresPage extends StatelessWidget {
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/presentation',
-          (Route<dynamic> route) => false,
+              (Route<dynamic> route) => false,
         );
       } catch (e) {
         CommunMethods().displaySnackBar(
