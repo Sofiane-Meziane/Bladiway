@@ -1,62 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
-// Widgets externalisés dans le dossier "widgets"
 import 'package:bladiway/widgets/settings_widgets.dart';
-// Méthodes communes dans le dossier "methods"
 import 'package:bladiway/methods/commun_methods.dart';
-// Provider de thème
 import 'package:bladiway/providers/theme_provider.dart';
+import 'package:bladiway/pages/centre_aide_page.dart';
 
-/// Écran des paramètres optimisé et organisé
 class ParametresPage extends StatelessWidget {
   const ParametresPage({super.key});
 
-  /// Construit la liste des sections de paramètres
   Widget _buildSettingsList(BuildContext context) {
-    // Récupérer l'état actuel du thème
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final currentLocale = context.locale;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // SECTION : Compte
         SettingsCard(
-          title: 'Compte',
+          title: tr('settings.account'),
           icon: Icons.person,
           children: [
             SettingsTile(
-              title: 'Mon profil',
+              title: tr('settings.my_profile'),
               icon: Icons.edit,
               onTap: () => Navigator.pushNamed(context, '/profile'),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        // SECTION : Préférences
         SettingsCard(
-          title: 'Préférences',
+          title: tr('settings.preferences'),
           icon: Icons.tune,
           children: [
             SettingsSwitch(
-              title: 'Notifications',
+              title: tr('settings.notifications'),
               icon: Icons.notifications,
               value: true,
-              onChanged: (bool newValue) {
-                // Implémentez ici la logique pour activer/désactiver les notifications
-              },
+              onChanged: (bool newValue) {},
             ),
             SettingsSwitch(
-              title: 'Mode sombre',
+              title: tr('settings.dark_mode'),
               icon: Icons.dark_mode,
-              value: themeProvider.isDarkMode, // Obtenir l'état actuel du thème
+              value: themeProvider.isDarkMode,
               onChanged: (bool newValue) {
-                // Changer le thème via le provider
                 themeProvider.setDarkMode(newValue);
-                // Afficher une confirmation à l'utilisateur
                 CommunMethods().displaySnackBar(
-                  newValue ? "Mode sombre activé" : "Mode clair activé",
+                  newValue
+                      ? tr('settings.dark_mode_enabled')
+                      : tr('settings.dark_mode_disabled'),
                   context,
                 );
               },
@@ -64,44 +57,41 @@ class ParametresPage extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        // SECTION : Langue
         SettingsCard(
-          title: 'Langue',
+          title: tr('settings.language'),
           icon: Icons.language,
           children: [
             SettingsTile(
-              title: 'Choisir la langue',
+              title: tr('settings.select_language'),
               icon: Icons.language,
-              onTap: () => _showLanguageDialog(context),
+              onTap: () => _showLanguageDialog(context, currentLocale),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        // SECTION : Aide
         SettingsCard(
-          title: 'Aide',
+          title: tr('settings.help'),
           icon: Icons.help,
           children: [
             SettingsTile(
-              title: 'Centre d\'aide',
+              title: tr('settings.help_center'),
               icon: Icons.help_outline,
               onTap: () {
-                CommunMethods().displaySnackBar(
-                  "Accéder au centre d'aide",
+                Navigator.push(
                   context,
+                  MaterialPageRoute(builder: (context) => const CentreAidePage()),
                 );
               },
             ),
           ],
         ),
         const SizedBox(height: 16),
-        // SECTION : Gestion du Compte
         SettingsCard(
-          title: 'Gestion du Compte',
+          title: tr('settings.account_management'),
           icon: Icons.account_circle,
           children: [
             SettingsTile(
-              title: 'Se déconnecter',
+              title: tr('settings.logout'),
               icon: Icons.logout,
               textColor: Theme.of(context).colorScheme.error,
               onTap: () => _showLogoutConfirmation(context),
@@ -112,60 +102,84 @@ class ParametresPage extends StatelessWidget {
     );
   }
 
-  /// Affiche la boîte de dialogue pour sélectionner la langue
-  void _showLanguageDialog(BuildContext context) {
+  void _showLanguageDialog(BuildContext context, Locale currentLocale) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (context) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Sélectionnez votre langue',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const Divider(),
-                _buildLanguageOption(context, 'Français', 'FR', true, () {
-                  CommunMethods().displaySnackBar(
-                    "Langue changée en Français",
-                    context,
-                  );
-                  Navigator.pop(context);
-                }),
-                _buildLanguageOption(context, 'Anglais', 'EN', false, () {
-                  CommunMethods().displaySnackBar(
-                    "Language changed to English",
-                    context,
-                  );
-                  Navigator.pop(context);
-                }),
-              ],
+      builder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tr('settings.select_language'),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-          ),
+            const Divider(),
+            _buildLanguageOption(
+              context,
+              'Français', 'FR', const Locale('fr'),
+              currentLocale,
+                  () {
+                context.setLocale(const Locale('fr'));
+                CommunMethods().displaySnackBar("Langue changée vers le français", context);
+                Navigator.pop(context);
+              },
+            ),
+            _buildLanguageOption(
+              context,
+              'English', 'EN', const Locale('en'),
+              currentLocale,
+                  () {
+                context.setLocale(const Locale('en'));
+                CommunMethods().displaySnackBar("Language changed to English", context);
+                Navigator.pop(context);
+              },
+            ),
+            _buildLanguageOption(
+              context,
+              'العربية', 'AR', const Locale('ar'),
+              currentLocale,
+                  () {
+                context.setLocale(const Locale('ar'));
+                CommunMethods().displaySnackBar("تم تغيير اللغة إلى العربية", context);
+                Navigator.pop(context);
+              },
+            ),
+            _buildLanguageOption(
+              context,
+              'Tamazight', 'KAB', const Locale('fr', 'DZ'),
+              currentLocale,
+                  () {
+                context.setLocale(const Locale('fr', 'DZ'));
+                CommunMethods().displaySnackBar("Langue changée vers Tamazight", context);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  /// Construit une option de langue pour le sélecteur
   Widget _buildLanguageOption(
-    BuildContext context,
-    String language,
-    String code,
-    bool isSelected,
-    VoidCallback onTap,
-  ) {
+      BuildContext context,
+      String language,
+      String code,
+      Locale locale,
+      Locale currentLocale,
+      VoidCallback onTap,
+      ) {
+    final isSelected = locale.languageCode == currentLocale.languageCode &&
+        (locale.countryCode == null || locale.countryCode == currentLocale.countryCode);
+
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor:
-            isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Colors.grey[200],
+        backgroundColor: isSelected
+            ? Theme.of(context).colorScheme.primary
+            : Colors.grey[200],
         radius: 16,
         child: Text(
           code,
@@ -177,56 +191,50 @@ class ParametresPage extends StatelessWidget {
         ),
       ),
       title: Text(language),
-      trailing:
-          isSelected
-              ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
-              : null,
+      trailing: isSelected
+          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+          : null,
       onTap: onTap,
     );
   }
 
-  /// Affiche une confirmation avant de se déconnecter
   Future<void> _showLogoutConfirmation(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Déconnexion'),
-            content: const Text('Êtes-vous sûr de vouloir vous déconnecter ?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white, // This ensures text is visible
-                ),
-                child: const Text(
-                  'Déconnecter',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold, // Makes text more visible
-                  ),
-                ),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text(tr('settings.logout')),
+        content: Text(tr('settings.logout_confirmation')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(tr('common.cancel')),
           ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(
+              tr('settings.logout'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
     if (result == true) {
       try {
         await FirebaseAuth.instance.signOut();
-        CommunMethods().displaySnackBar("Déconnexion réussie", context);
+        CommunMethods().displaySnackBar(tr('settings.logout_success'), context);
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/presentation',
-          (Route<dynamic> route) => false,
+              (Route<dynamic> route) => false,
         );
       } catch (e) {
         CommunMethods().displaySnackBar(
-          "Erreur lors de la déconnexion : $e",
+          "${tr('settings.logout_error')} : $e",
           context,
         );
       }
@@ -236,14 +244,11 @@ class ParametresPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Utilise la couleur de fond définie dans votre thème (depuis main.dart)
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
-            // En-tête réutilisable externalisé dans widgets/settings_widgets.dart
-            const SettingsHeader(title: 'Paramètres'),
-            // Liste des paramètres
+            SettingsHeader(title: tr('settings.title')),
             Expanded(child: _buildSettingsList(context)),
           ],
         ),

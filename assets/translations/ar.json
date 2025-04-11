@@ -1,0 +1,406 @@
+{
+
+
+  "help_center": {
+    "title": "مركز المساعدة",
+    "header_title": "بحاجة إلى مساعدة؟",
+    "header_subtitle": "ابحث عن إجابات لأسئلتك أو اتصل بفريق الدعم لدينا",
+    "faq_title": "الأسئلة الشائعة",
+    "search_hint": "ابحث عن سؤال...",
+    "contact_support": "اتصل بالدعم",
+    "contact_form_title": "اتصل بالدعم",
+    "contact_form_subtitle": "لم تجد إجابة لسؤالك؟ أرسل لنا رسالة وسنرد عليك في أقرب وقت ممكن.",
+    "email_label": "بريدك الإلكتروني *",
+    "email_hint": "example@mail.com",
+    "email_required": "الرجاء إدخال بريدك الإلكتروني",
+    "message_label": "رسالتك *",
+    "message_hint": "صف مشكلتك بالتفصيل...",
+    "message_required": "الرجاء كتابة رسالة",
+    "send_button": "إرسال",
+    "feedback_question": "هل كانت هذه الإجابة مفيدة؟",
+    "feedback_thanks": "شكرًا على ملاحظاتك!",
+    "feedback_sorry": "نأسف لأن هذه الإجابة لم تكن مفيدة. لا تتردد في الاتصال بنا!",
+    "error_email_required": "البريد الإلكتروني مطلوب.",
+    "error_email_invalid": "الرجاء إدخال بريد إلكتروني صالح.",
+    "error_message_required": "الرجاء كتابة رسالة.",
+    "error_sending": "خطأ في إرسال الرسالة. حاول مرة اخرى.",
+    "success_message": "تم إرسال الرسالة! سنرد عليك قريبًا."
+  },
+  "faq": {
+    "cancel_trip": {
+      "question": "كيفية إلغاء رحلة؟",
+      "answer": "لإلغاء رحلة، انتقل إلى \"رحلاتي\" وحدد خيار \"إلغاء\"."
+    },
+    "cancel_reservation": {
+      "question": "كيفية إلغاء حجزي؟",
+      "answer": "يمكنك إلغاء حجزك من قسم \"الحجوزات\". انقر على زر \"إلغاء\" بجوار حجزك."
+    },
+    "contact_support": {
+      "question": "كيفية الاتصال بالدعم؟",
+      "answer": "أرسل لنا رسالة عبر النموذج في أسفل هذه الصفحة أو على support@bladiway.com."
+    },
+    "change_language": {
+      "question": "كيفية تغيير تفضيلات اللغة الخاصة بي؟",
+      "answer": "انتقل إلى الإعدادات > اللغة."
+    }
+  },
+
+
+
+
+  "create_account": "إنشاء حساب",
+  "profile_photo": "صورة الملف الشخصي",
+  "lastname": "اللقب",
+  "firstname": "الاسم",
+  "email": "البريد الإلكتروني",
+  "phone_number": "رقم الهاتف",
+  "birth_date": "تاريخ الميلاد",
+  "gender": "الجنس",
+  "password": "كلمة المرور",
+  "signup": "تسجيل",
+  "already_have_account": "هل لديك حساب بالفعل؟",
+  "login": "تسجيل الدخول",
+  "homme": "ذكر",
+  "femme": "أنثى",
+  "please_enter_lastname": "الرجاء إدخال اللقب",
+  "please_enter_firstname": "الرجاء إدخال الاسم",
+  "please_enter_email": "الرجاء إدخال البريد الإلكتروني",
+  "please_enter_valid_email": "الرجاء إدخال بريد إلكتروني صالح",
+  "please_select_birth_date": "الرجاء اختيار تاريخ الميلاد",
+  "please_select_gender": "الرجاء اختيار الجنس",
+  "please_enter_password": "الرجاء إدخال كلمة المرور",
+  "password_min_length": "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل",
+  "error_select_image": "خطأ في اختيار الصورة",
+  "choose_profile_image": "اختر صورة الملف الشخصي",
+  "take_photo": "التقاط صورة",
+  "choose_from_gallery": "اختر من المعرض",
+  "phone_already_used": "رقم الهاتف هذا مستخدم بالفعل",
+  "permission_denied_database": "تم رفض الإذن للوصول إلى قاعدة البيانات",
+  "firebase_error": "خطأ في فايربيس",
+  "unexpected_error": "خطأ غير متوقع",
+  "firebase_error_check_phone": "خطأ في فايربيس أثناء التحقق من رقم الهاتف",
+  "unexpected_error_check_phone": "خطأ غير متوقع أثناء التحقق من رقم الهاتف",
+  "enter_valid_email": "الرجاء إدخال بريد إلكتروني صالح",
+  "validation_failed": "فشل التحقق (التنسيق/فارغ)",
+  "checking_firebase_for": "جاري التحقق في فايربيس لـ",
+  "email_already_used": "هذا البريد الإلكتروني مستخدم بالفعل",
+  "email_available": "البريد الإلكتروني متاح",
+  "firebase_auth_error": "خطأ في مصادقة فايربيس",
+  "invalid_email_format": "تنسيق البريد الإلكتروني غير صالح",
+  "too_many_attempts": "محاولات كثيرة جدا. حاول مرة أخرى لاحقا",
+  "unexpected_error_check_email": "خطأ غير متوقع أثناء التحقق من البريد الإلكتروني",
+  "unexpected_error_email": "خطأ غير متوقع (البريد الإلكتروني)",
+  "select_profile_image": "الرجاء اختيار صورة الملف الشخصي",
+  "verification_in_progress": "جاري التحقق...",
+  "starting_availability_check": "بدء التحقق من التوفر...",
+  "phone_available": "رقم الهاتف متاح",
+  "starting_otp_verification": "بدء التحقق من رمز OTP...",
+  "phone_number_required": "رقم الهاتف مطلوب",
+  "error_in_signup_process": "خطأ في عملية التسجيل",
+  "start_phone_verification": "بدء التحقق من الهاتف لـ",
+  "auto_verification_success": "نجح التحقق التلقائي",
+  "verification_failed": "فشل التحقق",
+  "sms_code_sent": "تم إرسال رمز الرسالة القصيرة",
+  "navigating_to_otp_screen": "الانتقال إلى شاشة OTP...",
+  "widget_not_mounted_navigation_cancelled": "الويدجت غير مثبت، تم إلغاء التنقل",
+  "auto_retrieval_timeout": "انتهت مهلة الاسترجاع التلقائي",
+  "verification_error": "خطأ في التحقق",
+  "error_in_phone_verification": "خطأ في التحقق من الهاتف",
+  "invalid_phone_number": "رقم هاتف غير صالح",
+  "too_many_attempts_try_later": "محاولات كثيرة جدا. حاول مرة أخرى لاحقا",
+  "an_error_occurred": "حدث خطأ",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"login": {
+    "title": "تسجيل الدخول",
+    "identifier_label": "البريد الإلكتروني أو رقم الهاتف",
+    "identifier_hint": "أدخل بريدك الإلكتروني أو رقم هاتفك",
+    "enter_identifier": "يرجى إدخال بريدك الإلكتروني أو رقم هاتفك.",
+    "invalid_identifier": "البريد الإلكتروني أو رقم الهاتف غير صالح.",
+    "enter_password": "يرجى إدخال كلمة المرور.",
+    "password": "كلمة المرور",
+    "forgot_password": "نسيت كلمة المرور؟",
+    "choose_method": "اختر طريقة",
+    "select_reset_option": "حدد الطريقة التي تريد من خلالها إعادة تعيين كلمة المرور",
+    "email": "البريد الإلكتروني",
+    "reset_via_email": "إعادة تعيين عبر البريد الإلكتروني",
+    "phone": "الهاتف",
+    "reset_via_phone": "إعادة تعيين عبر رقم الهاتف",
+    "user_not_found": "المستخدم غير موجود.",
+    "wrong_password": "كلمة المرور غير صحيحة.",
+    "invalid_email": "البريد الإلكتروني غير صالح.",
+    "error": "خطأ: {}",
+    "unexpected_error": "خطأ غير متوقع: {}",
+    "no_user_found_phone": "لم يتم العثور على مستخدم باستخدام هذا الرقم.",
+    "login_button": "تسجيل الدخول",
+    "no_account": "ليس لديك حساب؟ ",
+    "signup": "إنشاء حساب"},
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"appbar": {
+    "title": "التحقق من رخصة السياقة"
+  },
+  "form": {
+    "license_number": "رقم الرخصة",
+    "expiration_date": "تاريخ الانتهاء"
+  },
+  "validation": {
+    "license_number": "يرجى إدخال رقم الرخصة",
+    "expiration_date": "يرجى إدخال تاريخ الانتهاء"
+  },
+  "upload": {
+    "select_front": "اختر صورة الوجه الأمامي",
+    "select_back": "اختر صورة الوجه الخلفي",
+    "front_selected": "تم اختيار الوجه الأمامي",
+    "back_selected": "تم اختيار الوجه الخلفي"
+  },
+  "error": {
+    "select_both_images": "يرجى اختيار الصورتين (الوجه الأمامي والخلفي).",
+    "not_logged_in": "يجب تسجيل الدخول للمتابعة.",
+    "license_update_failed": "فشل في تحديث معلومات الرخصة.",
+    "validation_check_failed": "حدث خطأ أثناء التحقق من حالة التحقق."
+  },
+  "success": {
+    "license_updated": "تم تحديث معلومات الرخصة بنجاح."
+  },
+  "info": {
+    "waiting_admin_validation": "في انتظار التحقق من قبل المسؤول..."
+  },
+  "uploading": {
+    "image_error": "حدث خطأ أثناء تحميل الصورة."
+  },
+  "button": {
+    "update_license_info": "تحديث معلومات الرخصة",
+    "back": "العودة"
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"form.make": "ماركة السيارة",
+    "form.model": "طراز السيارة",
+    "form.year": "سنة التصنيع",
+    "form.color": "اللون",
+    "form.plate": "رقم اللوحة",
+    "form.vin": "رقم التعريف (VIN)",
+    "validation.make": "يرجى إدخال ماركة السيارة",
+    "validation.model": "يرجى إدخال طراز السيارة",
+    "validation.year": "يرجى اختيار سنة التصنيع",
+    "validation.color": "يرجى اختيار لون السيارة",
+    "validation.plate": "يرجى إدخال رقم اللوحة",
+    "validation.vin": "يرجى إدخال رقم التعريف",
+    "button.register_car": "تسجيل السيارة",
+    "button.back": "رجوع",
+    "error.registration": "حدث خطأ أثناء تسجيل السيارة",
+    "error.not_logged_in": "يجب أن تكون مسجلاً للدخول للاستمرار",
+    "registering": "جارٍ تسجيل السيارة...",
+    "success.registration": "تم تسجيل السيارة بنجاح!",
+    "appbar.add_car": "إضافة سيارة",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  "Complétez votre profil pour publier un trajet": "أكمل ملفك الشخصي لنشر رحلة",
+  "Pour publier un trajet, vous devez scanner votre permis de conduire et ajouter au moins une voiture.": "لنشر رحلة، يجب عليك مسح رخصة القيادة ضوئيًا وإضافة سيارة واحدة على الأقل.",
+  "Bladiway": "بلاديواي",
+  "Scanner le permis": "مسح الرخصة ضوئيًا",
+  "Ajouter une voiture": "إضافة سيارة",
+
+
+
+
+
+
+
+
+  "Nom": "الاسم",
+  "Prénom": "اللقب",
+  "Email": "البريد الإلكتروني",
+  "Téléphone": "الهاتف",
+  "Date de naissance": "تاريخ الميلاد",
+  "Genre": "النوع",
+  "Sauvegarder": "حفظ",
+  "Modifier": "تعديل",
+  "Annuler": "إلغاء",
+  "Erreur": "خطأ",
+  "Chargement": "جار التحميل",
+
+  "Vérification du conducteur": "Asenqed n uneḥḥaj",
+  "Téléchargez votre permis de conduire": "Sali-d tasiregt-inek n uneḥḥej",
+  "Nous avons besoin des deux côtés de votre permis de conduire pour vérifier votre identité": "Nesra sin idisan n tsiregt-inek n uneḥḥej i usenqed n tmagit-inek",
+  "Recto du permis": "Udem n tsiregt",
+  "Verso du permis": "Aεrur n tsiregt",
+  "Télécharger une image": "Sali-d tawlaft",
+  "Continuer": "Kemmel",
+  "Après avoir téléchargé votre permis, vous devrez ajouter les informations de votre véhicule.": "Deffir usali n tsiregt-inek, ilaq ad ternuḍ isalen n tkerwant-inek.",
+  "Veuillez télécharger les deux côtés de votre permis": "Ttxil-k sali-d sin idisan n tsiregt-inek",
+  "Utilisateur non connecté": "Aseqdac ur yeqqin ara",
+  "Permis téléchargé avec succès": "Tasiregt tettwasali-d akken iwata",
+  "Erreur lors du téléchargement": "Tuccḍa deg usali",
+  "Utilisateur": "Aseqdac",
+  "Erreur lors de la récupération des données utilisateur": "Tuccḍa deg tririt n isefka n useqdac",
+  "Vous devez être connecté pour continuer": "Ilaq ad teqqneḍ iwakken ad tkemmleḍ",
+  "Utilisateur non trouvé": "Aseqdac ur yettwaf ara",
+  "Vos informations sont en cours de validation": "Isalen-inek ttwasenqaden",
+
+
+
+
+
+
+  "Vérification du conducteur": "التحقق من السائق",
+  "Téléchargez votre permis de conduire": "قم بتحميل رخصة القيادة الخاصة بك",
+  "Nous avons besoin des deux côtés de votre permis de conduire pour vérifier votre identité": "نحتاج إلى صورة لكلا جانبي رخصة القيادة للتحقق من هويتك",
+  "Recto du permis": "الجهة الأمامية للرخصة",
+  "Verso du permis": "الجهة الخلفية للرخصة",
+  "Télécharger une image": "تحميل صورة",
+  "Continuer": "متابعة",
+  "Après avoir téléchargé votre permis, vous devrez ajouter les informations de votre véhicule.": "بعد تحميل رخصتك، ستحتاج إلى إضافة معلومات سيارتك.",
+  "Veuillez télécharger les deux côtés de votre permis": "يرجى تحميل كلا جانبي الرخصة",
+  "Utilisateur non connecté": "المستخدم غير متصل",
+  "Permis téléchargé avec succès": "تم تحميل الرخصة بنجاح",
+  "Erreur lors du téléchargement": "خطأ أثناء التحميل",
+  "Utilisateur": "مستخدم",
+  "Erreur lors de la récupération des données utilisateur": "خطأ في استرداد بيانات المستخدم",
+  "Vous devez être connecté pour continuer": "يجب أن تكون متصلاً للمتابعة",
+  "Utilisateur non trouvé": "المستخدم غير موجود",
+  "Vos informations sont en cours de validation": "معلوماتك قيد التحقق",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  "Informations personnelles": "المعلومات الشخصية",
+  "Détails personnels": "التفاصيل الشخصية",
+  "Famme": "امرأة",
+  "Homme": "رجل",
+  "Bienvenue à notre plateforme": "مرحبًا بك في منصتنا",
+  "Bonjour, {}": "مرحباً، {}",
+  "Trouvez votre trajet idéal 🚗": "ابحث عن رحلتك المثالية 🚗",
+  "Découvrez facilement les meilleurs trajets adaptés à vos besoins.": "اكتشف بسهولة أفضل الرحلات التي تناسب احتياجاتك.",
+  "Réserver": "احجز الآن",
+  "Proposez votre trajet 🛣️": "اقترح رحلتك 🛣️",
+  "Partagez votre route et faites des économies.": "شارك رحلتك ووفّر المال.",
+  "Ajouter un trajet": "أضف رحلة",
+  "Vos statistiques": "إحصائياتك",
+  "Trajets": "الرحلات",
+  "Proposés": "المُقترحة",
+  "Km parcourus": "الكيلومترات المقطوعة",
+  "Accueil": "الرئيسية",
+  "Mes trajets": "رحلاتي",
+  "Réservations": "الحجوزات",
+  "Paramètres": "الإعدادات",
+  "Vous devez être connecté pour continuer": "يجب أن تكون متصلاً للمتابعة",
+  "Utilisateur non trouvé": "المستخدم غير موجود",
+  "Vos informations sont en cours de validation": "يتم التحقق من معلوماتك",
+  "Erreur lors de la vérification": "خطأ أثناء التحقق",
+
+  "settings": {
+    "title": "الإعدادات",
+    "account": "الحساب",
+    "my_profile": "ملفي الشخصي",
+    "preferences": "التفضيلات",
+    "notifications": "الإشعارات",
+    "dark_mode": "الوضع الليلي",
+    "dark_mode_enabled": "تم تفعيل الوضع الليلي",
+    "dark_mode_disabled": "تم تعطيل الوضع الليلي",
+    "language": "اللغة",
+    "select_language": "اختر اللغة",
+    "help": "مساعدة",
+    "help_center": "مركز المساعدة",
+    "account_management": "إدارة الحساب",
+    "logout": "تسجيل الخروج",
+    "logout_confirmation": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+    "logout_success": "تم تسجيل الخروج بنجاح",
+    "logout_error": "حدث خطأ أثناء تسجيل الخروج"
+  },
+
+  "common": {
+    "cancel": "إلغاء"
+  }
+}

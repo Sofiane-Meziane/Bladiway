@@ -1,0 +1,334 @@
+{
+  "help_center": {
+    "title": "Help Center",
+    "header_title": "Need help?",
+    "header_subtitle": "Find answers to your questions or contact our support team",
+    "faq_title": "Frequently Asked Questions",
+    "search_hint": "Search a question...",
+    "contact_support": "Contact support",
+    "contact_form_title": "Contact support",
+    "contact_form_subtitle": "Didn't find an answer to your question? Send us a message and we'll get back to you as soon as possible.",
+    "email_label": "Your email *",
+    "email_hint": "example@mail.com",
+    "email_required": "Please enter your email",
+    "message_label": "Your message *",
+    "message_hint": "Describe your issue in detail...",
+    "message_required": "Please enter your message",
+    "send_button": "Send",
+    "feedback_question": "Was this answer helpful?",
+    "feedback_thanks": "Thanks for your feedback!",
+    "feedback_sorry": "Sorry this answer wasn't helpful. Feel free to contact us!",
+    "error_email_required": "Email is required.",
+    "error_email_invalid": "Please enter a valid email.",
+    "error_message_required": "Please write a message.",
+    "error_sending": "Error sending the message. Please try again.",
+    "success_message": "Message sent! We'll get back to you soon."
+  },
+  "faq": {
+    "cancel_trip": {
+      "question": "How to cancel a trip?",
+      "answer": "To cancel a trip, go to \"My trips\" and select the \"Cancel\" option."
+    },
+    "cancel_reservation": {
+      "question": "How to cancel my reservation?",
+      "answer": "You can cancel your reservation from the \"Reservations\" section. Click on the \"Cancel\" button next to your reservation."
+    },
+    "contact_support": {
+      "question": "How to contact support?",
+      "answer": "Send us a message via the form at the bottom of this page or at support@bladiway.com."
+    },
+    "change_language": {
+      "question": "How to change my language preferences?",
+      "answer": "Go to Settings > Language."
+    }
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  "create_account": "Create an account",
+  "profile_photo": "Profile photo",
+  "lastname": "Last name",
+  "firstname": "First name",
+  "email": "Email",
+  "phone_number": "Phone number",
+  "birth_date": "Birth date",
+  "gender": "Gender",
+  "password": "Password",
+  "signup": "Sign up",
+  "already_have_account": "Already have an account?",
+  "login": "Log in",
+  "homme": "Male",
+  "femme": "Female",
+  "please_enter_lastname": "Please enter your last name",
+  "please_enter_firstname": "Please enter your first name",
+  "please_enter_email": "Please enter your email",
+  "please_enter_valid_email": "Please enter a valid email",
+  "please_select_birth_date": "Please select your birth date",
+  "please_select_gender": "Please select your gender",
+  "please_enter_password": "Please enter a password",
+  "password_min_length": "Password must contain at least 8 characters",
+  "error_select_image": "Error selecting image",
+  "choose_profile_image": "Choose profile image",
+  "take_photo": "Take a photo",
+  "choose_from_gallery": "Choose from gallery",
+  "phone_already_used": "This phone number is already in use",
+  "permission_denied_database": "Permission denied to access database",
+  "firebase_error": "Firebase error",
+  "unexpected_error": "Unexpected error",
+  "firebase_error_check_phone": "Firebase error in _checkPhoneNumberAvailability",
+  "unexpected_error_check_phone": "Unexpected error in _checkPhoneNumberAvailability",
+  "enter_valid_email": "Please enter a valid email",
+  "validation_failed": "Validation failed (format/empty)",
+  "checking_firebase_for": "Checking Firebase for",
+  "email_already_used": "This email is already in use",
+  "email_available": "Email available",
+  "firebase_auth_error": "FirebaseAuthException error in _checkEmailAvailability",
+  "invalid_email_format": "Invalid email format (according to Firebase)",
+  "too_many_attempts": "Too many attempts. Try again later",
+  "unexpected_error_check_email": "Unexpected error in _checkEmailAvailability",
+  "unexpected_error_email": "Unexpected error (Email)",
+  "select_profile_image": "Please select a profile image",
+  "verification_in_progress": "Verification in progress...",
+  "starting_availability_check": "Starting availability check...",
+  "phone_available": "Phone number available",
+  "starting_otp_verification": "Starting OTP verification...",
+  "phone_number_required": "Phone number required",
+  "error_in_signup_process": "Error in signup process",
+  "start_phone_verification": "Starting phone verification for",
+  "auto_verification_success": "Automatic verification successful",
+  "verification_failed": "Verification failed",
+  "sms_code_sent": "SMS code sent with verificationId",
+  "navigating_to_otp_screen": "Navigating to OTP screen...",
+  "widget_not_mounted_navigation_cancelled": "Widget not mounted, navigation cancelled",
+  "auto_retrieval_timeout": "Auto retrieval timeout",
+  "verification_error": "Verification error",
+  "error_in_phone_verification": "Error in phone verification",
+  "invalid_phone_number": "Invalid phone number",
+  "too_many_attempts_try_later": "Too many attempts. Try again later",
+  "an_error_occurred": "An error occurred",
+
+
+
+
+"login": {
+    "title": "Login",
+    "identifier_label": "Email or phone number",
+    "identifier_hint": "Enter your email or phone",
+    "enter_identifier": "Please enter your email or phone.",
+    "invalid_identifier": "Invalid email or phone number.",
+    "enter_password": "Please enter your password.",
+    "password": "Password",
+    "forgot_password": "Forgot password?",
+    "choose_method": "Choose a method",
+    "select_reset_option": "Select how you want to reset your password",
+    "email": "Email",
+    "reset_via_email": "Reset using your email address",
+    "phone": "Phone",
+    "reset_via_phone": "Reset using your phone number",
+    "user_not_found": "User not found.",
+    "wrong_password": "Incorrect password.",
+    "invalid_email": "Invalid email address.",
+    "error": "Error: {}",
+    "unexpected_error": "Unexpected error: {}",
+    "no_user_found_phone": "No user found with this phone number.",
+    "login_button": "Log in",
+    "no_account": "Don't have an account? ",
+    "signup": "Sign up"
+  },
+
+
+
+
+
+
+"appbar": {
+    "title": "License Verification"
+  },
+  "form": {
+    "license_number": "License Number",
+    "expiration_date": "Expiration Date"
+  },
+  "validation": {
+    "license_number": "Please enter your license number.",
+    "expiration_date": "Please enter the expiration date."
+  },
+  "upload": {
+    "select_front": "Select front side of license",
+    "select_back": "Select back side of license",
+    "front_selected": "Front side selected",
+    "back_selected": "Back side selected"
+  },
+  "button": {
+    "update_license_info": "Update License Info",
+    "back": "Back"
+  },
+  "error": {
+    "select_both_images": "Please select both front and back images of your license.",
+    "not_logged_in": "User not logged in.",
+    "license_update_failed": "Failed to update license information.",
+    "validation_check_failed": "Error while checking validation status."
+  },
+  "success": {
+    "license_updated": "License information updated successfully."
+  },
+  "info": {
+    "waiting_admin_validation": "Your license and vehicle information have been submitted. Awaiting admin validation."
+  },
+  "uploading": {
+    "image_error": "Error uploading image."
+  },
+
+
+  
+
+   "form.make": "Car Make",
+    "form.model": "Car Model",
+    "form.year": "Manufacturing Year",
+    "form.color": "Color",
+    "form.plate": "Plate Number",
+    "form.vin": "VIN (Vehicle Identification Number)",
+    "validation.make": "Please enter the car make",
+    "validation.model": "Please enter the car model",
+    "validation.year": "Please select the manufacturing year",
+    "validation.color": "Please select the car color",
+    "validation.plate": "Please enter the plate number",
+    "validation.vin": "Please enter the VIN",
+    "button.register_car": "Register Car",
+    "button.back": "Back",
+    "error.registration": "Error during car registration",
+    "error.not_logged_in": "You need to be logged in to continue",
+    "registering": "Registering car...",
+    "success.registration": "Car registered successfully!",
+    "appbar.add_car": "Add a Car",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  "Complétez votre profil pour publier un trajet": "Complete your profile to publish a trip",
+  "Pour publier un trajet, vous devez scanner votre permis de conduire et ajouter au moins une voiture.": "To publish a trip, you need to scan your driving license and add at least one car.",
+  "Bladiway": "Bladiway",
+  "Scanner le permis": "Scan license",
+  "Ajouter une voiture": "Add a car",
+
+
+
+
+
+
+
+  "Nom": "Name",
+  "Prénom": "First Name",
+  "Email": "Email",
+  "Téléphone": "Phone",
+  "Date de naissance": "Date of Birth",
+  "Genre": "Gender",
+  "Sauvegarder": "Save",
+  "Modifier": "Edit",
+  "Annuler": "Cancel",
+  "Erreur": "Error",
+  "Chargement": "Loading",
+  
+    
+    "Informations personnelles": "Personal Information",
+  "Détails personnels": "Personal Details",
+
+
+  "Vérification du conducteur": "Driver Verification",
+  "Téléchargez votre permis de conduire": "Upload your driver's license",
+  "Nous avons besoin des deux côtés de votre permis de conduire pour vérifier votre identité": "We need both sides of your driver's license to verify your identity",
+  "Recto du permis": "Front of license",
+  "Verso du permis": "Back of license",
+  "Télécharger une image": "Upload an image",
+  "Continuer": "Continue",
+  "Après avoir téléchargé votre permis, vous devrez ajouter les informations de votre véhicule.": "After uploading your license, you will need to add your vehicle information.",
+  "Veuillez télécharger les deux côtés de votre permis": "Please upload both sides of your license",
+  "Utilisateur non connecté": "User not logged in",
+  "Permis téléchargé avec succès": "License uploaded successfully",
+  "Erreur lors du téléchargement": "Upload error",
+  "Utilisateur": "User",
+  "Erreur lors de la récupération des données utilisateur": "Error retrieving user data",
+  "Vous devez être connecté pour continuer": "You must be logged in to continue",
+  "Utilisateur non trouvé": "User not found",
+
+
+
+
+
+
+
+
+
+
+   
+  "Bienvenue à notre plateforme": "Welcome to our platform",
+  "Bonjour": "Hello",
+  "Trouvez votre trajet idéal 🚗": "Find your ideal ride 🚗",
+  "Découvrez facilement les meilleurs trajets adaptés à vos besoins.": "Easily discover the best rides tailored to your needs.",
+  "Réserver": "Book now",
+  "Proposez votre trajet 🛣️": "Offer your ride 🛣️",
+  "Partagez votre route et faites des économies.": "Share your route and save money.",
+  "Ajouter un trajet": "Add a ride",
+  "Vos statistiques": "Your statistics",
+  "Trajets": "Rides",
+  "Proposés": "Offered",
+  "Km parcourus": "Km traveled",
+  "Accueil": "Home",
+  "Mes trajets": "My rides",
+  "Réservations": "Bookings",
+  "Paramètres": "Settings",
+  "Bonjour, {}": "Hello, {}",
+  "Vous devez être connecté pour continuer": "You must be logged in to continue",
+  "Utilisateur non trouvé": "User not found",
+  "Vos informations sont en cours de validation": "Your information is being validated",
+  "Homme": "Men",
+  "Famme": "Women",
+  "Erreur lors de la vérification": "Error during verification",
+
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "my_profile": "My profile",
+    "preferences": "Preferences",
+    "notifications": "Notifications",
+    "dark_mode": "Dark mode",
+    "dark_mode_enabled": "Dark mode enabled",
+    "dark_mode_disabled": "Dark mode disabled",
+    "language": "Language",
+    "select_language": "Select language",
+    "help": "Help",
+    "help_center": "Help center",
+    "account_management": "Account management",
+    "logout": "Log out",
+    "logout_confirmation": "Are you sure you want to log out?",
+    "logout_success": "Successfully logged out",
+    "logout_error": "An error occurred while logging out"
+  },
+
+  "common": {
+    "cancel": "Cancel"
+  }
+}

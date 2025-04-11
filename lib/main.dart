@@ -8,24 +8,38 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 import 'pages/home_page.dart';
 import 'pages/settings_screen.dart';
 import 'pages/profile_screen.dart';
 import 'authentication/login_screen.dart';
 import 'authentication/signup_screen.dart';
 import 'providers/theme_provider.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'pages/centre_aide_page.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await EasyLocalization.ensureInitialized();
 
-  // Initialiser le ThemeProvider
   final themeProvider = ThemeProvider();
-  // Pas besoin d'appeler _loadThemeFromPrefs() explicitement
-  // car il est déjà appelé dans le constructeur
 
   runApp(
-    ChangeNotifierProvider.value(value: themeProvider, child: const MyApp()),
+    EasyLocalization(
+      supportedLocales: const [
+        Locale('fr'),
+        Locale('en'),
+        Locale('ar'),
+        Locale('fr', 'DZ'), // Utilisé comme fallback pour Tamazight (Kabyle)
+      ],
+      path: 'assets/translations', // Chemin vers les fichiers JSON
+      fallbackLocale: Locale('fr'),
+      child: ChangeNotifierProvider.value(
+        value: themeProvider,
+        child: const MyApp(),
+      ),
+    ),
   );
 }
 
@@ -34,38 +48,30 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Écouter les changements de thème
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      locale: const Locale('fr', 'FR'),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('fr', 'FR'),
-        // Ajoutez d'autres locales si nécessaire, comme Locale('en', 'US')
-      ],
+      title: 'BladiWay',
+      locale: context.locale,
+      supportedLocales: context.supportedLocales,
+      localizationsDelegates: context.localizationDelegates,
       theme: ThemeData(
         brightness: Brightness.light,
-        colorScheme: ColorScheme.light(
+        colorScheme: const ColorScheme.light(
           primary: Color(0xFF2196F3),
-          secondary: const Color.fromARGB(255, 197, 209, 212),
+          secondary: Color.fromARGB(255, 197, 209, 212),
           surface: Colors.white,
         ),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         colorScheme: ColorScheme.dark(
-          primary: Color(0xFF2196F3),
+          primary: const Color(0xFF2196F3),
           secondary: Colors.white,
-          surface: Colors.grey[800]!,
+          surface: Colors.grey,
         ),
       ),
-      themeMode:
-          themeProvider.themeMode, // Utiliser le mode de thème du provider
+      themeMode: themeProvider.themeMode,
       debugShowCheckedModeBanner: false,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
@@ -91,6 +97,9 @@ class MyApp extends StatelessWidget {
         '/add_car': (context) => const CarRegistrationScreen(),
         '/verifier_Conducteur': (context) => const PermissionAddCarPage(),
         '/scan_permission': (context) => const LicenseVerificationScreen(),
+        '/centre-aide': (context) => const CentreAidePage(),
+          '/scanner_permis': (context) => const LicenseVerificationScreen (),
+
       },
     );
   }
