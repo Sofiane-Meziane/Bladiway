@@ -387,7 +387,7 @@ class _HomePageState extends State<HomePage> {
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onPrimary,
-                            letterSpacing: 1.5,
+                            //letterSpacing: 1.5,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -478,7 +478,7 @@ class _HomePageState extends State<HomePage> {
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.check_circle),
-            label: 'Réservation'.tr(),
+            label: 'Réservations'.tr(),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.directions_car),

@@ -4,22 +4,20 @@ import 'package:intl/intl.dart';
 import 'maps.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// Ajoutez cette classe Car pour modéliser les voitures
+// Classe Car pour modéliser les voitures
 class Car {
   final String id;
   final String marque;
   final String modele;
-  final String couleur;
-  final String imageUrl;
   final String plaque;
+  final String imageUrl;
 
   Car({
     required this.id,
     required this.marque,
     required this.modele,
-    required this.couleur,
-    required this.imageUrl,
     required this.plaque,
+    required this.imageUrl,
   });
 
   factory Car.fromFirestore(DocumentSnapshot doc) {
@@ -28,9 +26,8 @@ class Car {
       id: doc.id,
       marque: data['marque'] ?? '',
       modele: data['model'] ?? '',
-      couleur: data['color'] ?? '',
-      imageUrl: data['imageUrl'] ?? '',
       plaque: data['plate'] ?? '',
+      imageUrl: data['imageUrl'] ?? '',
     );
   }
 }
@@ -53,7 +50,7 @@ class _InfoTrajetState extends State<InfoTrajet>
   final TextEditingController _descriptionController = TextEditingController();
   final user = FirebaseAuth.instance.currentUser;
 
-  // Ajoutez ces nouvelles variables pour la sélection de véhicule
+  // Variables pour la sélection de véhicule
   List<Car> _userCars = [];
   Car? _selectedCar;
   bool _isLoadingCars = true;
@@ -92,44 +89,6 @@ class _InfoTrajetState extends State<InfoTrajet>
     final accentColor = colorScheme.secondary;
     final backgroundColor = colorScheme.surface;
     final surfaceColor = colorScheme.surface;
-
-    // Méthode pour charger les voitures de l'utilisateur actuel
-    Future<void> loadUserCars() async {
-      setState(() {
-        _isLoadingCars = true;
-      });
-
-      try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          final carsSnapshot =
-              await FirebaseFirestore.instance
-                  .collection('cars')
-                  .where('id_proprietaire', isEqualTo: user.uid)
-                  .get();
-
-          final cars =
-              carsSnapshot.docs.map((doc) => Car.fromFirestore(doc)).toList();
-
-          setState(() {
-            _userCars = cars;
-            if (cars.isNotEmpty) {
-              _selectedCar = cars.first;
-            }
-            _isLoadingCars = false;
-          });
-        } else {
-          setState(() {
-            _isLoadingCars = false;
-          });
-        }
-      } catch (e) {
-        print('Erreur lors du chargement des voitures: $e');
-        setState(() {
-          _isLoadingCars = false;
-        });
-      }
-    }
 
     // Méthode pour construire la section de sélection de véhicule
     Widget buildVehicleSelection(Color primaryColor, Color surfaceColor) {
@@ -293,7 +252,8 @@ class _InfoTrajetState extends State<InfoTrajet>
                 ],
               ),
               const SizedBox(height: 24),
-              // NOUVEAU: Section de sélection de véhicule
+
+              // Section de sélection de véhicule
               buildVehicleSelection(primaryColor, surfaceColor),
               const SizedBox(height: 24),
 
@@ -484,7 +444,7 @@ class _InfoTrajetState extends State<InfoTrajet>
     );
   }
 
-  // Widget pour sélectionner le nombre de places - CORRIGÉ
+  // Widget pour sélectionner le nombre de places
   Widget _buildSeatSelector(Color primaryColor) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
@@ -701,17 +661,6 @@ class _InfoTrajetState extends State<InfoTrajet>
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.palette, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Text(
-                      car.couleur,
-                      style: TextStyle(color: Colors.grey[700]),
                     ),
                   ],
                 ),
@@ -1228,6 +1177,7 @@ class _InfoTrajetState extends State<InfoTrajet>
         },
       );
 
+      // Sauvegarder uniquement l'ID du véhicule dans la collection trips
       await FirebaseFirestore.instance.collection('trips').add({
         'userId': user!.uid,
         'départ': _departureController.text,
@@ -1244,13 +1194,7 @@ class _InfoTrajetState extends State<InfoTrajet>
         'description': _descriptionController.text,
         'status': 'en attente',
         'createdAt': FieldValue.serverTimestamp(),
-        // Ajout des informations du véhicule
         'vehiculeId': _selectedCar?.id ?? '',
-        'vehiculeMarque': _selectedCar?.marque ?? '',
-        'vehiculeModele': _selectedCar?.modele ?? '',
-        'vehiculeCouleur': _selectedCar?.couleur ?? '',
-        'vehiculePlaque': _selectedCar?.plaque ?? '',
-        'vehiculeImage': _selectedCar?.imageUrl ?? '',
       });
 
       // Fermer le dialogue de chargement

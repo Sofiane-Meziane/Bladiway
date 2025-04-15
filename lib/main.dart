@@ -1,6 +1,6 @@
 import 'package:bladiway/pages/car_add.dart';
 import 'package:bladiway/pages/edit_car_page.dart';
-import 'package:bladiway/pages/info_trajet.dart';
+import 'package:bladiway/pages/ajouter_trajet.dart';
 import 'package:bladiway/pages/mes_trajet.dart';
 import 'package:bladiway/pages/otp_screen.dart';
 import 'package:bladiway/pages/presentation.dart';

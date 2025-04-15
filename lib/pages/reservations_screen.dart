@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'chat_screen.dart'; // Import de la page de chat
-import 'info_conducteur.dart'; // Import de la page d'informations sur le conducteur
+import 'info_trajets.dart'; // Import de la page d'informations sur le conducteur
 
 class ReservationsScreen extends StatefulWidget {
   const ReservationsScreen({super.key});

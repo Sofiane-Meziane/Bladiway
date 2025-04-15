@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async'; // Import pour StreamSubscription
-import 'package:url_launcher/url_launcher.dart'; // Import pour canLaunchUrl
+import 'package:url_launcher/url_launcher.dart'; // Import pour launchUrl
+import 'chat_screen.dart'; // Import de la page de chat
 
 // Constantes pour les noms de champs Firestore
 const String FIELD_USER_ID = 'userId';
@@ -26,82 +27,6 @@ const String STATUS_COMPLETE = 'completé';
 const String STATUS_ANNULE = 'annulé';
 const String STATUS_BLOQUE = 'bloqué';
 
-// Déplacer la classe MessagesScreen en dehors de _TrajetDetailsScreenState
-class MessagesScreen extends StatefulWidget {
-  final String receiverId;
-  final String receiverName;
-
-  const MessagesScreen({
-    super.key,
-    required this.receiverId,
-    required this.receiverName,
-  });
-
-  @override
-  _MessagesScreenState createState() => _MessagesScreenState();
-}
-
-class _MessagesScreenState extends State<MessagesScreen> {
-  final TextEditingController _messageController = TextEditingController();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  void _sendMessage() {
-    // À implémenter
-    if (_messageController.text.trim().isEmpty) return;
-
-    _messageController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fonctionnalité à implémenter')),
-    );
-  }
-
-  // Ajouter la méthode build manquante
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Messages avec ${widget.receiverName}')),
-      body: Column(
-        children: [
-          Expanded(
-            child: Center(child: Text("Historique des messages à implémenter")),
-          ),
-          Container(
-            padding: const EdgeInsets.all(8.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.5),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: "Écrire un message...",
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.blue),
-                  onPressed: _sendMessage,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class TrajetDetailsScreen extends StatefulWidget {
   final String tripId;
 
@@ -115,14 +40,12 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   Map<String, dynamic>? _tripData;
-  // Ajouter cette variable pour stocker les données du véhicule
   Map<String, dynamic>? _vehicleData;
   List<Map<String, dynamic>> _passengers = [];
   bool _isLoading = true;
   String? _errorMessage;
   bool _isProcessing = false;
 
-  // Variables pour les listeners en temps réel
   StreamSubscription<DocumentSnapshot>? _tripSubscription;
   StreamSubscription<QuerySnapshot>? _passengersSubscription;
   bool _listenerSetupComplete = false;
@@ -135,13 +58,11 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
 
   @override
   void dispose() {
-    // Annuler les abonnements aux streams quand on quitte l'écran
     _tripSubscription?.cancel();
     _passengersSubscription?.cancel();
     super.dispose();
   }
 
-  // Méthode pour créer une ligne d'information
   Widget _infoRow(IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,7 +95,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         _errorMessage = null;
       });
 
-      // Vérifier si l'utilisateur est connecté
       final currentUser = _auth.currentUser;
       if (currentUser == null) {
         setState(() {
@@ -184,7 +104,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         return;
       }
 
-      // Récupérer les détails du trajet (première fois seulement)
       final tripDoc =
           await _firestore.collection('trips').doc(widget.tripId).get();
 
@@ -196,13 +115,12 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         return;
       }
       final tripData = tripDoc.data() as Map<String, dynamic>;
-      // Après avoir chargé les données du trajet, charger les données du véhicule
+
       if (tripData.containsKey(FIELD_VEHICLE)) {
         String vehicleId = tripData[FIELD_VEHICLE];
         await _loadVehicleData(vehicleId);
       }
 
-      // Vérifier que l'utilisateur actuel est bien le propriétaire du trajet
       if (tripData[FIELD_USER_ID] != currentUser.uid) {
         setState(() {
           _errorMessage = "Vous n'êtes pas autorisé à consulter ce trajet.";
@@ -211,7 +129,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         return;
       }
 
-      // Si le statut n'est pas défini, définir par défaut à En attente
       if (!tripData.containsKey(FIELD_STATUS)) {
         await _firestore.collection('trips').doc(widget.tripId).update({
           FIELD_STATUS: STATUS_EN_ATTENTE,
@@ -219,16 +136,10 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         tripData[FIELD_STATUS] = STATUS_EN_ATTENTE;
       }
 
-      // Vérifier automatiquement si la date du trajet est passée et mettre à jour si nécessaire
       await _checkAndUpdateTripStatus(tripData);
-
-      // Configurer l'écoute en temps réel des modifications de trajet
       _setupRealtimeListeners();
-
-      // Charger les informations des passagers
       await _loadPassengersFromReservations(tripData);
 
-      // On charge les données initiales
       setState(() {
         _tripData = tripData;
         _isLoading = false;
@@ -243,7 +154,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     }
   }
 
-  // Ajouter cette nouvelle méthode pour charger les données du véhicule
   Future<void> _loadVehicleData(String vehicleId) async {
     try {
       final vehicleDoc =
@@ -259,7 +169,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     }
   }
 
-  // Ajouter cette méthode pour construire le widget de véhicule
   Widget _buildVehicleWidget() {
     if (_vehicleData == null) {
       return _infoRow(
@@ -277,7 +186,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          // Photo du véhicule (comme icône)
           Container(
             width: 60,
             height: 60,
@@ -309,7 +217,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                     ),
           ),
           SizedBox(width: 16),
-          // Informations du véhicule
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,15 +242,12 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     );
   }
 
-  // Méthode pour charger les informations des passagers
   Future<void> _loadPassengersFromReservations(
     Map<String, dynamic> tripData,
   ) async {
     try {
-      // Debug pour voir l'ID du trajet
       print("Chargement des passagers pour le trajet: ${widget.tripId}");
 
-      // Récupérer toutes les réservations pour ce trajet
       final reservationsSnapshot =
           await _firestore
               .collection('reservations')
@@ -354,38 +258,27 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         "Nombre de réservations trouvées: ${reservationsSnapshot.docs.length}",
       );
 
-      // Créer un map pour stocker les IDs d'utilisateurs et leurs places réservées
       Map<String, int> userReservedPlaces = {};
-
-      // Calculer le nombre de places réservées total à partir des réservations
       int placesReserveesTotal = 0;
 
-      // Parcourir toutes les réservations pour ce trajet
       for (var doc in reservationsSnapshot.docs) {
         final data = doc.data();
         final userId = data['userId'] as String?;
         int seatsReserved = data['seatsReserved'] ?? 1;
 
-        // Ajouter l'utilisateur à notre map avec ses places réservées
         if (userId != null) {
           userReservedPlaces[userId] = seatsReserved;
         }
-
-        // Calculer le total des places réservées
         placesReserveesTotal += seatsReserved;
       }
 
-      // Mettre à jour les données du trajet avec le nombre correct de places disponibles
       int totalPlaces = tripData['nbrPlaces'] ?? 0;
       int placesDisponibles = totalPlaces - placesReserveesTotal;
-
-      // S'assurer que les places disponibles ne sont pas négatives
       if (placesDisponibles < 0) placesDisponibles = 0;
 
-      // Mettre à jour les données du trajet localement
       tripData['placesDisponibles'] = placesDisponibles;
       await _checkAndUpdateTripStatusBasedOnSeats(tripData);
-      // Si la liste des passagers est vide, pas besoin de continuer
+
       if (userReservedPlaces.isEmpty) {
         setState(() {
           _passengers = [];
@@ -394,13 +287,11 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         return;
       }
 
-      // Charger les détails des utilisateurs
       List<Map<String, dynamic>> allPassengers = [];
       List<String> userIds = userReservedPlaces.keys.toList();
 
       print("Utilisateurs à charger: $userIds");
 
-      // Traiter les utilisateurs par lots de 10 (limite Firestore pour whereIn)
       for (int i = 0; i < userIds.length; i += 10) {
         int endIdx = (i + 10 < userIds.length) ? i + 10 : userIds.length;
         List<String> batch = userIds.sublist(i, endIdx);
@@ -445,7 +336,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     if (_listenerSetupComplete) return;
 
     try {
-      // 1. Écouter les modifications du document trajet en temps réel
       _tripSubscription = _firestore
           .collection('trips')
           .doc(widget.tripId)
@@ -461,22 +351,18 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
 
               final updatedTripData = snapshot.data() as Map<String, dynamic>;
 
-              // Vérifier et mettre à jour le statut si nécessaire
               await _checkAndUpdateTripStatus(updatedTripData);
-              // Charger les données du véhicule si l'ID du véhicule a changé
               if (updatedTripData.containsKey(FIELD_VEHICLE) &&
                   (_tripData == null ||
                       _tripData![FIELD_VEHICLE] !=
                           updatedTripData[FIELD_VEHICLE])) {
                 await _loadVehicleData(updatedTripData[FIELD_VEHICLE]);
               }
-              // Mettre à jour les données locales
               setState(() {
                 _tripData = updatedTripData;
                 _isLoading = false;
               });
 
-              // Charger les informations mises à jour des passagers
               await _loadPassengersFromReservations(updatedTripData);
             },
             onError: (error) {
@@ -502,7 +388,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
             },
           );
 
-      // 2. Configurer le listener pour les passagers si nécessaire
       if (_tripData != null && _tripData!.containsKey(FIELD_PASSENGERS)) {
         _listenForPassengersChanges();
       }
@@ -517,13 +402,10 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
 
   void _listenForPassengersChanges() {
     try {
-      // Nettoyer l'ancien abonnement s'il existe
       _passengersSubscription?.cancel();
 
-      // Initialiser une liste vide pour stocker les IDs des passagers
       List<String> passengerIds = [];
 
-      // Si le trajet a des passagers, récupérer leurs IDs
       if (_tripData != null && _tripData!.containsKey(FIELD_PASSENGERS)) {
         final passengersList = _tripData![FIELD_PASSENGERS];
         if (passengersList is List && passengersList.isNotEmpty) {
@@ -533,7 +415,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         }
       }
 
-      // Si la liste des passagers est vide, pas besoin d'écouter les changements
       if (passengerIds.isEmpty) {
         setState(() {
           _passengers = [];
@@ -541,10 +422,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         return;
       }
 
-      // Éviter l'erreur "A value of type 'List<dynamic>' can't be assigned to a variable of type 'List<String>'"
-      // Créer un batch de requêtes si nous avons plus de 10 passagers à cause de la limitation whereIn
       if (passengerIds.length <= 10) {
-        // Écouter les changements dans la collection users pour ces passagers
         _passengersSubscription = _firestore
             .collection('users')
             .where(FieldPath.documentId, whereIn: passengerIds)
@@ -553,8 +431,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
               _updatePassengersFromSnapshot(snapshot);
             });
       } else {
-        // Si plus de 10 passagers, faire une requête individuelle pour chaque passager
-        // Note: Ceci est une approche simplifiée, idéalement on diviserait en batchs de 10
         _loadPassengersFromReservations(_tripData!);
       }
     } catch (e) {
@@ -617,7 +493,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
           itemCount: _passengers.length,
           itemBuilder: (context, index) {
             final passenger = _passengers[index];
-            // Récupérer le nombre de places réservées
             final placesReservees = passenger['placesReservees'] ?? 1;
 
             return Card(
@@ -650,7 +525,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          // Afficher le badge avec le nombre de places réservées
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -676,7 +550,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    // Boutons séparés du ListTile pour éviter le débordement
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -687,10 +560,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                         IconButton(
                           icon: const Icon(Icons.message, color: Colors.blue),
                           onPressed:
-                              () => _navigateToMessaging(
-                                passenger['id'],
-                                '${passenger['prenom']} ${passenger['nom']}',
-                              ),
+                              () => _navigateToMessaging(passenger['id']),
                         ),
                       ],
                     ),
@@ -708,7 +578,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     Map<String, dynamic> tripData,
   ) async {
     try {
-      // Vérifier si le statut est déjà Terminé, Completé ou Annulé
       String currentStatus = tripData[FIELD_STATUS] ?? STATUS_EN_ATTENTE;
       if ([
         STATUS_TERMINE,
@@ -716,10 +585,9 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         STATUS_ANNULE,
         STATUS_EN_ROUTE,
       ].contains(currentStatus)) {
-        return; // Ne pas modifier ces statuts
+        return;
       }
 
-      // Vérifier si toutes les places sont réservées
       int totalPlaces = tripData[FIELD_PLACES] ?? 0;
       int availablePlaces = tripData[FIELD_PLACES_DISPONIBLES] ?? totalPlaces;
 
@@ -727,7 +595,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         "Vérification des places: $availablePlaces disponibles sur $totalPlaces",
       );
 
-      // Si toutes les places sont réservées et le statut est en attente ou bloqué
       if (availablePlaces == 0 &&
           totalPlaces > 0 &&
           [STATUS_EN_ATTENTE, STATUS_BLOQUE].contains(currentStatus)) {
@@ -735,7 +602,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         await _firestore.collection('trips').doc(widget.tripId).update({
           FIELD_STATUS: STATUS_COMPLETE,
         });
-
         print("Statut du trajet mis à jour automatiquement à 'Completé'");
       }
     } catch (e) {
@@ -743,23 +609,53 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     }
   }
 
-  // Méthode pour naviguer vers l'écran de messagerie
-  void _navigateToMessaging(String receiverId, String receiverName) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder:
-            (context) => MessagesScreen(
-              receiverId: receiverId,
-              receiverName: receiverName,
-            ),
-      ),
-    );
+  // Nouvelle méthode pour récupérer l'ID de la réservation
+  Future<String?> _getReservationIdForPassenger(String passengerId) async {
+    try {
+      final reservationSnapshot =
+          await _firestore
+              .collection('reservations')
+              .where('tripId', isEqualTo: widget.tripId)
+              .where('userId', isEqualTo: passengerId)
+              .get();
+
+      if (reservationSnapshot.docs.isNotEmpty) {
+        return reservationSnapshot.docs.first.id;
+      }
+      return null;
+    } catch (e) {
+      print("Erreur lors de la récupération de la réservation: $e");
+      return null;
+    }
+  }
+
+  // Méthode modifiée pour utiliser l'ID de la réservation
+  void _navigateToMessaging(String receiverId) async {
+    String? reservationId = await _getReservationIdForPassenger(receiverId);
+    if (reservationId != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder:
+              (context) => ChatPage(
+                reservationId: reservationId, // Passer l'ID de la réservation
+                otherUserId: receiverId,
+              ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Impossible de trouver la réservation pour ce passager.',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _checkAndUpdateTripStatus(Map<String, dynamic> tripData) async {
     try {
       await _checkAndUpdateTripStatusBasedOnSeats(tripData);
-      // Vérifier si le statut est déjà Terminé, Completé ou Annulé
       String currentStatus = tripData[FIELD_STATUS] ?? STATUS_EN_ATTENTE;
       if ([
         STATUS_TERMINE,
@@ -767,16 +663,14 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         STATUS_COMPLETE,
         STATUS_EN_ROUTE,
       ].contains(currentStatus)) {
-        return; // Ne pas modifier les statuts finaux, sauf COMPLETE qui peut passer à EN_ROUTE
+        return;
       }
 
-      // Vérifier si toutes les places sont réservées
       int totalPlaces = tripData[FIELD_PLACES] ?? 0;
       int availablePlaces = tripData[FIELD_PLACES_DISPONIBLES] ?? totalPlaces;
       print(
         "Vérification des places: $availablePlaces disponibles sur $totalPlaces",
       );
-      // Si toutes les places sont réservées et le statut n'est pas déjà COMPLETE
       if (availablePlaces == 0 &&
           totalPlaces > 0 &&
           [STATUS_EN_ATTENTE, STATUS_BLOQUE].contains(currentStatus)) {
@@ -784,18 +678,14 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         await _firestore.collection('trips').doc(widget.tripId).update({
           FIELD_STATUS: STATUS_COMPLETE,
         });
-
-        // La mise à jour sera automatiquement captée par le listener
         print("Statut du trajet mis à jour automatiquement à 'Completé'");
       }
 
-      // Vérifier si la date du trajet est passée
       String tripDateStr = tripData[FIELD_DATE] ?? '';
       String tripTimeStr = tripData[FIELD_HEURE] ?? '00:00';
 
       if (tripDateStr.isEmpty) return;
 
-      // Parser la date au format français (DD/MM/YYYY)
       List<String> dateParts = tripDateStr.split('/');
       if (dateParts.length != 3) return;
 
@@ -805,7 +695,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         int month = int.parse(dateParts[1]);
         int year = int.parse(dateParts[2]);
 
-        // Parser l'heure (HH:MM)
         List<String> timeParts = tripTimeStr.split(':');
         int hour = 0, minute = 0;
         if (timeParts.length == 2) {
@@ -821,9 +710,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
 
       DateTime now = DateTime.now();
 
-      // Si la date et l'heure du trajet sont passées et le statut est toujours
-      // 'En attente', 'En route', 'Bloqué' ou 'Completé'
-      // Modification ici: on vérifie maintenant si la date actuelle est simplement après la date du trajet
       if (now.isAfter(tripDateTime) &&
           [
             STATUS_EN_ATTENTE,
@@ -831,12 +717,9 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
             STATUS_BLOQUE,
             STATUS_COMPLETE,
           ].contains(currentStatus)) {
-        // Mettre à jour automatiquement le statut à 'Terminé'
         await _firestore.collection('trips').doc(widget.tripId).update({
           FIELD_STATUS: STATUS_TERMINE,
         });
-
-        // La mise à jour sera automatiquement captée par le listener
         print("Statut du trajet mis à jour automatiquement à 'Terminé'");
       }
     } catch (e) {
@@ -856,7 +739,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         FIELD_STATUS: newStatus,
       });
 
-      // La mise à jour sera automatiquement captée par le listener
       setState(() {
         _isProcessing = false;
       });
@@ -890,14 +772,12 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     });
 
     try {
-      // Mettre à jour avec la raison d'annulation
       await _firestore.collection('trips').doc(widget.tripId).update({
         FIELD_STATUS: newStatus,
         'cancellationReason': reason,
         'cancelledAt': FieldValue.serverTimestamp(),
       });
 
-      // La mise à jour sera automatiquement captée par le listener
       setState(() {
         _isProcessing = false;
       });
@@ -1042,22 +922,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     );
   }
 
-  void _navigateToPassengerInfo(Map<String, dynamic> passenger) {
-    // Cette fonction sera implémentée ultérieurement
-    print("Navigation vers les détails du passager: ${passenger['id']}");
-
-    // Afficher un message temporaire
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Détails du passager: ${passenger['prenom']} ${passenger['nom']}',
-          ),
-        ),
-      );
-    }
-  }
-
   Future<void> _callPhoneNumber(String? phoneNumber) async {
     if (phoneNumber == null || phoneNumber.isEmpty) {
       if (mounted) {
@@ -1068,16 +932,11 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
       return;
     }
 
-    // Nettoyer le numéro de téléphone (enlever les espaces et caractères spéciaux)
     String cleanPhoneNumber = phoneNumber.replaceAll(RegExp(r'\s+'), '');
 
     try {
-      // Construire l'URI avec le préfixe tel:
       final Uri launchUri = Uri.parse('tel:$cleanPhoneNumber');
-
-      print("Tentative d'appel: $launchUri"); // Pour déboguer
-
-      // Lancer l'URI directement, sans vérification préalable
+      print("Tentative d'appel: $launchUri");
       await launchUrl(launchUri, mode: LaunchMode.externalApplication);
     } catch (e) {
       print("Erreur lors de l'appel: $e");
@@ -1094,7 +953,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
 
     final String currentStatus = _tripData![FIELD_STATUS] ?? STATUS_EN_ATTENTE;
 
-    // Ne pas afficher de boutons si le trajet est déjà terminé ou annulé
     if ([STATUS_TERMINE, STATUS_ANNULE].contains(currentStatus)) {
       return Container();
     }
@@ -1116,7 +974,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
           runSpacing: 10,
           alignment: WrapAlignment.center,
           children: [
-            // Afficher le bouton "Commencer" pour les trajets complets ou bloqués
             if (currentStatus == STATUS_COMPLETE ||
                 currentStatus == STATUS_BLOQUE)
               ElevatedButton.icon(
@@ -1138,8 +995,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                           STATUS_EN_ROUTE,
                         ),
               ),
-
-            // Afficher le bouton "Terminer" uniquement si le trajet est en route
             if (currentStatus == STATUS_EN_ROUTE)
               ElevatedButton.icon(
                 icon: const Icon(Icons.check_circle),
@@ -1158,9 +1013,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                         : () =>
                             _showConfirmationDialog('Terminer', STATUS_TERMINE),
               ),
-
-            // N'afficher le bouton "Bloquer" que pour les trajets en attente (mais pas pour les trajets completés)
-            // Ne pas l'afficher si le trajet est déjà bloqué
             if (currentStatus == STATUS_EN_ATTENTE &&
                 currentStatus != STATUS_BLOQUE)
               ElevatedButton.icon(
@@ -1180,8 +1032,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                         : () =>
                             _showConfirmationDialog('Bloquer', STATUS_BLOQUE),
               ),
-
-            // Le bouton "Annuler" est disponible sauf si déjà annulé/terminé§en route
             if (![
               STATUS_ANNULE,
               STATUS_TERMINE,
@@ -1230,7 +1080,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         statusColor = Colors.orange;
     }
 
-    // Return a badge widget
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -1253,77 +1102,13 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     var totalPlaces = _tripData![FIELD_PLACES] ?? 0;
     var placesDisponibles = _tripData![FIELD_PLACES_DISPONIBLES] ?? totalPlaces;
 
-    // Calculer les places réservées
     var reservedPlaces = totalPlaces - placesDisponibles;
-    // S'assurer que les valeurs ne sont pas négatives
     if (reservedPlaces < 0) reservedPlaces = 0;
 
     return _infoRow(
       Icons.airline_seat_recline_normal,
       'Places',
       "$reservedPlaces / $totalPlaces réservées",
-    );
-  }
-
-  Widget _buildRefreshButton() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: ElevatedButton.icon(
-          icon: const Icon(Icons.refresh),
-          label: const Text('Actualiser les données'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
-          onPressed: () {
-            // Recharger manuellement les données
-            _loadTripDetails();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Actualisation des données...')),
-              );
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  // Widget pour afficher l'état de la connexion en temps réel
-  Widget _buildConnectionStatus() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color:
-            _listenerSetupComplete
-                ? Colors.green.withOpacity(0.2)
-                : Colors.orange.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _listenerSetupComplete ? Colors.green : Colors.orange,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _listenerSetupComplete ? Icons.sync : Icons.sync_disabled,
-            size: 16,
-            color: _listenerSetupComplete ? Colors.green : Colors.orange,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            _listenerSetupComplete ? "Synchronisé" : "Mode hors ligne",
-            style: TextStyle(
-              fontSize: 12,
-              color: _listenerSetupComplete ? Colors.green : Colors.orange,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1368,18 +1153,14 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
       );
     }
 
-    // Variables pour les données du trajet
     final String depart = _tripData![FIELD_DEPART] ?? 'Non spécifié';
     final String arrivee = _tripData![FIELD_ARRIVEE] ?? 'Non spécifié';
     final String date = _tripData![FIELD_DATE] ?? 'Non spécifié';
     final String heure = _tripData![FIELD_HEURE] ?? 'Non spécifié';
     final String prix =
         '${_tripData![FIELD_PRIX]?.toString() ?? 'Non spécifié'} DA';
-    final int placesTotal = _tripData![FIELD_PLACES] ?? 0;
-    final int placesDispo = _tripData![FIELD_PLACES_DISPONIBLES] ?? placesTotal;
     final String description =
         _tripData![FIELD_DESCRIPTION] ?? 'Aucune description';
-    final String vehicle = _tripData![FIELD_VEHICLE] ?? 'Non spécifié';
     final String status = _tripData![FIELD_STATUS] ?? STATUS_EN_ATTENTE;
 
     return Scaffold(
@@ -1401,7 +1182,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // En-tête avec statut
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1412,10 +1192,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                   _buildStatusBadge(status),
                 ],
               ),
-
               const SizedBox(height: 24),
-
-              // Informations principales du trajet
               _infoRow(Icons.location_on, 'Départ', depart),
               const SizedBox(height: 16),
               _infoRow(Icons.location_on_outlined, 'Arrivée', arrivee),
@@ -1427,8 +1204,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
               _infoRow(Icons.attach_money, 'Prix', prix),
               const SizedBox(height: 16),
               _buildPlacesInfo(),
-
-              // Information sur l'annulation si le trajet est annulé
               if (status == STATUS_ANNULE &&
                   _tripData!.containsKey('cancellationReason'))
                 Padding(
@@ -1439,23 +1214,14 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                     _tripData!['cancellationReason'],
                   ),
                 ),
-
               const SizedBox(height: 16),
-
-              // Description et véhicule
               if (description.isNotEmpty)
                 _infoRow(Icons.description, 'Description', description),
               if (description.isNotEmpty) const SizedBox(height: 16),
-
-              // Par celle-ci
               const SizedBox(height: 16),
               _buildVehicleWidget(),
-
-              // Liste des passagers
               const SizedBox(height: 24),
               _buildPassengersList(),
-
-              // Boutons d'action
               _buildActionButtons(),
             ],
           ),
