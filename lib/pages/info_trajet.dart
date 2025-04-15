@@ -4,8 +4,39 @@ import 'package:intl/intl.dart';
 import 'maps.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+// Ajoutez cette classe Car pour modéliser les voitures
+class Car {
+  final String id;
+  final String marque;
+  final String modele;
+  final String couleur;
+  final String imageUrl;
+  final String plaque;
+
+  Car({
+    required this.id,
+    required this.marque,
+    required this.modele,
+    required this.couleur,
+    required this.imageUrl,
+    required this.plaque,
+  });
+
+  factory Car.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return Car(
+      id: doc.id,
+      marque: data['marque'] ?? '',
+      modele: data['model'] ?? '',
+      couleur: data['color'] ?? '',
+      imageUrl: data['imageUrl'] ?? '',
+      plaque: data['plate'] ?? '',
+    );
+  }
+}
+
 class InfoTrajet extends StatefulWidget {
-  const InfoTrajet({Key? key}) : super(key: key);
+  const InfoTrajet({super.key});
 
   @override
   _InfoTrajetState createState() => _InfoTrajetState();
@@ -22,15 +53,25 @@ class _InfoTrajetState extends State<InfoTrajet>
   final TextEditingController _descriptionController = TextEditingController();
   final user = FirebaseAuth.instance.currentUser;
 
+  // Ajoutez ces nouvelles variables pour la sélection de véhicule
+  List<Car> _userCars = [];
+  Car? _selectedCar;
+  bool _isLoadingCars = true;
   TimeOfDay _selectedTime = TimeOfDay.now();
   DateTime _selectedDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserCars();
+  }
 
   // Valeurs des menus déroulants
   String _selectedLuggage = 'Non Autorisé';
   String _selectedSmoking = 'Non Autorisé';
   String _selectedAnimal = 'Non Autorisé';
   String _selectedAirConditioning = 'Non Autorisé';
-  String _selectedPaymentMethod = 'Espèces';
+  final String _selectedPaymentMethod = 'Espèces';
 
   // État d'expansion des sections
   bool _isOptionsExpanded = false;
@@ -45,11 +86,128 @@ class _InfoTrajetState extends State<InfoTrajet>
   Widget build(BuildContext context) {
     super.build(context);
 
-    // Définir les couleurs personnalisées
-    final primaryColor = const Color(0xFF42A5F5); // Nouveau bleu principal
-    final accentColor = const Color(0xFF2E7D32); // Nouveau vert pour l'accent
-    final backgroundColor = Colors.white;
-    final surfaceColor = const Color(0xFFF5F7FA);
+    // Utiliser les couleurs du thème global
+    final colorScheme = Theme.of(context).colorScheme;
+    final primaryColor = colorScheme.primary;
+    final accentColor = colorScheme.secondary;
+    final backgroundColor = colorScheme.surface;
+    final surfaceColor = colorScheme.surface;
+
+    // Méthode pour charger les voitures de l'utilisateur actuel
+    Future<void> loadUserCars() async {
+      setState(() {
+        _isLoadingCars = true;
+      });
+
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final carsSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('cars')
+                  .where('id_proprietaire', isEqualTo: user.uid)
+                  .get();
+
+          final cars =
+              carsSnapshot.docs.map((doc) => Car.fromFirestore(doc)).toList();
+
+          setState(() {
+            _userCars = cars;
+            if (cars.isNotEmpty) {
+              _selectedCar = cars.first;
+            }
+            _isLoadingCars = false;
+          });
+        } else {
+          setState(() {
+            _isLoadingCars = false;
+          });
+        }
+      } catch (e) {
+        print('Erreur lors du chargement des voitures: $e');
+        setState(() {
+          _isLoadingCars = false;
+        });
+      }
+    }
+
+    // Méthode pour construire la section de sélection de véhicule
+    Widget buildVehicleSelection(Color primaryColor, Color surfaceColor) {
+      return Container(
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.directions_car, color: primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Sélectionner un véhicule',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_isLoadingCars)
+              const Center(child: CircularProgressIndicator())
+            else if (_userCars.isEmpty)
+              const Center(
+                child: Text(
+                  'Aucun véhicule disponible. Veuillez en ajouter un dans votre profil.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              )
+            else
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<Car>(
+                        isExpanded: true,
+                        value: _selectedCar,
+                        icon: Icon(Icons.arrow_drop_down, color: primaryColor),
+                        items:
+                            _userCars.map<DropdownMenuItem<Car>>((Car car) {
+                              return DropdownMenuItem<Car>(
+                                value: car,
+                                child: Text(
+                                  '${car.marque} ${car.modele} - ${car.plaque}',
+                                ),
+                              );
+                            }).toList(),
+                        onChanged: (Car? newValue) {
+                          setState(() {
+                            _selectedCar = newValue;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (_selectedCar != null)
+                    _buildSelectedCarCard(_selectedCar!, primaryColor),
+                ],
+              ),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -135,6 +293,9 @@ class _InfoTrajetState extends State<InfoTrajet>
                 ],
               ),
               const SizedBox(height: 24),
+              // NOUVEAU: Section de sélection de véhicule
+              buildVehicleSelection(primaryColor, surfaceColor),
+              const SizedBox(height: 24),
 
               // Description du trajet
               Container(
@@ -162,22 +323,33 @@ class _InfoTrajetState extends State<InfoTrajet>
                       decoration: InputDecoration(
                         hintText:
                             'Décrivez votre trajet, les conditions, etc...',
+                        hintStyle: TextStyle(
+                          color: colorScheme.onSurface.withOpacity(0.5),
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade400),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary.withOpacity(0.2),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade400),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary.withOpacity(0.2),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: primaryColor, width: 2),
+                          borderSide: BorderSide(
+                            color: colorScheme.primary,
+                            width: 2,
+                          ),
                         ),
                         contentPadding: const EdgeInsets.all(16),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: colorScheme.surface,
                       ),
+                      style: TextStyle(color: colorScheme.onSurface),
                     ),
                   ],
                 ),
@@ -314,17 +486,21 @@ class _InfoTrajetState extends State<InfoTrajet>
 
   // Widget pour sélectionner le nombre de places - CORRIGÉ
   Widget _buildSeatSelector(Color primaryColor) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('Places', style: TextStyle(fontSize: 16)),
+          Text(
+            'Places',
+            style: TextStyle(fontSize: 16, color: colorScheme.onSurface),
+          ),
           Flexible(
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -339,7 +515,7 @@ class _InfoTrajetState extends State<InfoTrajet>
                     padding: const EdgeInsets.all(2),
                     child: Icon(
                       Icons.remove_circle,
-                      color: primaryColor,
+                      color: colorScheme.primary,
                       size: 20,
                     ),
                   ),
@@ -352,7 +528,7 @@ class _InfoTrajetState extends State<InfoTrajet>
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: primaryColor,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),
@@ -366,7 +542,7 @@ class _InfoTrajetState extends State<InfoTrajet>
                     padding: const EdgeInsets.all(2),
                     child: Icon(
                       Icons.add_circle,
-                      color: primaryColor,
+                      color: colorScheme.primary,
                       size: 20,
                     ),
                   ),
@@ -381,25 +557,30 @@ class _InfoTrajetState extends State<InfoTrajet>
 
   // Widget pour le champ de date
   Widget _buildDateField(Color primaryColor) {
+    final colorScheme = Theme.of(context).colorScheme;
     return TextField(
       controller: _dateController,
       decoration: InputDecoration(
         labelText: 'Date',
+        labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        prefixIcon: const Icon(Icons.calendar_today),
+        prefixIcon: Icon(Icons.calendar_today, color: colorScheme.primary),
         contentPadding: const EdgeInsets.symmetric(
           vertical: 12,
           horizontal: 12,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.2)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
+        filled: true,
+        fillColor: colorScheme.surface,
       ),
+      style: TextStyle(color: colorScheme.onSurface),
       readOnly: true,
       onTap: () => _pickDate(primaryColor),
     );
@@ -407,27 +588,138 @@ class _InfoTrajetState extends State<InfoTrajet>
 
   // Widget pour le champ d'heure
   Widget _buildTimeField(Color primaryColor) {
+    final colorScheme = Theme.of(context).colorScheme;
     return TextField(
       controller: _timeController,
       readOnly: true,
       decoration: InputDecoration(
         labelText: 'Heure',
+        labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        prefixIcon: const Icon(Icons.access_time),
+        prefixIcon: Icon(Icons.access_time, color: colorScheme.primary),
         contentPadding: const EdgeInsets.symmetric(
           vertical: 12,
           horizontal: 12,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.2)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
+        filled: true,
+        fillColor: colorScheme.surface,
       ),
+      style: TextStyle(color: colorScheme.onSurface),
       onTap: () => _pickTime(primaryColor),
+    );
+  }
+
+  // Widget pour afficher la carte du véhicule sélectionné
+  Widget _buildSelectedCarCard(Car car, Color primaryColor) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Image du véhicule
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+            child:
+                car.imageUrl.isNotEmpty
+                    ? Image.network(
+                      car.imageUrl,
+                      height: 150,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 150,
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.directions_car,
+                            size: 60,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
+                    )
+                    : Container(
+                      height: 150,
+                      color: Colors.grey[200],
+                      child: const Icon(
+                        Icons.directions_car,
+                        size: 60,
+                        color: Colors.grey,
+                      ),
+                    ),
+          ),
+          // Informations du véhicule
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${car.marque} ${car.modele}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        car.plaque,
+                        style: TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.palette, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      car.couleur,
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -500,6 +792,44 @@ class _InfoTrajetState extends State<InfoTrajet>
         ],
       ),
     );
+  }
+
+  // Méthode pour charger les voitures de l'utilisateur actuel
+  Future<void> _loadUserCars() async {
+    setState(() {
+      _isLoadingCars = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final carsSnapshot =
+            await FirebaseFirestore.instance
+                .collection('cars')
+                .where('id_proprietaire', isEqualTo: user.uid)
+                .get();
+
+        final cars =
+            carsSnapshot.docs.map((doc) => Car.fromFirestore(doc)).toList();
+
+        setState(() {
+          _userCars = cars;
+          if (cars.isNotEmpty) {
+            _selectedCar = cars.first;
+          }
+          _isLoadingCars = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingCars = false;
+        });
+      }
+    } catch (e) {
+      print('Erreur lors du chargement des voitures: $e');
+      setState(() {
+        _isLoadingCars = false;
+      });
+    }
   }
 
   // Widget pour les options
@@ -637,25 +967,27 @@ class _InfoTrajetState extends State<InfoTrajet>
     bool isLocationField = false,
     required Color primaryColor,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        prefixIcon: Icon(icon, color: primaryColor),
+        prefixIcon: Icon(icon, color: colorScheme.primary),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.2)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         suffixIcon:
             isLocationField
                 ? IconButton(
-                  icon: Icon(Icons.map_outlined, color: primaryColor),
+                  icon: Icon(Icons.map_outlined, color: colorScheme.primary),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -677,8 +1009,9 @@ class _InfoTrajetState extends State<InfoTrajet>
           horizontal: 12,
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: colorScheme.surface,
       ),
+      style: TextStyle(color: colorScheme.onSurface),
       readOnly: isLocationField,
     );
   }
@@ -731,7 +1064,7 @@ class _InfoTrajetState extends State<InfoTrajet>
 
   // Dialogue de confirmation
   void showConfirmationDialog() {
-    final primaryColor = const Color(0xFF42A5F5); // Nouveau bleu
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     showDialog(
       context: context,
@@ -883,7 +1216,7 @@ class _InfoTrajetState extends State<InfoTrajet>
                 children: [
                   CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      const Color(0xFF42A5F5),
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 20),
@@ -911,6 +1244,13 @@ class _InfoTrajetState extends State<InfoTrajet>
         'description': _descriptionController.text,
         'status': 'en attente',
         'createdAt': FieldValue.serverTimestamp(),
+        // Ajout des informations du véhicule
+        'vehiculeId': _selectedCar?.id ?? '',
+        'vehiculeMarque': _selectedCar?.marque ?? '',
+        'vehiculeModele': _selectedCar?.modele ?? '',
+        'vehiculeCouleur': _selectedCar?.couleur ?? '',
+        'vehiculePlaque': _selectedCar?.plaque ?? '',
+        'vehiculeImage': _selectedCar?.imageUrl ?? '',
       });
 
       // Fermer le dialogue de chargement
@@ -929,7 +1269,7 @@ class _InfoTrajetState extends State<InfoTrajet>
               ),
             ],
           ),
-          backgroundColor: const Color(0xFF2E7D32),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
           duration: const Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(

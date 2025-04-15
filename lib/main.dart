@@ -1,9 +1,13 @@
 import 'package:bladiway/pages/car_add.dart';
+import 'package:bladiway/pages/edit_car_page.dart';
 import 'package:bladiway/pages/info_trajet.dart';
+import 'package:bladiway/pages/mes_trajet.dart';
 import 'package:bladiway/pages/otp_screen.dart';
 import 'package:bladiway/pages/presentation.dart';
+import 'package:bladiway/pages/reservations_screen.dart';
 import 'package:bladiway/pages/scanner_permis.dart';
 import 'package:bladiway/pages/verification_conducteur.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -93,6 +97,12 @@ class MyApp extends StatelessWidget {
         '/add_car': (context) => const CarRegistrationScreen(),
         '/verifier_Conducteur': (context) => const PermissionAddCarPage(),
         '/scan_permission': (context) => const LicenseVerificationScreen(),
+        '/reservations': (context) => const ReservationsScreen(),
+        '/trips': (context) => const MesTrajetScreen(),
+        '/edit_car': (context) {
+          final voiture = ModalRoute.of(context)!.settings.arguments as DocumentSnapshot;
+          return EditCarPage(voiture: voiture);
+        },
       },
     );
   }

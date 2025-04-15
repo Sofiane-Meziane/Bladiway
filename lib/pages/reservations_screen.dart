@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'chat_screen.dart'; // Import de la page de chat
+import 'info_conducteur.dart'; // Import de la page d'informations sur le conducteur
 
 class ReservationsScreen extends StatefulWidget {
   const ReservationsScreen({super.key});
@@ -12,22 +13,27 @@ class ReservationsScreen extends StatefulWidget {
 }
 
 class _ReservationsScreenState extends State<ReservationsScreen> {
-  int _selectedIndex =
-      2; // Index pour "Réservations" dans la barre de navigation
-
+  final int _selectedIndex = 1; // Set to 1 since this is the reservations screen
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    if (index == 0) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else if (index == 1) {
-      // Navigation vers Mes trajets (à implémenter)
-    } else if (index == 2) {
-      // Rester sur la page actuelle (Réservations)
-    } else if (index == 3) {
-      Navigator.pushReplacementNamed(context, '/settings');
+    if (_selectedIndex != index) {
+      String route = '';
+      switch (index) {
+        case 0:
+          route = '/home';
+          break;
+        case 1:
+          route = '/reservations';
+          break;
+        case 2:
+          route = '/trips';
+          break;
+        case 3:
+          route = '/settings';
+          break;
+      }
+      if (route.isNotEmpty) {
+        Navigator.pushReplacementNamed(context, route);
+      }
     }
   }
 
@@ -410,407 +416,429 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(15),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.all(12.0),
-                                      child: Row(
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 24,
-                                            backgroundColor: theme
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.1),
-                                            backgroundImage:
-                                                profileImageUrl != null
-                                                    ? NetworkImage(
-                                                      profileImageUrl,
-                                                    )
-                                                    : null,
-                                            child:
-                                                profileImageUrl == null
-                                                    ? Icon(
-                                                      Icons.person,
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => InfoConducteur(
+                                              reservation: reservationDoc,
+                                              trip: tripSnapshot.data!,
+                                              conductor: userSnapshot.data!,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  child: Column(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.all(12.0),
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 24,
+                                              backgroundColor: theme
+                                                  .colorScheme
+                                                  .primary
+                                                  .withOpacity(0.1),
+                                              backgroundImage:
+                                                  profileImageUrl != null
+                                                      ? NetworkImage(
+                                                        profileImageUrl,
+                                                      )
+                                                      : null,
+                                              child:
+                                                  profileImageUrl == null
+                                                      ? Icon(
+                                                        Icons.person,
+                                                        color:
+                                                            theme
+                                                                .colorScheme
+                                                                .primary,
+                                                      )
+                                                      : null,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    '$prenom $nom',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color:
+                                                          theme
+                                                              .colorScheme
+                                                              .onSurface,
+                                                    ),
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.star,
+                                                        color: Colors.amber,
+                                                        size: 16,
+                                                      ),
+                                                      Text(
+                                                        ' 4.5',
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color: theme
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withOpacity(0.7),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 5,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: _getStatusColor(
+                                                  status,
+                                                  theme,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: Text(
+                                                status,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Divider(
+                                        height: 1,
+                                        thickness: 1,
+                                        color: theme.colorScheme.onSurface
+                                            .withOpacity(0.1),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Column(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.trip_origin,
                                                       color:
                                                           theme
                                                               .colorScheme
                                                               .primary,
-                                                    )
-                                                    : null,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  '$prenom $nom',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color:
-                                                        theme
-                                                            .colorScheme
-                                                            .onSurface,
+                                                      size: 20,
+                                                    ),
+                                                    Container(
+                                                      width: 2,
+                                                      height: 25,
+                                                      color: theme
+                                                          .colorScheme
+                                                          .primary
+                                                          .withOpacity(0.5),
+                                                    ),
+                                                    Icon(
+                                                      Icons.location_on,
+                                                      color:
+                                                          theme
+                                                              .colorScheme
+                                                              .primary,
+                                                      size: 20,
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        depart,
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          color:
+                                                              theme
+                                                                  .colorScheme
+                                                                  .onSurface,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        height: 20,
+                                                      ),
+                                                      Text(
+                                                        arrivee,
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          color:
+                                                              theme
+                                                                  .colorScheme
+                                                                  .onSurface,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 20),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceAround,
+                                              children: [
+                                                _buildInfoItem(
+                                                  context,
+                                                  Icons.calendar_today,
+                                                  date,
+                                                  'Date',
+                                                  theme,
+                                                ),
+                                                _buildInfoItem(
+                                                  context,
+                                                  Icons.access_time,
+                                                  time,
+                                                  'Heure',
+                                                  theme,
+                                                ),
+                                                _buildInfoItem(
+                                                  context,
+                                                  Icons.attach_money,
+                                                  '${price.toStringAsFixed(0)} DA',
+                                                  'Prix',
+                                                  theme,
                                                 ),
                                                 Row(
                                                   children: [
-                                                    const Icon(
-                                                      Icons.star,
-                                                      color: Colors.amber,
-                                                      size: 16,
+                                                    _buildInfoItem(
+                                                      context,
+                                                      Icons.event_seat,
+                                                      seatsReserved.toString(),
+                                                      'Places',
+                                                      theme,
                                                     ),
-                                                    Text(
-                                                      ' 4.5',
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        color: theme
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withOpacity(0.7),
+                                                    IconButton(
+                                                      icon: Icon(
+                                                        Icons.edit,
+                                                        color:
+                                                            theme
+                                                                .colorScheme
+                                                                .primary,
                                                       ),
+                                                      onPressed: () {
+                                                        _showModifySeatsDialog(
+                                                          context,
+                                                          reservationId,
+                                                          seatsReserved,
+                                                          tripId,
+                                                        );
+                                                      },
                                                     ),
                                                   ],
                                                 ),
                                               ],
                                             ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 5,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _getStatusColor(
-                                                status,
-                                                theme,
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 8.0,
                                               ),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              status,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Divider(
-                                      height: 1,
-                                      thickness: 1,
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.1),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Column(
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Column(
-                                                children: [
-                                                  Icon(
-                                                    Icons.trip_origin,
-                                                    color:
-                                                        theme
-                                                            .colorScheme
-                                                            .primary,
-                                                    size: 20,
-                                                  ),
-                                                  Container(
-                                                    width: 2,
-                                                    height: 25,
-                                                    color: theme
-                                                        .colorScheme
-                                                        .primary
-                                                        .withOpacity(0.5),
-                                                  ),
-                                                  Icon(
-                                                    Icons.location_on,
-                                                    color:
-                                                        theme
-                                                            .colorScheme
-                                                            .primary,
-                                                    size: 20,
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      depart,
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                        color:
-                                                            theme
-                                                                .colorScheme
-                                                                .onSurface,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 20),
-                                                    Text(
-                                                      arrivee,
-                                                      style: TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                        color:
-                                                            theme
-                                                                .colorScheme
-                                                                .onSurface,
-                                                      ),
-                                                    ),
-                                                  ],
+                                              child: Text(
+                                                'Places encore disponibles: $nbrPlaces',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                  fontWeight: FontWeight.w500,
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 20),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceAround,
-                                            children: [
-                                              _buildInfoItem(
-                                                context,
-                                                Icons.calendar_today,
-                                                date,
-                                                'Date',
-                                                theme,
-                                              ),
-                                              _buildInfoItem(
-                                                context,
-                                                Icons.access_time,
-                                                time,
-                                                'Heure',
-                                                theme,
-                                              ),
-                                              _buildInfoItem(
-                                                context,
-                                                Icons.attach_money,
-                                                '${price.toStringAsFixed(0)} DA',
-                                                'Prix',
-                                                theme,
-                                              ),
-                                              Row(
-                                                children: [
-                                                  _buildInfoItem(
-                                                    context,
-                                                    Icons.event_seat,
-                                                    seatsReserved.toString(),
-                                                    'Places',
-                                                    theme,
-                                                  ),
-                                                  IconButton(
-                                                    icon: Icon(
-                                                      Icons.edit,
-                                                      color:
-                                                          theme
-                                                              .colorScheme
-                                                              .primary,
-                                                    ),
-                                                    onPressed: () {
-                                                      _showModifySeatsDialog(
-                                                        context,
-                                                        reservationId,
-                                                        seatsReserved,
-                                                        tripId,
-                                                      );
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 8.0,
                                             ),
-                                            child: Text(
-                                              'Places encore disponibles: $nbrPlaces',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color:
-                                                    theme.colorScheme.primary,
-                                                fontWeight: FontWeight.w500,
-                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceEvenly,
+                                          children: [
+                                            _buildActionButton(
+                                              context,
+                                              Icons.message,
+                                              'Contacter',
+                                              theme.colorScheme.primary,
+                                              () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder:
+                                                        (context) => ChatPage(
+                                                          reservationId:
+                                                              reservationId,
+                                                          otherUserId: addedBy,
+                                                        ),
+                                                  ),
+                                                );
+                                              },
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          _buildActionButton(
-                                            context,
-                                            Icons.message,
-                                            'Contacter',
-                                            theme.colorScheme.primary,
-                                            () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder:
-                                                      (context) => ChatPage(
-                                                        reservationId:
-                                                            reservationId,
-                                                        otherUserId: addedBy,
+                                            _buildActionButton(
+                                              context,
+                                              Icons.phone,
+                                              'Appeler',
+                                              Colors.green,
+                                              () async {
+                                                if (phoneNumber !=
+                                                    'Non disponible') {
+                                                  final url =
+                                                      'tel:$phoneNumber';
+                                                  if (await canLaunch(url)) {
+                                                    await launch(url);
+                                                  } else {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          'Impossible d\'ouvrir l\'application téléphonique',
+                                                        ),
                                                       ),
-                                                ),
-                                              );
-                                                                                        },
-                                          ),
-                                          _buildActionButton(
-                                            context,
-                                            Icons.phone,
-                                            'Appeler',
-                                            Colors.green,
-                                            () async {
-                                              if (phoneNumber !=
-                                                  'Non disponible') {
-                                                final url = 'tel:$phoneNumber';
-                                                if (await canLaunch(url)) {
-                                                  await launch(url);
+                                                    );
+                                                  }
                                                 } else {
                                                   ScaffoldMessenger.of(
                                                     context,
                                                   ).showSnackBar(
                                                     const SnackBar(
                                                       content: Text(
-                                                        'Impossible d\'ouvrir l\'application téléphonique',
+                                                        'Numéro de téléphone non disponible',
                                                       ),
                                                     ),
                                                   );
                                                 }
-                                              } else {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Numéro de téléphone non disponible',
-                                                    ),
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                          ),
-                                          _buildActionButton(
-                                            context,
-                                            Icons.cancel,
-                                            'Annuler',
-                                            Colors.red,
-                                            () async {
-                                              try {
-                                                await FirebaseFirestore.instance
-                                                    .runTransaction((
-                                                      transaction,
-                                                    ) async {
-                                                      DocumentReference
-                                                      tripRef =
-                                                          FirebaseFirestore
-                                                              .instance
-                                                              .collection(
-                                                                'trips',
-                                                              )
-                                                              .doc(tripId);
-                                                      DocumentSnapshot
-                                                      tripSnapshot =
-                                                          await transaction.get(
-                                                            tripRef,
+                                              },
+                                            ),
+                                            _buildActionButton(
+                                              context,
+                                              Icons.cancel,
+                                              'Annuler',
+                                              Colors.red,
+                                              () async {
+                                                try {
+                                                  await FirebaseFirestore
+                                                      .instance
+                                                      .runTransaction((
+                                                        transaction,
+                                                      ) async {
+                                                        DocumentReference
+                                                        tripRef =
+                                                            FirebaseFirestore
+                                                                .instance
+                                                                .collection(
+                                                                  'trips',
+                                                                )
+                                                                .doc(tripId);
+                                                        DocumentSnapshot
+                                                        tripSnapshot =
+                                                            await transaction
+                                                                .get(tripRef);
+
+                                                        if (!tripSnapshot
+                                                            .exists) {
+                                                          throw Exception(
+                                                            'Trajet non trouvé',
                                                           );
+                                                        }
 
-                                                      if (!tripSnapshot
-                                                          .exists) {
-                                                        throw Exception(
-                                                          'Trajet non trouvé',
+                                                        Map<String, dynamic>
+                                                        tripData =
+                                                            tripSnapshot.data()
+                                                                as Map<
+                                                                  String,
+                                                                  dynamic
+                                                                >;
+                                                        int placesDisponibles =
+                                                            tripData['nbrPlaces']
+                                                                as int? ??
+                                                            0;
+                                                        num
+                                                        newPlacesDisponibles =
+                                                            placesDisponibles +
+                                                            seatsReserved;
+
+                                                        transaction.update(
+                                                          tripRef,
+                                                          {
+                                                            'nbrPlaces':
+                                                                newPlacesDisponibles,
+                                                          },
                                                         );
-                                                      }
 
-                                                      Map<String, dynamic>
-                                                      tripData =
-                                                          tripSnapshot.data()
-                                                              as Map<
-                                                                String,
-                                                                dynamic
-                                                              >;
-                                                      int placesDisponibles =
-                                                          tripData['nbrPlaces']
-                                                              as int? ??
-                                                          0;
-                                                      num newPlacesDisponibles =
-                                                          placesDisponibles +
-                                                          seatsReserved;
+                                                        DocumentReference
+                                                        reservationRef =
+                                                            FirebaseFirestore
+                                                                .instance
+                                                                .collection(
+                                                                  'reservations',
+                                                                )
+                                                                .doc(
+                                                                  reservationId,
+                                                                );
+                                                        transaction.delete(
+                                                          reservationRef,
+                                                        );
+                                                      });
 
-                                                      transaction.update(
-                                                        tripRef,
-                                                        {
-                                                          'nbrPlaces':
-                                                              newPlacesDisponibles,
-                                                        },
-                                                      );
-
-                                                      DocumentReference
-                                                      reservationRef =
-                                                          FirebaseFirestore
-                                                              .instance
-                                                              .collection(
-                                                                'reservations',
-                                                              )
-                                                              .doc(
-                                                                reservationId,
-                                                              );
-                                                      transaction.delete(
-                                                        reservationRef,
-                                                      );
-                                                    });
-
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Réservation annulée avec succès',
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Réservation annulée avec succès',
+                                                      ),
                                                     ),
-                                                  ),
-                                                );
-                                              } catch (e) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                      'Erreur lors de l\'annulation: $e',
+                                                  );
+                                                } catch (e) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        'Erreur lors de l\'annulation: $e',
+                                                      ),
                                                     ),
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                          ),
-                                        ],
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               );
                             },
@@ -837,12 +865,12 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.directions_car),
-            label: 'Mes trajets',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.check_circle),
             label: 'Réservations',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.directions_car),
+            label: 'Mes trajets',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
@@ -965,7 +993,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       case 'terminée':
       case 'terminé(e)':
       case 'completed':
-        return Colors.blue;
+        return const Color.fromARGB(255, 8, 157, 18);
       default:
         return theme.colorScheme.primary;
     }

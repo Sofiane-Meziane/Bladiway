@@ -10,7 +10,8 @@ class LicenseVerificationScreen extends StatefulWidget {
   const LicenseVerificationScreen({super.key});
 
   @override
-  _LicenseVerificationScreenState createState() => _LicenseVerificationScreenState();
+  _LicenseVerificationScreenState createState() =>
+      _LicenseVerificationScreenState();
 }
 
 class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
@@ -20,6 +21,7 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
 
   XFile? _frontImage;
   XFile? _backImage;
+  bool _isLoading = false;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -63,27 +65,37 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
     }
   }
 
-  Future<void> updateLicenseInfo() async {
+  Future<void> transmitLicense() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_frontImage == null || _backImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('error.select_both_images'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('error.select_both_images'.tr())));
       return;
     }
 
     User? user = _auth.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('error.not_logged_in'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('error.not_logged_in'.tr())));
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      String frontImageUrl = await _uploadImage(_frontImage!, '${user.uid}_front_image.jpg');
-      String backImageUrl = await _uploadImage(_backImage!, '${user.uid}_back_image.jpg');
+      String frontImageUrl = await _uploadImage(
+        _frontImage!,
+        '${user.uid}_front_image.jpg',
+      );
+      String backImageUrl = await _uploadImage(
+        _backImage!,
+        '${user.uid}_back_image.jpg',
+      );
 
       String licenseNumber = _licenseNumberController.text;
       String expirationDate = _expirationDateController.text;
@@ -100,10 +112,16 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
 
       await _checkAndUpdateValidationStatus(user);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('success.license_updated'.tr())),
-      );
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Afficher un dialogue de succès
+      _showSuccessDialog();
     } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
       print('error.license_update_failed'.tr());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('error.license_update_failed'.tr())),
@@ -111,15 +129,57 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
     }
   }
 
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 30),
+              const SizedBox(width: 10),
+              Text(
+                'Succès',
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Vos informations ont été enregistrées avec succès. Elles seront examinées par notre équipe.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Fermer le dialogue
+                Navigator.of(context).pop(); // Revenir à l'écran précédent
+              },
+              child: Text(
+                'OK',
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _checkAndUpdateValidationStatus(User user) async {
     try {
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
-      bool hasLicense = userDoc['recto_permis'] != null && userDoc['verso_permis'] != null;
-      QuerySnapshot carsSnapshot = await _firestore
-          .collection('cars')
-          .where('id_proprietaire', isEqualTo: user.uid)
-          .limit(1)
-          .get();
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(user.uid).get();
+      bool hasLicense =
+          userDoc['recto_permis'] != null && userDoc['verso_permis'] != null;
+      QuerySnapshot carsSnapshot =
+          await _firestore
+              .collection('cars')
+              .where('id_proprietaire', isEqualTo: user.uid)
+              .limit(1)
+              .get();
       bool hasCar = carsSnapshot.docs.isNotEmpty;
 
       if (hasLicense && hasCar) {
@@ -168,91 +228,110 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: primaryColor),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _licenseNumberController,
-                  decoration: InputDecoration(
-                    labelText: 'form.license_number'.tr(),
-                    prefixIcon: Icon(Icons.credit_card, color: primaryColor),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(Icons.info_outline, color: primaryColor),
-                      onPressed: _showImageDialog,
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextFormField(
+                      controller: _licenseNumberController,
+                      decoration: InputDecoration(
+                        labelText: 'form.license_number'.tr(),
+                        prefixIcon: Icon(
+                          Icons.credit_card,
+                          color: primaryColor,
+                        ),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(Icons.info_outline, color: primaryColor),
+                          onPressed: _showImageDialog,
+                        ),
+                      ),
+                      validator: _validateLicenseNumber,
                     ),
-                  ),
-                  validator: _validateLicenseNumber,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _expirationDateController,
-                  decoration: InputDecoration(
-                    labelText: 'form.expiration_date'.tr(),
-                    prefixIcon: Icon(Icons.calendar_today, color: primaryColor),
-                    border: const OutlineInputBorder(),
-                  ),
-                  validator: _validateExpirationDate,
-                  onTap: () async {
-                    FocusScope.of(context).requestFocus(FocusNode());
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(1900),
-                      lastDate: DateTime(2100),
-                    );
-                    if (selectedDate != null) {
-                      _expirationDateController.text =
-                          '${selectedDate.toLocal()}'.split(' ')[0];
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildImageSelector(
-                  onTap: () => _selectImage(ImageSource.gallery, true),
-                  hasImage: _frontImage != null,
-                  textKeyWhenSelected: 'upload.front_selected',
-                  textKeyWhenNotSelected: 'upload.select_front',
-                ),
-                const SizedBox(height: 16),
-                _buildImageSelector(
-                  onTap: () => _selectImage(ImageSource.gallery, false),
-                  hasImage: _backImage != null,
-                  textKeyWhenSelected: 'upload.back_selected',
-                  textKeyWhenNotSelected: 'upload.select_back',
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _expirationDateController,
+                      decoration: InputDecoration(
+                        labelText: 'form.expiration_date'.tr(),
+                        prefixIcon: Icon(
+                          Icons.calendar_today,
+                          color: primaryColor,
+                        ),
+                        border: const OutlineInputBorder(),
+                      ),
+                      validator: _validateExpirationDate,
+                      onTap: () async {
+                        FocusScope.of(context).requestFocus(FocusNode());
+                        DateTime? selectedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime(2100),
+                        );
+                        if (selectedDate != null) {
+                          _expirationDateController.text =
+                              '${selectedDate.toLocal()}'.split(' ')[0];
+                        }
+                      },
                     ),
-                  ),
-                  onPressed: updateLicenseInfo,
-                  child: Text(
-                    "button.update_license_info".tr(),
-                    style: const TextStyle(fontSize: 16, color: Colors.white),
-                  ),
+                    const SizedBox(height: 20),
+                    _buildImageSelector(
+                      onTap: () => _selectImage(ImageSource.gallery, true),
+                      hasImage: _frontImage != null,
+                      textKeyWhenSelected: 'upload.front_selected',
+                      textKeyWhenNotSelected: 'upload.select_front',
+                    ),
+                    const SizedBox(height: 16),
+                    _buildImageSelector(
+                      onTap: () => _selectImage(ImageSource.gallery, false),
+                      hasImage: _backImage != null,
+                      textKeyWhenSelected: 'upload.back_selected',
+                      textKeyWhenNotSelected: 'upload.select_back',
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: _isLoading ? null : transmitLicense,
+                      child: Text(
+                        "Envoyer mes données",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed:
+                          _isLoading ? null : () => Navigator.pop(context),
+                      child: Text(
+                        'button.back'.tr(),
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'button.back'.tr(),
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          if (_isLoading)
+            Container(
+              color: Colors.black45,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
       ),
     );
   }
@@ -269,18 +348,31 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: hasImage ? Colors.green : primaryColor.withOpacity(0.1),
+          color:
+              hasImage
+                  ? Colors.green.withOpacity(0.2)
+                  : primaryColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: hasImage ? Colors.green : primaryColor.withOpacity(0.3),
+            width: 1.5,
+          ),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.camera_alt, color: primaryColor),
+            Icon(
+              hasImage ? Icons.check_circle : Icons.camera_alt,
+              color: hasImage ? Colors.green : primaryColor,
+            ),
             const SizedBox(width: 10),
             Text(
               hasImage ? textKeyWhenSelected.tr() : textKeyWhenNotSelected.tr(),
-              style: TextStyle(color: primaryColor),
+              style: TextStyle(
+                color: hasImage ? Colors.green : primaryColor,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
