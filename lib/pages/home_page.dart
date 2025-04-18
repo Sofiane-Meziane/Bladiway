@@ -5,6 +5,7 @@ import 'package:bladiway/methods/user_data_notifier.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/evaluation_service.dart';
 import 'settings_screen.dart';
 import 'mes_voitures_page.dart'; // Import de la nouvelle page
 
@@ -29,6 +30,9 @@ class _HomePageState extends State<HomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late Stream<DocumentSnapshot> _userStream;
 
+  // Service d'évaluation
+  final EvaluationService _evaluationService = EvaluationService();
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +47,16 @@ class _HomePageState extends State<HomePage> {
       _setupUserListener();
     }
     _checkUserHasCar(); // Vérifier initialement si l'utilisateur a une voiture
+
+    // Vérifier si l'utilisateur a des évaluations en attente
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingEvaluations();
+    });
+  }
+
+  // Méthode pour vérifier les évaluations en attente
+  void _checkPendingEvaluations() {
+    _evaluationService.checkPendingEvaluations(context);
   }
 
   // Nouvelle méthode pour charger l'état du message
@@ -423,7 +437,7 @@ class _HomePageState extends State<HomePage> {
                     color2: const Color(0xFF42A5F5),
                     onPressed: () {
                       // Naviguer vers la page de réservation
-                      Navigator.pushNamed(context, '/reservation');
+                      Navigator.pushNamed(context, '/reserver');
                     },
                   ),
                   const SizedBox(height: 16),

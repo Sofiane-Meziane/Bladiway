@@ -68,6 +68,7 @@ class _InfoTrajetState extends State<InfoTrajet>
   String _selectedSmoking = 'Non Autorisé';
   String _selectedAnimal = 'Non Autorisé';
   String _selectedAirConditioning = 'Non Autorisé';
+  String _selectedPassengersType = 'Mixte';
   final String _selectedPaymentMethod = 'Espèces';
 
   // État d'expansion des sections
@@ -398,6 +399,15 @@ class _InfoTrajetState extends State<InfoTrajet>
                       (newValue) =>
                           setState(() => _selectedAirConditioning = newValue!),
                       primaryColor: primaryColor,
+                    ),
+                    const Divider(height: 1),
+                    _buildOptionRow(
+                      'Type de passagers',
+                      _selectedPassengersType,
+                      (newValue) =>
+                          setState(() => _selectedPassengersType = newValue!),
+                      primaryColor: primaryColor,
+                      options: ['Mixte', 'Femmes', 'Hommes'],
                     ),
                   ],
                 ),
@@ -787,8 +797,10 @@ class _InfoTrajetState extends State<InfoTrajet>
     String currentValue,
     void Function(String?) onChanged, {
     required Color primaryColor,
+    List<String>? options,
   }) {
-    final List<String> dropdownOptions = ['Autorisé', 'Non Autorisé'];
+    final List<String> dropdownOptions =
+        options ?? ['Autorisé', 'Non Autorisé'];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: Row(
@@ -1187,10 +1199,12 @@ class _InfoTrajetState extends State<InfoTrajet>
         'prix': double.tryParse(_priceController.text) ?? 0,
         'méthodePaiement': _selectedPaymentMethod,
         'nbrPlaces': _seatCount,
+        'placesDisponibles': _seatCount,
         'bagage': _selectedLuggage,
         'fumer': _selectedSmoking,
         'animal': _selectedAnimal,
         'climatisation': _selectedAirConditioning,
+        'typePassagers': _selectedPassengersType,
         'description': _descriptionController.text,
         'status': 'en attente',
         'createdAt': FieldValue.serverTimestamp(),

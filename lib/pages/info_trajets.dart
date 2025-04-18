@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'chat_screen.dart';
+import 'info_conducteur.dart'; // Import the new screen
 
 class InfoConducteur extends StatelessWidget {
   final DocumentSnapshot reservation;
@@ -115,23 +116,34 @@ class InfoConducteur extends StatelessWidget {
                   ),
                 ),
 
-                // Carte du profil du conducteur
+                // Carte du profil du conducteur - Rendue cliquable pour naviguer vers info_conducteur.dart
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              _showDriverInfoDialog(context, conductor.id);
-                            },
-                            child: Hero(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Navigation vers info_conducteur.dart quand on clique sur la carte du conducteur
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => InfoConducteurPage(
+                                conductorId: conductor.id,
+                                reservationId: reservation.id,
+                                currentUserId: reservationData['userId'],
+                              ),
+                        ),
+                      );
+                    },
+                    child: Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Hero(
                               tag: 'conductor-${conductor.id}',
                               child: CircleAvatar(
                                 radius: 40,
@@ -149,85 +161,138 @@ class InfoConducteur extends StatelessWidget {
                                         : null,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${conductorData['prenom']} ${conductorData['nom']}',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${conductorData['prenom']} ${conductorData['nom']}',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 18,
-                                    ),
-                                    Text(
-                                      ' 4.5',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '(120 avis)',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                // Afficher le label "Vérifié" uniquement si isValidated est true
-                                if (isValidated)
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: const [
-                                            Icon(
-                                              Icons.verified,
-                                              color: Colors.white,
-                                              size: 14,
+                                  const SizedBox(height: 4),
+                                  FutureBuilder<QuerySnapshot>(
+                                    future:
+                                        FirebaseFirestore.instance
+                                            .collection('reviews')
+                                            .where(
+                                              'ratedUserId',
+                                              isEqualTo: conductor.id,
+                                            )
+                                            .get(),
+                                    builder: (context, reviewsSnapshot) {
+                                      if (reviewsSnapshot.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.star,
+                                              color: Colors.grey,
+                                              size: 18,
                                             ),
-                                            SizedBox(width: 4),
                                             Text(
-                                              'Vérifié',
+                                              ' Chargement...',
                                               style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 12,
+                                                fontSize: 16,
+                                                color: Colors.grey[700],
                                               ),
                                             ),
                                           ],
-                                        ),
-                                      ),
-                                    ],
+                                        );
+                                      }
+                                      double rating = 0;
+                                      int reviewCount = 0;
+                                      if (reviewsSnapshot.hasData &&
+                                          reviewsSnapshot
+                                              .data!
+                                              .docs
+                                              .isNotEmpty) {
+                                        reviewCount =
+                                            reviewsSnapshot.data!.docs.length;
+                                        double totalRating = 0;
+                                        for (var doc
+                                            in reviewsSnapshot.data!.docs) {
+                                          final reviewData =
+                                              doc.data()
+                                                  as Map<String, dynamic>;
+                                          totalRating +=
+                                              (reviewData['rating'] as num? ??
+                                                      0)
+                                                  .toDouble();
+                                        }
+                                        rating = totalRating / reviewCount;
+                                      }
+                                      return Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.star,
+                                            color: Colors.amber,
+                                            size: 18,
+                                          ),
+                                          Text(
+                                            ' ${rating.toStringAsFixed(1)}',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '($reviewCount avis)',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   ),
-                              ],
+                                  const SizedBox(height: 8),
+                                  // Afficher le label "Vérifié" uniquement si isValidated est true
+                                  if (isValidated)
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: const [
+                                              Icon(
+                                                Icons.verified,
+                                                color: Colors.white,
+                                                size: 14,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                'Vérifié',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -330,187 +395,6 @@ class InfoConducteur extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Nouvelle méthode pour afficher la fenêtre modale d'information du conducteur
-  void _showDriverInfoDialog(BuildContext context, String conductorId) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: FutureBuilder<DocumentSnapshot>(
-            future:
-                FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(conductorId)
-                    .get(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(
-                  height: 200,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (!snapshot.hasData || snapshot.data == null) {
-                return const SizedBox(
-                  height: 200,
-                  child: Center(
-                    child: Text(
-                      'Erreur: Impossible de charger les informations',
-                    ),
-                  ),
-                );
-              }
-
-              final userData = snapshot.data!.data() as Map<String, dynamic>;
-              final profileImageUrl = userData['profileImageUrl'] as String?;
-              final nom = userData['nom'] as String? ?? 'Non disponible';
-              final prenom = userData['prenom'] as String? ?? 'Non disponible';
-              final genre = userData['genre'] as String? ?? 'Non spécifié';
-              final email = userData['email'] as String? ?? 'Non disponible';
-              final phone = userData['phone'] as String? ?? 'Non disponible';
-
-              return Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Titre avec bouton de fermeture
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Profil du conducteur',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Photo de profil
-                    Hero(
-                      tag: 'conductor-profile-$conductorId',
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.1),
-                        backgroundImage:
-                            profileImageUrl != null
-                                ? NetworkImage(profileImageUrl)
-                                : null,
-                        child:
-                            profileImageUrl == null
-                                ? const Icon(Icons.person, size: 50)
-                                : null,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Informations personnelles
-                    _buildInfoRow(Icons.person, 'Nom complet', '$prenom $nom'),
-                    const Divider(height: 20),
-                    _buildInfoRow(Icons.wc, 'Genre', genre),
-                    const Divider(height: 20),
-                    _buildInfoRow(Icons.email, 'Email', email),
-                    const Divider(height: 20),
-                    _buildInfoRow(Icons.phone, 'Téléphone', phone),
-
-                    const SizedBox(height: 20),
-                    // Bouton pour contacter
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.phone),
-                          color: Colors.blue,
-                          onPressed: () async {
-                            if (phone != 'Non disponible') {
-                              final url = 'tel:$phone';
-                              if (await canLaunch(url)) {
-                                await launch(url);
-                              }
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.message),
-                          color: Colors.green,
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => ChatPage(
-                                      reservationId: reservation.id,
-                                      otherUserId: conductorId,
-                                    ),
-                              ),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.email),
-                          color: Colors.red,
-                          onPressed: () async {
-                            if (email != 'Non disponible') {
-                              final url = 'mailto:$email';
-                              if (await canLaunch(url)) {
-                                await launch(url);
-                              }
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  // Widget pour afficher une ligne d'information
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.blue),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 16),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -641,6 +525,8 @@ class InfoConducteur extends StatelessWidget {
         tripData['climatisation'] as String? ?? 'Non Autorisé';
     final fumer = tripData['fumer'] as String? ?? 'Non Autorisé';
     final animal = tripData['animal'] as String? ?? 'Non Autorisé';
+    // Ajout du nouveau champ typePassagers
+    final typePassagers = tripData['typePassagers'] as String? ?? 'Mixte';
 
     return Card(
       elevation: 2,
@@ -685,7 +571,7 @@ class InfoConducteur extends StatelessWidget {
             ],
             Center(
               child: Container(
-                constraints: BoxConstraints(
+                constraints: const BoxConstraints(
                   maxWidth: 400,
                 ), // Limite la largeur maximale
                 child: Wrap(
@@ -715,6 +601,13 @@ class InfoConducteur extends StatelessWidget {
                       label: 'Animal',
                       value: animal,
                     ),
+                    // Ajout du nouveau typePassagers
+                    _buildFeatureItem(
+                      icon: Icons.people,
+                      label: 'Passagers',
+                      value: typePassagers,
+                      isPassengerType: true,
+                    ),
                   ],
                 ),
               ),
@@ -729,44 +622,101 @@ class InfoConducteur extends StatelessWidget {
     required IconData icon,
     required String label,
     required String value,
+    bool isPassengerType = false,
   }) {
+    // Pour les éléments standards (bagage, climatisation, etc.)
     final isAuthorized = value == 'Autorisé';
 
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color:
-                isAuthorized
-                    ? Colors.blue.withOpacity(0.1)
-                    : Colors.grey.withOpacity(0.1),
-            shape: BoxShape.circle,
+    // Pour le type de passagers, on utilise une logique différente
+    Color iconColor;
+    Color textColor;
+    Color bgColor;
+
+    if (isPassengerType) {
+      // Couleurs spécifiques pour le type de passagers
+      switch (value) {
+        case 'Femmes':
+          iconColor = Colors.pink;
+          textColor = Colors.pink;
+          bgColor = Colors.pink.withOpacity(0.1);
+          break;
+        case 'Hommes':
+          iconColor = Colors.blue;
+          textColor = Colors.blue;
+          bgColor = Colors.blue.withOpacity(0.1);
+          break;
+        case 'Mixte':
+        default:
+          iconColor = Colors.purple;
+          textColor = Colors.purple;
+          bgColor = Colors.purple.withOpacity(0.1);
+          break;
+      }
+
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+            child: Icon(icon, color: iconColor, size: 24),
           ),
-          child: Icon(
-            icon,
-            color: isAuthorized ? Colors.blue : Colors.grey,
-            size: 24,
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: isAuthorized ? Colors.black87 : Colors.grey,
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              color: textColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        Text(
-          isAuthorized ? 'Autorisé' : 'Non Autorisé',
-          style: TextStyle(
-            fontSize: 12,
-            color: isAuthorized ? Colors.green : Colors.red,
+        ],
+      );
+    } else {
+      // Logique originale pour les autres attributs
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color:
+                  isAuthorized
+                      ? Colors.blue.withOpacity(0.1)
+                      : Colors.grey.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: isAuthorized ? Colors.blue : Colors.grey,
+              size: 24,
+            ),
           ),
-        ),
-      ],
-    );
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: isAuthorized ? Colors.black87 : Colors.grey,
+            ),
+          ),
+          Text(
+            isAuthorized ? 'Autorisé' : 'Non Autorisé',
+            style: TextStyle(
+              fontSize: 12,
+              color: isAuthorized ? Colors.green : Colors.red,
+            ),
+          ),
+        ],
+      );
+    }
   }
 
   Widget _buildCarInfo(BuildContext context, Map<String, dynamic> tripData) {

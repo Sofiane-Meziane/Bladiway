@@ -13,7 +13,8 @@ class ReservationsScreen extends StatefulWidget {
 }
 
 class _ReservationsScreenState extends State<ReservationsScreen> {
-  final int _selectedIndex = 1; // Set to 1 since this is the reservations screen
+  final int _selectedIndex =
+      1; // Set to 1 since this is the reservations screen
   void _onItemTapped(int index) {
     if (_selectedIndex != index) {
       String route = '';
@@ -143,7 +144,18 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         int diff = currentSeats - newSeats;
         Map<String, dynamic> tripData =
             tripSnapshot.data() as Map<String, dynamic>;
-        int placesDisponibles = tripData['nbrPlaces'] as int? ?? 0;
+
+        int totalPlaces =
+            tripData['nbrPlaces'] is int
+                ? tripData['nbrPlaces']
+                : int.tryParse(tripData['nbrPlaces'].toString()) ?? 0;
+
+        int placesDisponibles =
+            tripData['placesDisponibles'] is int
+                ? tripData['placesDisponibles']
+                : int.tryParse(tripData['placesDisponibles'].toString()) ??
+                    totalPlaces;
+
         int newPlacesDisponibles = placesDisponibles + diff;
 
         if (newPlacesDisponibles < 0) {
@@ -153,8 +165,20 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         DocumentReference reservationRef = FirebaseFirestore.instance
             .collection('reservations')
             .doc(reservationId);
+
+        // Mettre à jour d'abord le nombre de places réservées et disponibles
         transaction.update(reservationRef, {'seatsReserved': newSeats});
-        transaction.update(tripRef, {'nbrPlaces': newPlacesDisponibles});
+        transaction.update(tripRef, {
+          'placesDisponibles': newPlacesDisponibles,
+        });
+
+        // Ensuite, mettre à jour le statut en fonction du nombre de places disponibles
+        if (newPlacesDisponibles == 0) {
+          transaction.update(tripRef, {'status': 'completé'});
+        } else if (tripData['status'] == 'completé' &&
+            newPlacesDisponibles > 0) {
+          transaction.update(tripRef, {'status': 'en attente'});
+        }
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -358,6 +382,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                               tripData['status'] as String? ?? 'En attente';
                           final addedBy = tripData['userId'] as String?;
                           final nbrPlaces = tripData['nbrPlaces'] as int? ?? 0;
+                          final placesDisponibles =
+                              tripData['placesDisponibles'] as int? ??
+                              nbrPlaces;
 
                           if (addedBy == null) {
                             return _buildErrorCard(
@@ -477,24 +504,106 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                               .onSurface,
                                                     ),
                                                   ),
-                                                  Row(
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.star,
-                                                        color: Colors.amber,
-                                                        size: 16,
-                                                      ),
-                                                      Text(
-                                                        ' 4.5',
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          color: theme
-                                                              .colorScheme
-                                                              .onSurface
-                                                              .withOpacity(0.7),
-                                                        ),
-                                                      ),
-                                                    ],
+                                                  FutureBuilder<QuerySnapshot>(
+                                                    future:
+                                                        FirebaseFirestore
+                                                            .instance
+                                                            .collection(
+                                                              'reviews',
+                                                            )
+                                                            .where(
+                                                              'ratedUserId',
+                                                              isEqualTo:
+                                                                  addedBy,
+                                                            )
+                                                            .get(),
+                                                    builder: (
+                                                      context,
+                                                      reviewsSnapshot,
+                                                    ) {
+                                                      if (reviewsSnapshot
+                                                              .connectionState ==
+                                                          ConnectionState
+                                                              .waiting) {
+                                                        return Row(
+                                                          children: [
+                                                            const Icon(
+                                                              Icons.star,
+                                                              color:
+                                                                  Colors.grey,
+                                                              size: 16,
+                                                            ),
+                                                            Text(
+                                                              ' Chargement...',
+                                                              style: TextStyle(
+                                                                fontSize: 14,
+                                                                color: theme
+                                                                    .colorScheme
+                                                                    .onSurface
+                                                                    .withOpacity(
+                                                                      0.7,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        );
+                                                      }
+                                                      double rating = 0;
+                                                      int reviewCount = 0;
+                                                      if (reviewsSnapshot
+                                                              .hasData &&
+                                                          reviewsSnapshot
+                                                              .data!
+                                                              .docs
+                                                              .isNotEmpty) {
+                                                        reviewCount =
+                                                            reviewsSnapshot
+                                                                .data!
+                                                                .docs
+                                                                .length;
+                                                        double totalRating = 0;
+                                                        for (var doc
+                                                            in reviewsSnapshot
+                                                                .data!
+                                                                .docs) {
+                                                          final reviewData =
+                                                              doc.data()
+                                                                  as Map<
+                                                                    String,
+                                                                    dynamic
+                                                                  >;
+                                                          totalRating +=
+                                                              (reviewData['rating']
+                                                                          as num? ??
+                                                                      0)
+                                                                  .toDouble();
+                                                        }
+                                                        rating =
+                                                            totalRating /
+                                                            reviewCount;
+                                                      }
+                                                      return Row(
+                                                        children: [
+                                                          const Icon(
+                                                            Icons.star,
+                                                            color: Colors.amber,
+                                                            size: 16,
+                                                          ),
+                                                          Text(
+                                                            ' ${rating.toStringAsFixed(1)} ($reviewCount avis)',
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              color: theme
+                                                                  .colorScheme
+                                                                  .onSurface
+                                                                  .withOpacity(
+                                                                    0.7,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      );
+                                                    },
                                                   ),
                                                 ],
                                               ),
@@ -643,18 +752,23 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                       icon: Icon(
                                                         Icons.edit,
                                                         color:
-                                                            theme
-                                                                .colorScheme
-                                                                .primary,
+                                                            status == 'terminé'
+                                                                ? Colors.grey
+                                                                : theme
+                                                                    .colorScheme
+                                                                    .primary,
                                                       ),
-                                                      onPressed: () {
-                                                        _showModifySeatsDialog(
-                                                          context,
-                                                          reservationId,
-                                                          seatsReserved,
-                                                          tripId,
-                                                        );
-                                                      },
+                                                      onPressed:
+                                                          status == 'terminé'
+                                                              ? null
+                                                              : () {
+                                                                _showModifySeatsDialog(
+                                                                  context,
+                                                                  reservationId,
+                                                                  seatsReserved,
+                                                                  tripId,
+                                                                );
+                                                              },
                                                     ),
                                                   ],
                                                 ),
@@ -664,15 +778,21 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                               padding: const EdgeInsets.only(
                                                 top: 8.0,
                                               ),
-                                              child: Text(
-                                                'Places encore disponibles: $nbrPlaces',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color:
-                                                      theme.colorScheme.primary,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
+                                              child:
+                                                  status == 'terminé'
+                                                      ? Container() // Ne pas afficher les places disponibles si le trajet est terminé
+                                                      : Text(
+                                                        'Places encore disponibles: $placesDisponibles',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color:
+                                                              theme
+                                                                  .colorScheme
+                                                                  .primary,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
                                             ),
                                           ],
                                         ),
@@ -741,16 +861,16 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                 }
                                               },
                                             ),
-                                            _buildActionButton(
-                                              context,
-                                              Icons.cancel,
-                                              'Annuler',
-                                              Colors.red,
-                                              () async {
-                                                try {
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .runTransaction((
+                                            status == 'terminé'
+                                                ? Container() // Ne pas afficher le bouton d'annulation si le trajet est terminé
+                                                : _buildActionButton(
+                                                  context,
+                                                  Icons.cancel,
+                                                  'Annuler',
+                                                  Colors.red,
+                                                  () async {
+                                                    try {
+                                                      await FirebaseFirestore.instance.runTransaction((
                                                         transaction,
                                                       ) async {
                                                         DocumentReference
@@ -780,22 +900,77 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                                   String,
                                                                   dynamic
                                                                 >;
-                                                        int placesDisponibles =
+
+                                                        int totalPlaces =
                                                             tripData['nbrPlaces']
-                                                                as int? ??
-                                                            0;
-                                                        num
+                                                                    is int
+                                                                ? tripData['nbrPlaces']
+                                                                : int.tryParse(
+                                                                      tripData['nbrPlaces']
+                                                                          .toString(),
+                                                                    ) ??
+                                                                    0;
+
+                                                        int placesDisponibles =
+                                                            tripData['placesDisponibles']
+                                                                    is int
+                                                                ? tripData['placesDisponibles']
+                                                                : int.tryParse(
+                                                                      tripData['placesDisponibles']
+                                                                          .toString(),
+                                                                    ) ??
+                                                                    totalPlaces;
+
+                                                        // Assurez-vous que seatsReserved est un int
+                                                        int seats =
+                                                            seatsReserved is int
+                                                                ? seatsReserved
+                                                                : (seatsReserved
+                                                                        is num
+                                                                    ? seatsReserved
+                                                                        .toInt()
+                                                                    : int.tryParse(
+                                                                          seatsReserved
+                                                                              .toString(),
+                                                                        ) ??
+                                                                        1);
+
+                                                        int
                                                         newPlacesDisponibles =
                                                             placesDisponibles +
-                                                            seatsReserved;
+                                                            seats;
 
+                                                        // Mettre à jour d'abord le nombre de places disponibles
                                                         transaction.update(
                                                           tripRef,
                                                           {
-                                                            'nbrPlaces':
+                                                            'placesDisponibles':
                                                                 newPlacesDisponibles,
                                                           },
                                                         );
+
+                                                        // Ensuite, mettre à jour le statut en fonction du nombre de places disponibles
+                                                        if (newPlacesDisponibles ==
+                                                            0) {
+                                                          transaction.update(
+                                                            tripRef,
+                                                            {
+                                                              'status':
+                                                                  'completé',
+                                                            },
+                                                          );
+                                                        } else if (tripData['status'] ==
+                                                                'completé' &&
+                                                            newPlacesDisponibles >
+                                                                0) {
+                                                          transaction.update(
+                                                            tripRef,
+                                                            {
+                                                              'status':
+                                                                  'en attente',
+                                                            },
+                                                          );
+                                                        }
 
                                                         DocumentReference
                                                         reservationRef =
@@ -812,28 +987,28 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                         );
                                                       });
 
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Réservation annulée avec succès',
-                                                      ),
-                                                    ),
-                                                  );
-                                                } catch (e) {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        'Erreur lors de l\'annulation: $e',
-                                                      ),
-                                                    ),
-                                                  );
-                                                }
-                                              },
-                                            ),
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            'Réservation annulée avec succès',
+                                                          ),
+                                                        ),
+                                                      );
+                                                    } catch (e) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                            'Erreur lors de l\'annulation: $e',
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                  },
+                                                ),
                                           ],
                                         ),
                                       ),

@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:ui';
 
 class MesVoituresPage extends StatefulWidget {
@@ -269,14 +268,14 @@ class _MesVoituresPageState extends State<MesVoituresPage>
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 10),
+                                    const SizedBox(height: 2),
                                     Row(
                                       children: [
                                         _buildInfoChip(
                                           Icons.calendar_today,
                                           year.toString(),
                                         ),
-                                        const SizedBox(width: 8),
+                                        const SizedBox(width: 5),
                                         _buildInfoChip(Icons.color_lens, color),
                                       ],
                                     ),
@@ -301,7 +300,7 @@ class _MesVoituresPageState extends State<MesVoituresPage>
                                       .withOpacity(0.1),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 5),
                               IconButton(
                                 onPressed: () => _supprimerVoiture(voiture.id),
                                 icon: const Icon(
@@ -331,7 +330,7 @@ class _MesVoituresPageState extends State<MesVoituresPage>
   Widget _buildInfoChip(IconData icon, String label) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -340,7 +339,7 @@ class _MesVoituresPageState extends State<MesVoituresPage>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
           Text(
             label,
             style: TextStyle(
@@ -383,33 +382,7 @@ class _MesVoituresPageState extends State<MesVoituresPage>
             ),
           ),
 
-          // Car illustration in background (optional)
-          Positioned(
-            top: 60,
-            right: -50,
-            child: Opacity(
-              opacity: 0.15,
-              child: Transform(
-                transform:
-                    Matrix4.identity()
-                      ..setEntry(3, 2, 0.001)
-                      ..rotateY(-0.3)
-                      ..rotateZ(0.1),
-                alignment: Alignment.center,
-                child: SvgPicture.network(
-                  'https://example.com/car-illustration.svg', // Remplacer par votre URL d'illustration
-                  width: 200,
-                  height: 200,
-                  placeholderBuilder:
-                      (context) => Container(
-                        width: 200,
-                        height: 200,
-                        color: Colors.transparent,
-                      ),
-                ),
-              ),
-            ),
-          ),
+          
 
           SafeArea(
             child: NestedScrollView(
@@ -441,8 +414,6 @@ class _MesVoituresPageState extends State<MesVoituresPage>
                           ),
                           const SizedBox(height: 30),
                           SizedBox(
-                            height:
-                                130 - (_scrollOffset * 0.5).clamp(0.0, 100.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -526,23 +497,6 @@ class _MesVoituresPageState extends State<MesVoituresPage>
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SvgPicture.network(
-                                  'https://example.com/empty-state.svg', // Remplacer par votre URL d'illustration
-                                  width: 150,
-                                  height: 150,
-                                  placeholderBuilder:
-                                      (context) => Container(
-                                        width: 150,
-                                        height: 150,
-                                        color: colorScheme.surfaceContainerHighest,
-                                        child: Icon(
-                                          Icons.directions_car_outlined,
-                                          size: 60,
-                                          color: colorScheme.primary
-                                              .withOpacity(0.5),
-                                        ),
-                                      ),
-                                ),
                                 const SizedBox(height: 24),
                                 Text(
                                   'Aucune voiture enregistrée'.tr(),
@@ -582,7 +536,7 @@ class _MesVoituresPageState extends State<MesVoituresPage>
                             ),
                           )
                           : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(24, 20, 24, 100),
+                            //padding: const EdgeInsets.fromLTRB(24, 20, 24, 100),
                             itemCount: voitures.length,
                             itemBuilder: (context, index) {
                               final voiture = voitures[index];

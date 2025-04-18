@@ -272,11 +272,27 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         placesReserveesTotal += seatsReserved;
       }
 
-      int totalPlaces = tripData['nbrPlaces'] ?? 0;
+      // Récupérer le nombre total de places du trajet
+      int totalPlaces =
+          tripData[FIELD_PLACES] != null
+              ? (tripData[FIELD_PLACES] is int
+                  ? tripData[FIELD_PLACES]
+                  : int.tryParse(tripData[FIELD_PLACES].toString()) ?? 0)
+              : 0;
+
+      // Calculer les places restantes
       int placesDisponibles = totalPlaces - placesReserveesTotal;
       if (placesDisponibles < 0) placesDisponibles = 0;
 
-      tripData['placesDisponibles'] = placesDisponibles;
+      // Mettre à jour les données du trajet avec les places disponibles
+      tripData[FIELD_PLACES_DISPONIBLES] = placesDisponibles;
+
+      // Mettre à jour le document trip avec le nombre de places disponibles uniquement si nécessaire
+      await _firestore.collection('trips').doc(widget.tripId).update({
+        FIELD_PLACES_DISPONIBLES: placesDisponibles,
+      });
+
+      // Vérifier si le trajet doit être marqué comme complet
       await _checkAndUpdateTripStatusBasedOnSeats(tripData);
 
       if (userReservedPlaces.isEmpty) {
@@ -588,13 +604,30 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         return;
       }
 
-      int totalPlaces = tripData[FIELD_PLACES] ?? 0;
-      int availablePlaces = tripData[FIELD_PLACES_DISPONIBLES] ?? totalPlaces;
+      // Récupérer les places totales et disponibles
+      int totalPlaces =
+          tripData[FIELD_PLACES] != null
+              ? (tripData[FIELD_PLACES] is int
+                  ? tripData[FIELD_PLACES]
+                  : int.tryParse(tripData[FIELD_PLACES].toString()) ?? 0)
+              : 0;
+
+      int availablePlaces =
+          tripData[FIELD_PLACES_DISPONIBLES] != null
+              ? (tripData[FIELD_PLACES_DISPONIBLES] is int
+                  ? tripData[FIELD_PLACES_DISPONIBLES]
+                  : int.tryParse(
+                        tripData[FIELD_PLACES_DISPONIBLES].toString(),
+                      ) ??
+                      totalPlaces)
+              : totalPlaces;
 
       print(
         "Vérification des places: $availablePlaces disponibles sur $totalPlaces",
       );
 
+      // Si toutes les places sont prises et le trajet est en attente ou bloqué,
+      // passer en statut completé
       if (availablePlaces == 0 &&
           totalPlaces > 0 &&
           [STATUS_EN_ATTENTE, STATUS_BLOQUE].contains(currentStatus)) {
@@ -738,6 +771,38 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
       await _firestore.collection('trips').doc(widget.tripId).update({
         FIELD_STATUS: newStatus,
       });
+
+      // Si le statut passe à "terminé", créer des notifications d'évaluation pour tous les passagers
+      if (newStatus == STATUS_TERMINE && _passengers.isNotEmpty) {
+        final currentUser = _auth.currentUser;
+        if (currentUser != null) {
+          // Récupérer toutes les réservations pour ce trajet
+          final reservationsSnapshot =
+              await _firestore
+                  .collection('reservations')
+                  .where('tripId', isEqualTo: widget.tripId)
+                  .get();
+
+          for (var reservationDoc in reservationsSnapshot.docs) {
+            final reservationData = reservationDoc.data();
+            final passengerId = reservationData['userId'] as String?;
+
+            // S'assurer que ce n'est pas le conducteur lui-même
+            if (passengerId != null && passengerId != currentUser.uid) {
+              // Créer une entrée dans la collection 'evaluations_pending'
+              await _firestore.collection('evaluations_pending').add({
+                'tripId': widget.tripId,
+                'driverId': currentUser.uid,
+                'passengerId': passengerId,
+                'reservationId': reservationDoc.id,
+                'createdAt': FieldValue.serverTimestamp(),
+                'isCompleted': false,
+                'skipped': false,
+              });
+            }
+          }
+        }
+      }
 
       setState(() {
         _isProcessing = false;
@@ -1099,10 +1164,27 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
   Widget _buildPlacesInfo() {
     if (_tripData == null) return Container();
 
-    var totalPlaces = _tripData![FIELD_PLACES] ?? 0;
-    var placesDisponibles = _tripData![FIELD_PLACES_DISPONIBLES] ?? totalPlaces;
+    // Récupérer les places totales
+    int totalPlaces =
+        _tripData![FIELD_PLACES] != null
+            ? (_tripData![FIELD_PLACES] is int
+                ? _tripData![FIELD_PLACES]
+                : int.tryParse(_tripData![FIELD_PLACES].toString()) ?? 0)
+            : 0;
 
-    var reservedPlaces = totalPlaces - placesDisponibles;
+    // Récupérer les places disponibles
+    int placesDisponibles =
+        _tripData![FIELD_PLACES_DISPONIBLES] != null
+            ? (_tripData![FIELD_PLACES_DISPONIBLES] is int
+                ? _tripData![FIELD_PLACES_DISPONIBLES]
+                : int.tryParse(
+                      _tripData![FIELD_PLACES_DISPONIBLES].toString(),
+                    ) ??
+                    totalPlaces)
+            : totalPlaces;
+
+    // Calculer les places réservées
+    int reservedPlaces = totalPlaces - placesDisponibles;
     if (reservedPlaces < 0) reservedPlaces = 0;
 
     return _infoRow(

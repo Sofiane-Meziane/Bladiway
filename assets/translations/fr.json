@@ -73,7 +73,6 @@
   "password": "Mot de passe",
   "signup": "S'inscrire",
   "already_have_account": "Vous avez déjà un compte?",
-  "login": "Connectez-vous",
   "homme": "Homme",
   "femme": "Femme",
   "please_enter_lastname": "Veuillez entrer votre nom",
@@ -126,7 +125,7 @@
 
 
 
-    "loginn": {
+    "login": {
       "title": "Connexion",
       "identifier_label": "Email ou numéro de téléphone",
       "identifier_hint": "Entrez votre email ou téléphone",
@@ -138,9 +137,9 @@
       "choose_method": "Choisissez une méthode",
       "select_reset_option": "Sélectionnez comment vous souhaitez réinitialiser votre mot de passe",
       "email": "Email",
-      "reset_via_email": "Réinitialiser via l'adresse email",
+      "reset_via_email": "Réinitialiser par adresse email",
       "phone": "Téléphone",
-      "reset_via_phone": "Réinitialiser via le numéro de téléphone",
+      "reset_via_phone": "Réinitialiser par téléphone",
       "user_not_found": "Utilisateur non trouvé.",
       "wrong_password": "Mot de passe incorrect.",
       "invalid_email": "Adresse email invalide.",

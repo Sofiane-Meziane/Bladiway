@@ -4,9 +4,11 @@ import 'package:bladiway/pages/ajouter_trajet.dart';
 import 'package:bladiway/pages/mes_trajet.dart';
 import 'package:bladiway/pages/otp_screen.dart';
 import 'package:bladiway/pages/presentation.dart';
+import 'package:bladiway/pages/reservation.dart';
 import 'package:bladiway/pages/reservations_screen.dart';
 import 'package:bladiway/pages/scanner_permis.dart';
 import 'package:bladiway/pages/verification_conducteur.dart';
+import 'package:bladiway/services/evaluation_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -46,6 +48,41 @@ void main() async {
   );
 }
 
+// Widget wrapper qui vérifie les évaluations en attente
+class EvaluationCheckWrapper extends StatefulWidget {
+  final Widget child;
+
+  const EvaluationCheckWrapper({Key? key, required this.child})
+    : super(key: key);
+
+  @override
+  _EvaluationCheckWrapperState createState() => _EvaluationCheckWrapperState();
+}
+
+class _EvaluationCheckWrapperState extends State<EvaluationCheckWrapper> {
+  final EvaluationService _evaluationService = EvaluationService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Vérifier les évaluations en attente après que le widget soit construit
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingEvaluations();
+    });
+  }
+
+  void _checkPendingEvaluations() {
+    if (FirebaseAuth.instance.currentUser != null) {
+      _evaluationService.checkPendingEvaluations(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -82,26 +119,48 @@ class MyApp extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          return snapshot.hasData ? const HomePage() : const PresentationPage();
+
+          // Utiliser le wrapper pour les utilisateurs connectés
+          if (snapshot.hasData) {
+            return EvaluationCheckWrapper(child: const HomePage());
+          }
+
+          return const PresentationPage();
         },
       ),
       routes: {
         '/signup': (context) => const SignUpScreen(),
         '/login': (context) => const LoginScreen(),
-        '/home': (context) => const HomePage(),
-        '/settings': (context) => const ParametresPage(),
-        '/profile': (context) => const ProfileScreen(),
+        '/home': (context) => EvaluationCheckWrapper(child: const HomePage()),
+        '/settings':
+            (context) => EvaluationCheckWrapper(child: const ParametresPage()),
+        '/profile':
+            (context) => EvaluationCheckWrapper(child: const ProfileScreen()),
         '/presentation': (context) => const PresentationPage(),
         '/otp': (context) => const OTPScreen(),
-        '/info_trajet': (context) => const InfoTrajet(),
-        '/add_car': (context) => const CarRegistrationScreen(),
-        '/verifier_Conducteur': (context) => const PermissionAddCarPage(),
-        '/scan_permission': (context) => const LicenseVerificationScreen(),
-        '/reservations': (context) => const ReservationsScreen(),
-        '/trips': (context) => const MesTrajetScreen(),
+        '/info_trajet':
+            (context) => EvaluationCheckWrapper(child: const InfoTrajet()),
+        '/add_car':
+            (context) =>
+                EvaluationCheckWrapper(child: const CarRegistrationScreen()),
+        '/verifier_Conducteur':
+            (context) =>
+                EvaluationCheckWrapper(child: const PermissionAddCarPage()),
+        '/scan_permission':
+            (context) => EvaluationCheckWrapper(
+              child: const LicenseVerificationScreen(),
+            ),
+        '/reservations':
+            (context) =>
+                EvaluationCheckWrapper(child: const ReservationsScreen()),
+        '/trips':
+            (context) => EvaluationCheckWrapper(child: const MesTrajetScreen()),
+        '/reserver':
+            (context) => EvaluationCheckWrapper(child: const ReservationPage()),
         '/edit_car': (context) {
-          final voiture = ModalRoute.of(context)!.settings.arguments as DocumentSnapshot;
-          return EditCarPage(voiture: voiture);
+          final voiture =
+              ModalRoute.of(context)!.settings.arguments as DocumentSnapshot;
+          return EvaluationCheckWrapper(child: EditCarPage(voiture: voiture));
         },
       },
     );
