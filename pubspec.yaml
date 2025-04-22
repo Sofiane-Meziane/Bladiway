@@ -81,7 +81,7 @@ flutter:
     - assets/translations/fr.json
     - assets/translations/en.json
     - assets/translations/ar.json
-    - assets/translations/fr_DZ.json
+    - assets/translations/fr-DZ.json
 
 flutter_icons:
   android: true

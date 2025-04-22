@@ -20,6 +20,8 @@ class TripResultsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -31,13 +33,19 @@ class TripResultsPage extends StatelessWidget {
           ),
         ),
         centerTitle: true,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: Colors.white,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(40),
           child: Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Text(
               'Les trajets disponibles',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
@@ -58,30 +66,49 @@ class TripResultsPage extends StatelessWidget {
                 ),
               )
               : ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 itemCount: trips.length,
                 itemBuilder: (context, index) {
                   final trip = trips[index].data() as Map<String, dynamic>;
-                  return TripCard(
-                    trip: trip,
-                    tripId: trips[index].id,
-                    onTap:
-                        () => _navigateToTripDetail(
-                          context,
-                          trip,
-                          trips[index].id,
-                        ),
-                    onDriverTap:
-                        () => _navigateToInfoConducteur(
-                          context,
-                          trip['userId'],
-                          trips[index].id,
-                        ),
+
+                  // Récupérer le nombre de places disponibles
+                  final placesDisponibles =
+                      trip['placesDisponibles'] is int
+                          ? trip['placesDisponibles']
+                          : int.tryParse(
+                                trip['placesDisponibles']?.toString() ?? '',
+                              ) ??
+                              (trip['nbrPlaces'] is int
+                                  ? trip['nbrPlaces']
+                                  : int.tryParse(
+                                        trip['nbrPlaces']?.toString() ?? '',
+                                      ) ??
+                                      0);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ModifiedTripCard(
+                      trip: trip,
+                      tripId: trips[index].id,
+                      placesDisponibles: placesDisponibles,
+                      onTap:
+                          () => _navigateToTripDetail(
+                            context,
+                            trip,
+                            trips[index].id,
+                          ),
+                      onDriverTap:
+                          () => _navigateToInfoConducteur(
+                            context,
+                            trip['userId'],
+                            trips[index].id,
+                          ),
+                    ),
                   );
                 },
               ),
     );
   }
-
 
   // Navigation vers la page détaillée du trajet
   void _navigateToTripDetail(
@@ -101,9 +128,6 @@ class TripResultsPage extends StatelessWidget {
       ),
     );
   }
-
-  // Affiche les options pour le trajet (menu trois points)
-
 
   // Nouvelle méthode pour naviguer vers la page InfoConducteurPage
   void _navigateToInfoConducteur(
@@ -151,6 +175,360 @@ class TripResultsPage extends StatelessWidget {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Erreur: $e")));
+    }
+  }
+}
+
+// Nouveau widget pour afficher les trajets avec le nombre de places disponibles
+class ModifiedTripCard extends StatelessWidget {
+  final Map<String, dynamic> trip;
+  final String tripId;
+  final int placesDisponibles;
+  final void Function()? onTap;
+  final void Function()? onDriverTap;
+
+  const ModifiedTripCard({
+    Key? key,
+    required this.trip,
+    required this.tripId,
+    required this.placesDisponibles,
+    this.onTap,
+    this.onDriverTap,
+  }) : super(key: key);
+
+  String _extractCity(String address) {
+    if (address.contains(',')) {
+      return address.split(',')[0].trim();
+    }
+    return address;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    bool isPast = _isTripPast(trip['date'], trip['heure']);
+
+    return GestureDetector(
+      onTap: isPast ? null : onTap,
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border:
+                isPast
+                    ? Border.all(color: Colors.red.withOpacity(0.5), width: 1.5)
+                    : null,
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: onDriverTap,
+                      child: StreamBuilder(
+                        stream:
+                            FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(trip['userId'])
+                                .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.grey[200],
+                              child: const CircularProgressIndicator(),
+                            );
+                          }
+                          if (!snapshot.hasData || snapshot.data == null) {
+                            return CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.grey[200],
+                              child: const Icon(
+                                Icons.person,
+                                color: Colors.blue,
+                                size: 32,
+                              ),
+                            );
+                          }
+                          final userData =
+                              snapshot.data!.data() as Map<String, dynamic>;
+                          final profileImageUrl = userData['profileImageUrl'];
+
+                          // Vérifier si le conducteur est validé
+                          final isValidated =
+                              userData['isValidated'] as bool? ?? false;
+
+                          return Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 28,
+                                backgroundColor: theme.colorScheme.primary
+                                    .withOpacity(0.1),
+                                backgroundImage:
+                                    profileImageUrl != null
+                                        ? NetworkImage(profileImageUrl)
+                                        : null,
+                                child:
+                                    profileImageUrl == null
+                                        ? const Icon(
+                                          Icons.person,
+                                          color: Colors.blue,
+                                          size: 32,
+                                        )
+                                        : null,
+                              ),
+                              if (isValidated)
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.verified,
+                                      color: Colors.green,
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Itinéraire
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _extractCity(trip['départ']),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                child: Icon(
+                                  Icons.arrow_forward,
+                                  size: 20,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  _extractCity(trip['arrivée']),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Date et heure
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 14,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${trip['date']} à ${trip['heure']}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          // Caractéristiques du trajet
+                          Row(
+                            children: [
+                              // Climatisation
+                              if (trip['climatisation'] == 'Autorisé')
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Icon(
+                                    Icons.ac_unit,
+                                    size: 16,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+
+                              // Bagages
+                              if (trip['bagage'] == 'Autorisé')
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Icon(
+                                    Icons.luggage,
+                                    size: 16,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+
+                              // Type de passagers
+                              if (trip['typePassagers'] != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Icon(
+                                    trip['typePassagers'] == 'Femmes'
+                                        ? Icons.female
+                                        : trip['typePassagers'] == 'Hommes'
+                                        ? Icons.male
+                                        : Icons.people,
+                                    size: 16,
+                                    color:
+                                        trip['typePassagers'] == 'Femmes'
+                                            ? Colors.pink
+                                            : trip['typePassagers'] == 'Hommes'
+                                            ? Colors.blue
+                                            : Colors.purple,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Section inférieure avec prix et places disponibles
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.08),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Prix
+                    Text(
+                      '${(trip['prix'] is double) ? trip['prix'].toStringAsFixed(0) : trip['prix']} DA',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+
+                    // Places disponibles
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.airline_seat_recline_normal,
+                          size: 18,
+                          color: Colors.black54,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$placesDisponibles ${placesDisponibles > 1 ? 'places disponibles' : 'place disponible'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color:
+                                placesDisponibles > 0
+                                    ? Colors.black87
+                                    : Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Afficher un indicateur si le trajet est passé
+              if (isPast)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.access_time, size: 16, color: Colors.red),
+                      SizedBox(width: 6),
+                      Text(
+                        'Ce trajet est déjà passé',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _isTripPast(String tripDate, String tripTime) {
+    try {
+      final now = DateTime.now();
+      final dateParts = tripDate.split('/');
+      if (dateParts.length != 3) return false;
+
+      final day = int.tryParse(dateParts[0]) ?? 1;
+      final month = int.tryParse(dateParts[1]) ?? 1;
+      final year = int.tryParse(dateParts[2]) ?? 2025;
+
+      final timeParts = tripTime.split(':');
+      if (timeParts.length != 2) return false;
+
+      final hour = int.tryParse(timeParts[0]) ?? 0;
+      final minute = int.tryParse(timeParts[1]) ?? 0;
+
+      final tripDateTime = DateTime(year, month, day, hour, minute);
+      return tripDateTime.isBefore(now);
+    } catch (e) {
+      print("Erreur lors de la vérification de la date: $e");
+      return false;
     }
   }
 }
