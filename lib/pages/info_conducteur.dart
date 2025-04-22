@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'chat_screen.dart';
-import 'evaluation_page.dart';
 
 class InfoConducteurPage extends StatefulWidget {
   final String conductorId;
@@ -24,7 +23,6 @@ class InfoConducteurPage extends StatefulWidget {
 class _InfoConducteurPageState extends State<InfoConducteurPage> {
   late Future<DocumentSnapshot> _userFuture;
   late Future<QuerySnapshot> _reviewsFuture;
-  bool _hasAlreadyReviewed = false;
 
   @override
   void initState() {
@@ -35,16 +33,9 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
 
   Future<void> _checkExistingReview() async {
     try {
-      final querySnapshot =
-          await FirebaseFirestore.instance
-              .collection('reviews')
-              .where('reviewerId', isEqualTo: widget.currentUserId)
-              .where('ratedUserId', isEqualTo: widget.conductorId)
-              .get();
 
       if (mounted) {
         setState(() {
-          _hasAlreadyReviewed = querySnapshot.docs.isNotEmpty;
         });
       }
     } catch (e) {
@@ -65,16 +56,6 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
             .get();
   }
 
-  void _refreshReviews() {
-    setState(() {
-      _reviewsFuture =
-          FirebaseFirestore.instance
-              .collection('reviews')
-              .where('ratedUserId', isEqualTo: widget.conductorId)
-              .get();
-      _hasAlreadyReviewed = true;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

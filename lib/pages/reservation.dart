@@ -19,8 +19,6 @@ class _ReservationPageState extends State<ReservationPage> {
   TextEditingController _seatsController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
-  final TimeOfDay _selectedTime = TimeOfDay.now();
-  int _numberOfSeats = 1;
 
   final user = FirebaseAuth.instance.currentUser;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -365,11 +363,6 @@ class _ReservationPageState extends State<ReservationPage> {
     }
   }
 
-  bool _areRequiredFieldsFilled() {
-    return _departureController.text.isNotEmpty &&
-        _arrivalController.text.isNotEmpty &&
-        _seatsController.text.isNotEmpty;
-  }
 
   void _showValidationErrors() {
     List<String> emptyFields = [];
@@ -398,7 +391,6 @@ class _ReservationPageState extends State<ReservationPage> {
     if (_seatsController.text.isEmpty) {
       setState(() {
         _seatsController.text = "1";
-        _numberOfSeats = 1;
       });
     }
 
