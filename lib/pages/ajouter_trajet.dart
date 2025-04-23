@@ -1017,19 +1017,24 @@ class _InfoTrajetState extends State<InfoTrajet>
     );
   }
 
-  // Méthode pour sauvegarder le trajet
-  Future<void> _saveTrip() async {
-    bool hasPermission = await _checkAddTripPermission();
-    if (!_areRequiredFieldsFilled() || !hasPermission) {
-      _showValidationErrors();
-      return;
-    }
-    // Vérifiez d'abord si l'utilisateur a les permissions nécessaires
-    
-    if (hasPermission) {
-      showConfirmationDialog();
-    }
+ // Méthode pour sauvegarder le trajet
+Future<void> _saveTrip() async {
+  // Vérifie d'abord si l'utilisateur a les permissions nécessaires
+  bool hasPermission = await _checkAddTripPermission();
+  if (!hasPermission) {
+    return; // Le message d'erreur est déjà affiché dans _checkAddTripPermission()
   }
+
+  // Ensuite, on vérifie que tous les champs requis sont remplis
+  if (!_areRequiredFieldsFilled()) {
+    _showValidationErrors();
+    return;
+  }
+
+  // Si tout est bon, on montre la boîte de confirmation
+  showConfirmationDialog();
+}
+
 
 
   // fonction pour la verification de conducteur 
