@@ -1020,7 +1020,7 @@ class _InfoTrajetState extends State<InfoTrajet>
   // Méthode pour sauvegarder le trajet
   Future<void> _saveTrip() async {
     bool hasPermission = await _checkAddTripPermission();
-    if (!_areRequiredFieldsFilled() || hasPermission) {
+    if (!_areRequiredFieldsFilled() || !hasPermission) {
       _showValidationErrors();
       return;
     }
