@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/services.dart';
+import 'mes_voitures_page.dart';
 
 class CarRegistrationScreen extends StatefulWidget {
   const CarRegistrationScreen({super.key});
@@ -194,7 +195,10 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen>
       _showSnackBar(tr('success.registration'));
 
       // Return to previous screen after successful registration
-      Navigator.pop(context);
+      Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (context) => MesVoituresPage()),
+);
     } catch (e) {
       _showSnackBar(tr('error.registration'));
     } finally {

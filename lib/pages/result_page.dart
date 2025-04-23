@@ -953,7 +953,7 @@ class TripDetailPage extends StatelessWidget {
                   ),
                 ),
                 onPressed:
-                    isPast ? null : () => _showReservationDialog(context),
+                    isPast ? null : () => _checkReservationPermission(context),
               ),
             ),
             const SizedBox(width: 16),
@@ -1002,7 +1002,59 @@ class TripDetailPage extends StatelessWidget {
     }
   }
 
-  void _showReservationDialog(BuildContext context) {
+
+  Future<void> _checkReservationPermission(BuildContext context) async {
+  // Récupérer l'instance de FirebaseAuth
+  final auth = FirebaseAuth.instance;
+  final firestore = FirebaseFirestore.instance;
+  
+  User? user = auth.currentUser;
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Vous devez être connecté pour continuer')),
+    );
+    return;
+  }
+  
+  try {
+    QuerySnapshot piecesSnapshot = await firestore
+        .collection('piece_identite')
+        .where('id_proprietaire', isEqualTo: user.uid)
+        .get();
+    
+    final pieces = piecesSnapshot.docs
+        .map((doc) => doc.data() as Map<String, dynamic>)
+        .toList();
+    
+    bool hasVerifiedID = pieces.any((piece) => piece['statut'] == 'verifie');
+    
+    if (hasVerifiedID) {
+      // Si l'utilisateur a une pièce vérifiée, on peut afficher le dialogue de réservation
+      _showReservationDialog(context);
+    } else {
+      // Si l'utilisateur n'a pas de pièce vérifiée, on le redirige vers la page verifier_passager
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vous devez faire vérifier votre pièce d\'identité avant de pouvoir réserver'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      
+      // Naviguer vers la page verifier_passager
+      Navigator.pushNamed(context, '/verifier_Passager');
+    }
+  } catch (e) {
+    print('Erreur lors de la vérification des conditions : $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Erreur lors de la vérification')),
+    );
+  }
+}
+
+
+
+
+  void _showReservationDialog(BuildContext context) async {
     // Récupérer les places disponibles
     final int availableSeats =
         trip['placesDisponibles'] is int

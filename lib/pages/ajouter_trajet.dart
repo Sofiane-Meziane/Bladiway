@@ -41,6 +41,9 @@ class InfoTrajet extends StatefulWidget {
 
 class _InfoTrajetState extends State<InfoTrajet>
     with AutomaticKeepAliveClientMixin {
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   // Contrôleurs pour les champs de texte
   final TextEditingController _departureController = TextEditingController();
   final TextEditingController _arrivalController = TextEditingController();
@@ -1016,12 +1019,106 @@ class _InfoTrajetState extends State<InfoTrajet>
 
   // Méthode pour sauvegarder le trajet
   Future<void> _saveTrip() async {
-    if (!_areRequiredFieldsFilled()) {
+    bool hasPermission = await _checkAddTripPermission();
+    if (!_areRequiredFieldsFilled() || hasPermission) {
       _showValidationErrors();
       return;
     }
-    showConfirmationDialog();
+    // Vérifiez d'abord si l'utilisateur a les permissions nécessaires
+    
+    if (hasPermission) {
+      showConfirmationDialog();
+    }
   }
+
+
+  // fonction pour la verification de conducteur 
+Future<bool> _checkAddTripPermission() async {
+  User? user = _auth.currentUser;
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Vous devez être connecté pour continuer')),
+    );
+    return false;
+  }
+
+  try {
+    // Récupérer le permis depuis la table piece_identite
+    QuerySnapshot permisSnapshot = await _firestore
+        .collection('piece_identite')
+        .where('id_proprietaire', isEqualTo: user.uid)
+        .where('type_piece', isEqualTo: 'permis')
+        .limit(1)
+        .get();
+
+    bool hasVerifiedLicense = false;
+    bool hasPendingOrNoLicense = true;
+
+    if (permisSnapshot.docs.isNotEmpty) {
+      var permisData = permisSnapshot.docs.first.data() as Map<String, dynamic>;
+      String statut = permisData['statut'] ?? '';
+      String? dateExpirationStr = permisData['date_expiration'];
+
+      DateTime? dateExpiration;
+      if (dateExpirationStr != null) {
+        try {
+          dateExpiration = DateTime.parse(dateExpirationStr);
+        } catch (e) {
+          print('Erreur de parsing de la date d\'expiration: $e');
+        }
+      }
+
+      bool isLicenseExpired = dateExpiration == null || dateExpiration.isBefore(DateTime.now());
+
+      hasVerifiedLicense = statut == 'verifie' && !isLicenseExpired;
+      hasPendingOrNoLicense = statut == 'en cours' || statut == 'refuse' || isLicenseExpired;
+    }
+
+    // Si l'utilisateur n'a pas de permis vérifié ou si son permis a expiré
+    if (!hasVerifiedLicense || hasPendingOrNoLicense) {
+      // Afficher un message approprié
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vous devez avoir un permis de conduire valide pour partager un trajet'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      
+      // Rediriger vers la page de vérification du conducteur
+      Navigator.pushNamed(context, '/verifier_Conducteur');
+      return false;
+    }
+
+    // Vérifier si l'utilisateur a déjà chargé ses voitures
+    if (_userCars.isEmpty && !_isLoadingCars) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vous devez ajouter au moins une voiture pour partager un trajet'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      
+      // Rediriger vers la page de vérification du conducteur
+      Navigator.pushNamed(context, '/verifier_Conducteur');
+      return false;
+    }
+
+    return true;
+
+  } catch (e) {
+    print('Erreur lors de la vérification des conditions : $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Erreur lors de la vérification')),
+    );
+    return false;
+  }
+}
+
+
+
+
 
   // Dialogue de confirmation
   void showConfirmationDialog() {

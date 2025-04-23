@@ -1,93 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-// Import de la page de vérification de licence
-import 'scanner_permis.dart'; // Remplacez par le chemin correct
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart'; // Pour le formatage de date
 
-// Classe pour gérer l'état des documents et validations
-class UserDocumentManager {
-  static const String _licenseScannedKey = 'license_scanned';
-  static const String _carAddedKey = 'car_added';
-  static const String _validationStatusKey = 'validation_status';
+// Importations de nos écrans personnalisés
+import 'scanner_permis.dart'; // Notre écran modifié précédemment
+import 'verification_encour.dart'; // Notre nouvel écran d'attente
 
-  // Statuts possibles
-  static const String PENDING_DOCUMENTS =
-      'pending_documents'; // Manque documents
-  static const String PENDING_VALIDATION =
-      'pending_validation'; // Documents soumis mais pas validés
-  static const String VALIDATED = 'validated'; // Validé par l'admin
+// Modèle de données pour cette nouvelle page
+class PermissionPage {
+  final String title;
+  final String description;
+  final String imagePath;
 
-  // Vérifier l'état de la licence
-  static Future<bool> isLicenseScanned() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_licenseScannedKey) ?? false;
-  }
-
-  // Vérifier si une voiture a été ajoutée
-  static Future<bool> isCarAdded() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_carAddedKey) ?? false;
-  }
-
-  // Obtenir le statut actuel de validation
-  static Future<String> getValidationStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_validationStatusKey) ?? PENDING_DOCUMENTS;
-  }
-
-  // Marquer le permis comme scanné
-  static Future<void> setLicenseScanned(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_licenseScannedKey, value);
-    await _updateValidationStatus();
-  }
-
-  // Marquer la voiture comme ajoutée
-  static Future<void> setCarAdded(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_carAddedKey, value);
-    await _updateValidationStatus();
-  }
-
-  // Mettre à jour le statut de validation par l'admin
-  static Future<void> setValidated() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_validationStatusKey, VALIDATED);
-  }
-
-  // Mise à jour interne du statut de validation
-  static Future<void> _updateValidationStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasLicense = await isLicenseScanned();
-    final hasCar = await isCarAdded();
-
-    // Si les deux documents sont présents, on passe en attente de validation
-    if (hasLicense && hasCar) {
-      final currentStatus = await getValidationStatus();
-      // Ne pas changer le statut s'il est déjà validé
-      if (currentStatus != VALIDATED) {
-        await prefs.setString(_validationStatusKey, PENDING_VALIDATION);
-      }
-    } else {
-      await prefs.setString(_validationStatusKey, PENDING_DOCUMENTS);
-    }
-  }
-
-  // Vérifier si l'utilisateur peut ajouter un trajet
-  static Future<bool> canAddTrip() async {
-    final status = await getValidationStatus();
-    return status == VALIDATED;
-  }
-
-  // Reset des données (pour tests)
-  static Future<void> reset() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_licenseScannedKey, false);
-    await prefs.setBool(_carAddedKey, false);
-    await prefs.setString(_validationStatusKey, PENDING_DOCUMENTS);
-  }
+  const PermissionPage({
+    required this.title,
+    required this.description,
+    required this.imagePath,
+  });
 }
 
+// Écran principal pour la page de scan du permis et ajout de voiture
 class PermissionAddCarPage extends StatefulWidget {
   const PermissionAddCarPage({super.key});
 
@@ -98,37 +31,335 @@ class PermissionAddCarPage extends StatefulWidget {
 class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  bool _isLicenseScanned = false;
-  bool _isCarAdded = false;
-  String _validationStatus = UserDocumentManager.PENDING_DOCUMENTS;
-  bool _isLoading = true;
+  bool _isLoading = false;
 
-  final List<Map<String, String>> _pages = [
-    {
-      'title': 'Complétez votre profil pour publier un trajet',
-      'description':
-          'Pour publier un trajet, vous devez scanner votre permis de conduire et ajouter au moins une voiture.',
-      'image': 'assets/images/licenceVerification.jpg',
-    },
+  // Liste des pages à afficher (ici, une seule page pour cette tâche spécifique)
+  final List<PermissionPage> _pages = const [
+    PermissionPage(
+      title: 'Complétez votre profil pour publier un trajet',
+      description:
+          'Pour publier un trajet, vous devez scanner votre permis de conduire valide et ajouter au moins une voiture.',
+      imagePath: 'assets/images/licenceVerification.jpg', // Mettez ici l'image appropriée
+    ),
   ];
 
   @override
   void initState() {
     super.initState();
-    _loadUserStatus();
+    _pageController.addListener(() {
+      setState(() {
+        _currentPage = _pageController.page?.round() ?? 0;
+      });
+    });
   }
 
-  Future<void> _loadUserStatus() async {
-    final licenseScanned = await UserDocumentManager.isLicenseScanned();
-    final carAdded = await UserDocumentManager.isCarAdded();
-    final validationStatus = await UserDocumentManager.getValidationStatus();
+  // Navigue vers une page spécifique
+  void _navigateToPage(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
 
+  // Vérification des documents d'identité pour rediriger vers le bon écran
+  Future<void> checkAndShowLicenseScreen(BuildContext context) async {
     setState(() {
-      _isLicenseScanned = licenseScanned;
-      _isCarAdded = carAdded;
-      _validationStatus = validationStatus;
-      _isLoading = false;
+      _isLoading = true;
     });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showErrorSnackBar('Vous devez être connecté pour accéder à cette fonctionnalité');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Récupérer tous les documents de type permis pour cet utilisateur
+      final docsSnapshot = await FirebaseFirestore.instance
+          .collection('piece_identite')
+          .where('id_proprietaire', isEqualTo: user.uid)
+          .where('type_piece', isEqualTo: 'permis')
+          .orderBy('date_soumission', descending: true) // Tri par date de soumission décroissante
+          .limit(1) // On ne récupère que le plus récent
+          .get();
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (docsSnapshot.docs.isNotEmpty) {
+        final doc = docsSnapshot.docs.first;
+        final String statutDoc = doc['statut'] as String;
+        
+        // Vérification de l'expiration du permis
+        if (doc.data().containsKey('date_expiration')) {
+          final String expirationDateStr = doc['date_expiration'] as String;
+          final DateTime expirationDate = DateFormat('yyyy-MM-dd').parse(expirationDateStr);
+          final DateTime today = DateTime.now();
+          
+          if (expirationDate.isBefore(today)) {
+            // Le permis est expiré
+            if (!mounted) return;
+            _showPermisExpiredDialog();
+            return;
+          }
+        }
+
+        if (!mounted) return;
+
+        if (statutDoc == 'verifie') {
+          // Permis vérifié et non expiré, l'utilisateur peut continuer
+          Navigator.pushNamed(context, '/add_car');
+        } else if (statutDoc == 'en cours') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VerificationPendingScreen(
+                documentType: 'permis',
+              ),
+            ),
+          );
+        } else if (statutDoc == 'refuse') {
+          _showPermisRejectedDialog();
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const IdentityVerificationScreen(
+                forcedIdType: 'permis',
+              ),
+            ),
+          );
+        }
+      } else {
+        // Aucun permis soumis, on redirige vers la page de soumission
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const IdentityVerificationScreen(
+              forcedIdType: 'permis',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification des documents: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorSnackBar('Une erreur est survenue. Veuillez réessayer plus tard.');
+    }
+  }
+
+  // Vérification et navigation vers la page appropriée pour les voitures
+  Future<void> checkAndShowCarScreen(BuildContext context) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showErrorSnackBar('Vous devez être connecté pour accéder à cette fonctionnalité');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Vérifier si l'utilisateur a déjà au moins une voiture
+      final carsSnapshot = await FirebaseFirestore.instance
+          .collection('voitures')
+          .where('user_id', isEqualTo: user.uid)
+          .limit(1)
+          .get();
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (!mounted) return;
+
+      // Rediriger vers la page appropriée en fonction du nombre de voitures
+      if (carsSnapshot.docs.isNotEmpty) {
+        // L'utilisateur a au moins une voiture, afficher la liste des voitures
+        Navigator.pushNamed(context, '/mes_voitures');
+      } else {
+        // L'utilisateur n'a pas encore de voiture, afficher la page d'ajout
+        Navigator.pushNamed(context, '/add_car');
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification des voitures: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorSnackBar('Une erreur est survenue. Veuillez réessayer plus tard.');
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _showPermisRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Permis de conduire requis',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Vous avez déjà soumis une pièce d\'identité, mais pour publier un trajet vous devez spécifiquement soumettre votre permis de conduire.',
+            style: TextStyle(height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Naviguer vers le formulaire avec permis présélectionné
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const IdentityVerificationScreen(
+                      forcedIdType: 'permis',
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              ),
+              child: const Text('Soumettre mon permis'),
+            ),
+          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPermisRejectedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Permis de conduire refusé',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.error,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Votre permis de conduire a été refusé. Veuillez le soumettre à nouveau avec une image plus claire et lisible.',
+            style: TextStyle(height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Naviguer vers le formulaire avec permis présélectionné
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const IdentityVerificationScreen(
+                      forcedIdType: 'permis',
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              ),
+              child: const Text('Soumettre à nouveau'),
+            ),
+          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        );
+      },
+    );
+  }
+
+  // Dialogue pour les permis expirés
+  void _showPermisExpiredDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Permis de conduire expiré',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.error,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Votre permis de conduire a expiré. Pour publier un trajet, vous devez soumettre un permis valide.',
+            style: TextStyle(height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Naviguer vers le formulaire avec permis présélectionné
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const IdentityVerificationScreen(
+                      forcedIdType: 'permis',
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              ),
+              child: const Text('Soumettre un permis valide'),
+            ),
+          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -137,193 +368,93 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
     super.dispose();
   }
 
-  void _navigateToPage(int index) {
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-    setState(() {
-      _currentPage = index;
-    });
-  }
-
-  Future<void> _scanLicense() async {
-    // Navigation vers la page de scan du permis en utilisant MaterialPageRoute
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => LicenseVerificationScreen()),
-    );
-
-    // Si le scan est réussi (result est true)
-    if (result == true) {
-      await UserDocumentManager.setLicenseScanned(true);
-      await _loadUserStatus();
-
-      // Si l'utilisateur a également ajouté une voiture, on le redirige vers l'accueil
-      if (_isCarAdded) {
-        if (!mounted) return;
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-      }
-    }
-  }
-
-  Future<void> _addCar() async {
-    // Navigation vers la page d'ajout de voiture
-    final result = await Navigator.pushNamed(context, '/add_car');
-
-    // Si l'ajout est réussi (result est true)
-    if (result == true) {
-      await UserDocumentManager.setCarAdded(true);
-      await _loadUserStatus();
-
-      // Si l'utilisateur a également scanné son permis, on le redirige vers l'accueil
-      if (_isLicenseScanned) {
-        if (!mounted) return;
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
 
-    if (_isLoading) {
-      return Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            children: [
-              // Back button
-              Row(
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
                 children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.arrow_back,
+                  const SizedBox(height: 20),
+                  // Titre de la page
+                  Text(
+                    "Bladiway",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
                       color: theme.colorScheme.primary,
                     ),
-                    onPressed: () => Navigator.pop(context),
                   ),
+                  const SizedBox(height: 20),
+                  // Vue paginée (mais ici il y a une seule page)
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _pages.length,
+                      itemBuilder: (context, index) =>
+                          _buildPageContent(_pages[index], size),
+                    ),
+                  ),
+                  
+                  // Boutons d'action
+                  const SizedBox(height: 30),
+                  _ActionButton(
+                    label: "Scanner le permis",
+                    onPressed: () => checkAndShowLicenseScreen(context),
+                  ),
+                  const SizedBox(height: 12),
+                  _ActionButton(
+                    label: "Ajouter une voiture",
+                    onPressed: () => checkAndShowCarScreen(context),
+                    isSecondary: true,
+                  ),
+                  const SizedBox(height: 12),
+                  // Bouton Skip
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, '/info_trajet'),
+                    child: Text(
+                      "Skip et continuer",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: theme.colorScheme.secondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
-              const SizedBox(height: 20),
-
-              // Center the "bladiway" text
-              Center(
-                child: Text(
-                  "bladiway".tr(),
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
+            ),
+            // Indicateur de chargement
+            if (_isLoading)
+              Container(
+                color: Colors.black.withOpacity(0.3),
+                child: const Center(
+                  child: CircularProgressIndicator(),
                 ),
               ),
-              const SizedBox(height: 20),
-
-              // Status indicator
-              if (_validationStatus == UserDocumentManager.PENDING_VALIDATION)
-                Container(
-                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  margin: EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.pending_actions, color: Colors.amber),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "Vos documents sont en attente de vérification".tr(),
-                          style: TextStyle(color: Colors.amber[800]),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  physics: const BouncingScrollPhysics(),
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                    });
-                  },
-                  itemCount: _pages.length,
-                  itemBuilder: (context, index) {
-                    return _buildPageContent(_pages[index], size);
-                  },
-                ),
-              ),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_pages.length, (index) {
-                  return GestureDetector(
-                    onTap: () => _navigateToPage(index),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: _buildDot(index == _currentPage),
-                    ),
-                  );
-                }),
-              ),
-
-              const SizedBox(height: 30),
-
-              // License Button
-              _buildActionButton(
-                label:
-                    _isLicenseScanned
-                        ? "Permis scanné ✓".tr()
-                        : "Scanner le permis".tr(),
-                icon: Icons.document_scanner,
-                onPressed: _isLicenseScanned ? null : _scanLicense,
-                isSuccess: _isLicenseScanned,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Car Button
-              _buildActionButton(
-                label:
-                    _isCarAdded
-                        ? "Voiture ajoutée ✓".tr()
-                        : "Ajouter une voiture".tr(),
-                icon: Icons.directions_car,
-                onPressed: _isCarAdded ? null : _addCar,
-                isSuccess: _isCarAdded,
-                isSecondary: !_isCarAdded,
-              ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildPageContent(Map<String, String> page, Size size) {
+  // Construction du contenu d'une page
+  Widget _buildPageContent(PermissionPage page, Size size) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(
           height: size.height * 0.25,
           child: Image.asset(
-            page['image']!,
+            page.imagePath,
             fit: BoxFit.contain,
             errorBuilder:
                 (context, error, stackTrace) => Icon(
@@ -335,20 +466,20 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
         ),
         const SizedBox(height: 24),
         Text(
-          page['title']!.tr(),
+          page.title,
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.primary,
           ),
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.center, // Centrer le titre
         ),
         const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Text(
-            page['description']!.tr(),
-            textAlign: TextAlign.center,
+            page.description,
+            textAlign: TextAlign.center, // Centrer la description
             style: TextStyle(
               fontSize: 16,
               height: 1.4,
@@ -359,69 +490,44 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
       ],
     );
   }
+}
 
-  Widget _buildDot(bool isActive) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: isActive ? 12 : 8,
-      height: isActive ? 12 : 8,
-      decoration: BoxDecoration(
-        color:
-            isActive
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.surfaceContainerHighest,
-        shape: BoxShape.circle,
-        boxShadow:
-            isActive
-                ? [
-                  BoxShadow(
-                    color: Theme.of(context).colorScheme.primary.withAlpha(76),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-                : null,
-      ),
-    );
-  }
+// Composant personnalisé pour les boutons
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+  final bool isSecondary;
 
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required VoidCallback? onPressed,
-    bool isSuccess = false,
-    bool isSecondary = false,
-  }) {
-    // Déterminer la couleur en fonction de l'état
-    Color backgroundColor;
-    Color textColor;
+  const _ActionButton({
+    required this.label,
+    required this.onPressed,
+    this.isSecondary = false,
+  });
 
-    if (isSuccess) {
-      // État complété/succès
-      backgroundColor = Colors.green.shade100;
-      textColor = Colors.green.shade800;
-    } else if (isSecondary) {
-      // Bouton secondaire
-      backgroundColor = Theme.of(context).colorScheme.secondaryContainer;
-      textColor = Theme.of(context).colorScheme.onSecondaryContainer;
-    } else {
-      // Bouton principal
-      backgroundColor = Theme.of(context).colorScheme.primary;
-      textColor = Theme.of(context).colorScheme.onPrimary;
-    }
-
-    return ElevatedButton.icon(
-      icon: Icon(icon),
-      label: Text(label),
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: backgroundColor,
-        foregroundColor: textColor,
+        backgroundColor:
+            isSecondary
+                ? Theme.of(context).colorScheme.secondaryContainer
+                : Theme.of(context).colorScheme.primary,
+        foregroundColor:
+            isSecondary
+                ? Theme.of(context).colorScheme.onSecondaryContainer
+                : Theme.of(context).colorScheme.onPrimary,
         minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        disabledBackgroundColor: isSuccess ? backgroundColor : null,
-        disabledForegroundColor: isSuccess ? textColor : null,
       ),
       onPressed: onPressed,
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+      ),
     );
   }
 }

@@ -4,37 +4,59 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:typed_data';
-import 'package:easy_localization/easy_localization.dart';
 
-class LicenseVerificationScreen extends StatefulWidget {
-  const LicenseVerificationScreen({super.key});
+class IdentityVerificationScreen extends StatefulWidget {
+  final String? forcedIdType; // Si spécifié, l'utilisateur ne peut pas changer le type de pièce
+
+  const IdentityVerificationScreen({this.forcedIdType, super.key});
 
   @override
-  _LicenseVerificationScreenState createState() =>
-      _LicenseVerificationScreenState();
+  _IdentityVerificationScreenState createState() =>
+      _IdentityVerificationScreenState();
 }
 
-class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
+class _IdentityVerificationScreenState extends State<IdentityVerificationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _licenseNumberController = TextEditingController();
+  final _idNumberController = TextEditingController();
   final _expirationDateController = TextEditingController();
 
   XFile? _frontImage;
   XFile? _backImage;
   bool _isLoading = false;
 
+  String _selectedIdType = 'permis'; // Valeur par défaut
+
+  final List<Map<String, String>> _idTypes = [
+    {'value': 'carte_identité', 'label': 'Carte d\'identité'},
+    {'value': 'permis', 'label': 'Permis de conduire'},
+    {'value': 'passeport', 'label': 'Passeport'},
+  ];
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  String? _validateLicenseNumber(String? value) {
-    if (value!.isEmpty) return 'validation.license_number'.tr();
+  @override
+  void initState() {
+    super.initState();
+    if (widget.forcedIdType != null) {
+      _selectedIdType = widget.forcedIdType!;
+    }
+  }
+
+  String? _validateIdNumber(String? value) {
+    if (value!.isEmpty) return 'Veuillez entrer le numéro de la pièce d\'identité';
     return null;
   }
 
   String? _validateExpirationDate(String? value) {
-    if (value!.isEmpty) return 'validation.expiration_date'.tr();
+    if (value!.isEmpty) return 'Veuillez entrer la date d\'expiration';
     return null;
+  }
+
+  // Vérifie si le type de document sélectionné nécessite une image verso
+  bool _needsBackImage() {
+    return _selectedIdType != 'passeport';
   }
 
   Future<void> _selectImage(ImageSource source, bool isFront) async {
@@ -54,32 +76,34 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
 
   Future<String> _uploadImage(XFile image, String fileName) async {
     try {
-      final storageRef = _storage.ref().child('license_images/$fileName');
+      final storageRef = _storage.ref().child('identity_docs/$fileName');
       final bytes = await image.readAsBytes();
       final uploadTask = storageRef.putData(Uint8List.fromList(bytes));
       final snapshot = await uploadTask.whenComplete(() {});
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
-      print('uploading.image_error'.tr());
-      throw Exception('uploading.image_error'.tr());
+      print('Erreur lors du téléchargement de l\'image');
+      throw Exception('Erreur lors du téléchargement de l\'image');
     }
   }
 
-  Future<void> transmitLicense() async {
+  Future<void> submitIdentityDocument() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_frontImage == null || _backImage == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('error.select_both_images'.tr())));
+    if (_frontImage == null || (_needsBackImage() && _backImage == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_needsBackImage() 
+          ? 'Veuillez sélectionner les deux faces de votre pièce d\'identité' 
+          : 'Veuillez sélectionner une image de votre passeport')),
+      );
       return;
     }
 
     User? user = _auth.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('error.not_logged_in'.tr())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vous devez être connecté pour effectuer cette action')),
+      );
       return;
     }
 
@@ -88,45 +112,54 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
     });
 
     try {
-      String frontImageUrl = await _uploadImage(
-        _frontImage!,
-        '${user.uid}_front_image.jpg',
-      );
-      String backImageUrl = await _uploadImage(
-        _backImage!,
-        '${user.uid}_back_image.jpg',
-      );
+  String frontImageUrl = await _uploadImage(
+    _frontImage!,
+    '${user.uid}_${_selectedIdType}_front_${DateTime.now().millisecondsSinceEpoch}.jpg',
+  );
 
-      String licenseNumber = _licenseNumberController.text;
-      String expirationDate = _expirationDateController.text;
+  String? backImageUrl;
+  if (_needsBackImage() && _backImage != null) {
+    backImageUrl = await _uploadImage(
+      _backImage!,
+      '${user.uid}_${_selectedIdType}_back_${DateTime.now().millisecondsSinceEpoch}.jpg',
+    );
+  }
 
-      DocumentReference userDoc = _firestore.collection('users').doc(user.uid);
+  String idNumber = _idNumberController.text;
+  String expirationDate = _expirationDateController.text;
 
-      await userDoc.set({
-        'num_permis': licenseNumber,
-        'date_expiration_permis': expirationDate,
-        'recto_permis': frontImageUrl,
-        'verso_permis': backImageUrl,
-        'isValidated': false,
-      }, SetOptions(merge: true));
+  Map<String, dynamic> idData = {
+    'id_proprietaire': user.uid,
+    'type_piece': _selectedIdType,
+    'num_piece': idNumber,
+    'date_expiration': expirationDate,
+    'recto_piece': frontImageUrl,
+    'statut': 'en cours',
+    'date_soumission': FieldValue.serverTimestamp(),
+  };
 
-      await _checkAndUpdateValidationStatus(user);
+  if (_needsBackImage() && backImageUrl != null) {
+    idData['verso_piece'] = backImageUrl;
+  }
 
-      setState(() {
-        _isLoading = false;
-      });
+  // 🔁 Nouvelle structure : on ajoute un document dans piece_identite
+  await _firestore.collection('piece_identite').add(idData);
 
-      // Afficher un dialogue de succès
-      _showSuccessDialog();
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      print('error.license_update_failed'.tr());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('error.license_update_failed'.tr())),
-      );
-    }
+  setState(() {
+    _isLoading = false;
+  });
+
+  _showSuccessDialog();
+} catch (e) {
+  setState(() {
+    _isLoading = false;
+  });
+  print('Erreur lors de la mise à jour: $e');
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Erreur lors de l\'enregistrement de votre pièce d\'identité')),
+  );
+}
+
   }
 
   void _showSuccessDialog() {
@@ -149,7 +182,7 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
             ],
           ),
           content: const Text(
-            'Vos informations ont été enregistrées avec succès. Elles seront examinées par notre équipe.',
+            'Votre pièce d\'identité a été enregistrée avec succès. Elle sera examinée par notre équipe.',
           ),
           actions: [
             TextButton(
@@ -168,29 +201,25 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
     );
   }
 
-  Future<void> _checkAndUpdateValidationStatus(User user) async {
-    try {
-      DocumentSnapshot userDoc =
-          await _firestore.collection('users').doc(user.uid).get();
-      bool hasLicense =
-          userDoc['recto_permis'] != null && userDoc['verso_permis'] != null;
-      QuerySnapshot carsSnapshot =
-          await _firestore
-              .collection('cars')
-              .where('id_proprietaire', isEqualTo: user.uid)
-              .limit(1)
-              .get();
-      bool hasCar = carsSnapshot.docs.isNotEmpty;
-
-      if (hasLicense && hasCar) {
-        print('info.waiting_admin_validation'.tr());
-      }
-    } catch (e) {
-      print('error.validation_check_failed'.tr());
-    }
-  }
-
+  
   void _showImageDialog() {
+    // Adapter l'image à afficher en fonction du type de pièce sélectionné
+    String assetPath;
+    
+    switch (_selectedIdType) {
+      case 'permis':
+        assetPath = 'assets/images/drivinglicence.jpg';
+        break;
+      case 'carte_identité':
+        assetPath = 'assets/images/identity_card.jpg';
+        break;
+      case 'passeport':
+        assetPath = 'assets/images/passport.jpg';
+        break;
+      default:
+        assetPath = 'assets/images/identity_card.jpg';
+    }
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -198,7 +227,7 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
           backgroundColor: Colors.black,
           child: Center(
             child: Image.asset(
-              'assets/images/drivinglicence.jpg',
+              assetPath,
               fit: BoxFit.contain,
             ),
           ),
@@ -207,9 +236,17 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
     );
   }
 
+  String _getImageSelectorText(bool isFront, bool hasImage) {
+    if (hasImage) {
+      return isFront ? 'Recto sélectionné' : 'Verso sélectionné';
+    } else {
+      return isFront ? 'Sélectionner le recto' : 'Sélectionner le verso';
+    }
+  }
+
   @override
   void dispose() {
-    _licenseNumberController.dispose();
+    _idNumberController.dispose();
     _expirationDateController.dispose();
     super.dispose();
   }
@@ -220,9 +257,9 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'appbar.title'.tr(),
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        title: const Text(
+          'Vérification d\'identité',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
@@ -238,10 +275,37 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    TextFormField(
-                      controller: _licenseNumberController,
+                    // Dropdown pour sélectionner le type de pièce d'identité
+                    DropdownButtonFormField<String>(
+                      value: _selectedIdType,
                       decoration: InputDecoration(
-                        labelText: 'form.license_number'.tr(),
+                        labelText: 'Type de pièce d\'identité',
+                        prefixIcon: Icon(Icons.badge, color: primaryColor),
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: _idTypes.map((type) {
+                        return DropdownMenuItem<String>(
+                          value: type['value'],
+                          child: Text(type['label']!),
+                        );
+                      }).toList(),
+                      onChanged: widget.forcedIdType == null
+                          ? (value) {
+                              setState(() {
+                                _selectedIdType = value!;
+                                // Réinitialiser _backImage si on passe à passeport
+                                if (!_needsBackImage()) {
+                                  _backImage = null;
+                                }
+                              });
+                            }
+                          : null, // Désactiver le changement si forcedIdType est spécifié
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _idNumberController,
+                      decoration: InputDecoration(
+                        labelText: 'Numéro de la pièce',
                         prefixIcon: Icon(
                           Icons.credit_card,
                           color: primaryColor,
@@ -252,13 +316,13 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
                           onPressed: _showImageDialog,
                         ),
                       ),
-                      validator: _validateLicenseNumber,
+                      validator: _validateIdNumber,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _expirationDateController,
                       decoration: InputDecoration(
-                        labelText: 'form.expiration_date'.tr(),
+                        labelText: 'Date d\'expiration',
                         prefixIcon: Icon(
                           Icons.calendar_today,
                           color: primaryColor,
@@ -284,16 +348,16 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
                     _buildImageSelector(
                       onTap: () => _selectImage(ImageSource.gallery, true),
                       hasImage: _frontImage != null,
-                      textKeyWhenSelected: 'upload.front_selected',
-                      textKeyWhenNotSelected: 'upload.select_front',
+                      labelText: _getImageSelectorText(true, _frontImage != null),
                     ),
                     const SizedBox(height: 16),
-                    _buildImageSelector(
-                      onTap: () => _selectImage(ImageSource.gallery, false),
-                      hasImage: _backImage != null,
-                      textKeyWhenSelected: 'upload.back_selected',
-                      textKeyWhenNotSelected: 'upload.select_back',
-                    ),
+                    // Affiche le sélecteur d'image verso uniquement si nécessaire
+                    if (_needsBackImage())
+                      _buildImageSelector(
+                        onTap: () => _selectImage(ImageSource.gallery, false),
+                        hasImage: _backImage != null,
+                        labelText: _getImageSelectorText(false, _backImage != null),
+                      ),
                     const SizedBox(height: 30),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -303,10 +367,10 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      onPressed: _isLoading ? null : transmitLicense,
-                      child: Text(
-                        "Envoyer mes données",
-                        style: const TextStyle(
+                      onPressed: _isLoading ? null : submitIdentityDocument,
+                      child: const Text(
+                        "Envoyer ma pièce d'identité",
+                        style: TextStyle(
                           fontSize: 16,
                           color: Colors.white,
                         ),
@@ -316,9 +380,9 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
                     TextButton(
                       onPressed:
                           _isLoading ? null : () => Navigator.pop(context),
-                      child: Text(
-                        'button.back'.tr(),
-                        style: const TextStyle(color: Colors.grey),
+                      child: const Text(
+                        'Retour',
+                        style: TextStyle(color: Colors.grey),
                       ),
                     ),
                   ],
@@ -339,8 +403,7 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
   Widget _buildImageSelector({
     required VoidCallback onTap,
     required bool hasImage,
-    required String textKeyWhenSelected,
-    required String textKeyWhenNotSelected,
+    required String labelText,
   }) {
     final primaryColor = Theme.of(context).colorScheme.primary;
 
@@ -349,9 +412,7 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
       child: Container(
         decoration: BoxDecoration(
           color:
-              hasImage
-                  ? Colors.green.withOpacity(0.2)
-                  : primaryColor.withOpacity(0.1),
+              hasImage ? Colors.green.withOpacity(0.2) : primaryColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: hasImage ? Colors.green : primaryColor.withOpacity(0.3),
@@ -368,7 +429,7 @@ class _LicenseVerificationScreenState extends State<LicenseVerificationScreen> {
             ),
             const SizedBox(width: 10),
             Text(
-              hasImage ? textKeyWhenSelected.tr() : textKeyWhenNotSelected.tr(),
+              labelText,
               style: TextStyle(
                 color: hasImage ? Colors.green : primaryColor,
                 fontWeight: FontWeight.w500,

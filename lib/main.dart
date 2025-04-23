@@ -8,6 +8,7 @@ import 'package:bladiway/pages/reservation.dart';
 import 'package:bladiway/pages/reservations_screen.dart';
 import 'package:bladiway/pages/scanner_permis.dart';
 import 'package:bladiway/pages/verification_conducteur.dart';
+import 'package:bladiway/pages/verification_passager.dart';
 import 'package:bladiway/services/evaluation_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -134,6 +135,8 @@ class MyApp extends StatelessWidget {
         '/home': (context) => EvaluationCheckWrapper(child: const HomePage()),
         '/settings':
             (context) => EvaluationCheckWrapper(child: const ParametresPage()),
+        '/verifier_Passager':
+            (context) => EvaluationCheckWrapper(child: const IdentityRequestPassengerPage()),
         '/profile':
             (context) => EvaluationCheckWrapper(child: const ProfileScreen()),
         '/presentation': (context) => const PresentationPage(),
@@ -148,7 +151,7 @@ class MyApp extends StatelessWidget {
                 EvaluationCheckWrapper(child: const PermissionAddCarPage()),
         '/scan_permission':
             (context) => EvaluationCheckWrapper(
-              child: const LicenseVerificationScreen(),
+              child: const IdentityVerificationScreen(),
             ),
         '/reservations':
             (context) =>

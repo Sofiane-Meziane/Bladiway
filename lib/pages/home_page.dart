@@ -3,11 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bladiway/methods/user_data_notifier.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../services/evaluation_service.dart';
 import 'settings_screen.dart';
-import 'mes_voitures_page.dart'; // Import de la nouvelle page
+import 'mes_voitures_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,58 +19,21 @@ class _HomePageState extends State<HomePage> {
   int totalTrips = 15;
   int proposedTrips = 5;
   int kilometersTraveled = 320;
-  bool _hasCar = false; // Pour vérifier si l'utilisateur a une voiture
-  bool _isValidated = false; // Pour vérifier si l'utilisateur est validé
-  bool _validationMessageShown =
-      false; // Pour suivre si le message de validation a été affiché
+  bool _hasCar = false;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late Stream<DocumentSnapshot> _userStream;
 
-  // Service d'évaluation
-  final EvaluationService _evaluationService = EvaluationService();
-
   @override
   void initState() {
     super.initState();
-    // Charger l'état du message depuis SharedPreferences
-    _loadMessageState();
-
-    // Initialiser le stream pour écouter les modifications des données utilisateur
     User? user = _auth.currentUser;
     if (user != null) {
       _userStream = _firestore.collection('users').doc(user.uid).snapshots();
-      // S'abonner au stream pour les mises à jour en temps réel
       _setupUserListener();
     }
-    _checkUserHasCar(); // Vérifier initialement si l'utilisateur a une voiture
-
-    // Vérifier si l'utilisateur a des évaluations en attente
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkPendingEvaluations();
-    });
-  }
-
-  // Méthode pour vérifier les évaluations en attente
-  void _checkPendingEvaluations() {
-    _evaluationService.checkPendingEvaluations(context);
-  }
-
-  // Nouvelle méthode pour charger l'état du message
-  Future<void> _loadMessageState() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        setState(() {
-          _validationMessageShown =
-              prefs.getBool('validation_message_shown_${user.uid}') ?? false;
-        });
-      }
-    } catch (e) {
-      print('Erreur lors du chargement de l\'état du message : $e');
-    }
+    _checkUserHasCar();
   }
 
   void _setupUserListener() {
@@ -84,22 +45,6 @@ class _HomePageState extends State<HomePage> {
             final name = data['prenom'] ?? 'Utilisateur'.tr();
             final photoUrl = data['profileImageUrl'] ?? '';
             userDataNotifier.updateUserData(name, photoUrl);
-
-            // Vérifier si l'utilisateur vient d'être validé
-            bool wasValidated = _isValidated;
-            setState(() {
-              _isValidated = data['isValidated'] == true;
-            });
-
-            // Afficher le message uniquement si l'utilisateur vient d'être validé
-            if (_isValidated &&
-                !wasValidated &&
-                _hasCar &&
-                !_validationMessageShown) {
-              _showValidationMessage();
-            }
-
-            // Vérifier si l'utilisateur a une voiture chaque fois que les données sont mises à jour
             _checkUserHasCar();
           }
         }
@@ -110,60 +55,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Méthode modifiée pour enregistrer l'état du message
-  Future<void> _showValidationMessage() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        // Marquer le message comme affiché localement
-        setState(() {
-          _validationMessageShown = true;
-        });
-
-        // Enregistrer l'état dans SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('validation_message_shown_${user.uid}', true);
-
-        // Afficher le SnackBar
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Votre compte a été validé! Vous pouvez maintenant gérer vos voitures.'
-                    .tr(),
-              ),
-              duration: const Duration(seconds: 3),
-              backgroundColor: Colors.green,
-            ),
-          );
-        });
-      }
-    } catch (e) {
-      print('Erreur lors de l\'enregistrement de l\'état du message : $e');
-    }
-  }
-
-  // Méthode pour vérifier si l'utilisateur a enregistré une voiture
   Future<void> _checkUserHasCar() async {
     try {
       User? user = _auth.currentUser;
       if (user != null) {
-        QuerySnapshot carsSnapshot =
-            await _firestore
-                .collection('cars')
-                .where('id_proprietaire', isEqualTo: user.uid)
-                .limit(1)
-                .get();
+        QuerySnapshot carsSnapshot = await _firestore
+            .collection('cars')
+            .where('id_proprietaire', isEqualTo: user.uid)
+            .limit(1)
+            .get();
 
-        bool hadCar = _hasCar;
         setState(() {
           _hasCar = carsSnapshot.docs.isNotEmpty;
         });
-
-        // Si l'utilisateur vient d'ajouter une voiture et qu'il est déjà validé
-        if (_hasCar && !hadCar && _isValidated && !_validationMessageShown) {
-          _showValidationMessage();
-        }
       }
     } catch (e) {
       print('Erreur lors de la vérification des voitures : $e');
@@ -171,13 +75,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onItemTapped(int index) {
-    // Définir les index pour chaque élément du menu
     final homeIndex = 0;
     final reservationIndex = 1;
     final tripsIndex = 2;
     final settingsIndex = 3;
 
-    // Redirection vers la page d'accueil
     if (index == homeIndex) {
       setState(() {
         _selectedIndex = homeIndex;
@@ -185,21 +87,16 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // Redirection vers la page de réservation
     if (index == reservationIndex) {
-      // Remplacer par la navigation vers la page de réservation
       Navigator.pushNamed(context, '/reservations');
       return;
     }
 
-    // Redirection vers la page des trajets
     if (index == tripsIndex) {
-      // Remplacer par la navigation vers la page des trajets
       Navigator.pushNamed(context, '/trips');
       return;
     }
 
-    // Redirection vers la page des paramètres
     if (index == settingsIndex) {
       Navigator.push(
         context,
@@ -218,97 +115,141 @@ class _HomePageState extends State<HomePage> {
       context,
       MaterialPageRoute(builder: (context) => const MesVoituresPage()),
     ).then((_) {
-      // Après retour de la page Mes Voitures, vérifier à nouveau si l'utilisateur a toujours une voiture
       _checkUserHasCar();
     });
   }
 
   Future<void> _checkAddTripPermission() async {
-    User? user = _auth.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Vous devez être connecté pour continuer'.tr())),
-      );
-      return;
-    }
-
-    try {
-      DocumentSnapshot userDoc =
-          await _firestore.collection('users').doc(user.uid).get();
-      if (!userDoc.exists) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Utilisateur non trouvé'.tr())));
-        return;
-      }
-
-      Map<String, dynamic>? userData = userDoc.data() as Map<String, dynamic>?;
-
-      bool hasLicense =
-          userData != null &&
-          userData.containsKey('recto_permis') &&
-          userData.containsKey('verso_permis') &&
-          userData['recto_permis'] != null &&
-          userData['verso_permis'] != null;
-
-      QuerySnapshot carsSnapshot =
-          await _firestore
-              .collection('cars')
-              .where('id_proprietaire', isEqualTo: user.uid)
-              .limit(1)
-              .get();
-      bool hasCar = carsSnapshot.docs.isNotEmpty;
-
-      // Mettre à jour l'état _hasCar si nécessaire
-      if (_hasCar != hasCar) {
-        setState(() {
-          _hasCar = hasCar;
-        });
-      }
-
-      bool isValidated =
-          userData != null &&
-          userData.containsKey('isValidated') &&
-          userData['isValidated'] == true;
-
-      // Mettre à jour l'état _isValidated si nécessaire
-      if (_isValidated != isValidated) {
-        setState(() {
-          _isValidated = isValidated;
-        });
-      }
-
-      if (hasLicense && hasCar) {
-        if (isValidated) {
-          Navigator.pushNamed(context, '/info_trajet');
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Vos informations sont en cours de validation'.tr(),
-              ),
-            ),
-          );
-        }
-      } else {
-        // Si l'utilisateur n'a pas de permis ou de voiture, le rediriger directement
-        if (!hasLicense || !hasCar) {
-          // Naviguer directement vers la page de vérification du conducteur
-          Navigator.pushNamed(context, '/verifier_Conducteur');
-        }
-      }
-    } catch (e) {
-      print('Erreur lors de la vérification des conditions : $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la vérification'.tr())),
-      );
-    }
+  User? user = _auth.currentUser;
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Vous devez être connecté pour continuer'.tr())),
+    );
+    return;
   }
+
+  try {
+    // Récupérer le permis depuis la table piece_identite
+    QuerySnapshot permisSnapshot = await _firestore
+        .collection('piece_identite')
+        .where('id_proprietaire', isEqualTo: user.uid)
+        .where('type_piece', isEqualTo: 'permis')
+        .limit(1)
+        .get();
+
+    print('Permis doc trouvé: ${permisSnapshot.docs.isNotEmpty}');
+    print('Données du permis: ${permisSnapshot.docs.isNotEmpty ? permisSnapshot.docs.first.data() : "Aucune donnée"}');
+
+    bool hasVerifiedLicense = false;
+    bool hasPendingOrNoLicense = true;
+
+    if (permisSnapshot.docs.isNotEmpty) {
+      var permisData = permisSnapshot.docs.first.data() as Map<String, dynamic>;
+      String statut = permisData['statut'];
+      String? dateExpirationStr = permisData['date_expiration'];
+
+      DateTime? dateExpiration;
+      if (dateExpirationStr != null) {
+        try {
+          dateExpiration = DateTime.parse(dateExpirationStr);
+        } catch (e) {
+          print('Erreur de parsing de la date d\'expiration: $e');
+        }
+      }
+
+      bool isLicenseExpired = dateExpiration == null || dateExpiration.isBefore(DateTime.now());
+
+      hasVerifiedLicense = statut == 'verifie' && !isLicenseExpired;
+      hasPendingOrNoLicense = statut == 'en cours' || statut == 'refuse' || isLicenseExpired;
+    }
+
+    // Récupérer les voitures
+    QuerySnapshot carsSnapshot = await _firestore
+        .collection('cars')
+        .where('id_proprietaire', isEqualTo: user.uid)
+        .limit(1)
+        .get();
+
+    bool hasCar = carsSnapshot.docs.isNotEmpty;
+
+    print('Nombre de voitures: ${carsSnapshot.docs.length}');
+    print('hasVerifiedLicense: $hasVerifiedLicense');
+    print('hasCar: $hasCar');
+    print('hasPendingOrNoLicense: $hasPendingOrNoLicense');
+
+    if (_hasCar != hasCar) {
+      setState(() {
+        _hasCar = hasCar;
+      });
+    }
+
+    // Redirection
+    if (hasVerifiedLicense && hasCar) {
+      Navigator.pushNamed(context, '/info_trajet');
+    } else {
+      Navigator.pushNamed(context, '/verifier_Conducteur');
+    }
+  } catch (e) {
+    print('Erreur lors de la vérification des conditions : $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Erreur lors de la vérification'.tr())),
+    );
+  }
+}
+
+
+
+
+Future<void> _checkReservationPermission() async {
+  User? user = _auth.currentUser;
+
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Vous devez être connecté pour continuer'.tr())),
+    );
+    return;
+  }
+
+  try {
+    QuerySnapshot piecesSnapshot = await _firestore
+        .collection('piece_identite')
+        .where('id_proprietaire', isEqualTo: user.uid)
+        .get();
+
+    final pieces = piecesSnapshot.docs
+        .map((doc) => doc.data() as Map<String, dynamic>)
+        .toList();
+
+    bool hasVerifiedID = pieces.any((piece) => piece['statut'] == 'verifie');
+    bool hasPendingOrRefusedID = pieces.isEmpty ||
+        pieces.any((piece) =>
+            piece['statut'] == 'en cours' || piece['statut'] == 'refuse');
+
+    if (hasVerifiedID) {
+      Navigator.pushNamed(context, '/reserver');
+    } else if (hasPendingOrRefusedID) {
+      Navigator.pushNamed(context, '/verifier_Passager');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Vous devez soumettre une pièce d\'identité pour réserver un trajet'.tr(),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  } catch (e) {
+    print('Erreur lors de la vérification des conditions : $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Erreur lors de la vérification'.tr())),
+    );
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
-    // Pas de SnackBar dans build() pour éviter l'affichage répété
-
     return Scaffold(
       body: Column(
         children: [
@@ -359,18 +300,16 @@ class _HomePageState extends State<HomePage> {
                                   child: CircleAvatar(
                                     radius: 20,
                                     backgroundColor: Colors.white,
-                                    backgroundImage:
-                                        photoUrl.isNotEmpty
-                                            ? NetworkImage(photoUrl)
-                                            : null,
-                                    child:
-                                        photoUrl.isEmpty
-                                            ? const Icon(
-                                              Icons.person,
-                                              color: Colors.blue,
-                                              size: 24,
-                                            )
-                                            : null,
+                                    backgroundImage: photoUrl.isNotEmpty
+                                        ? NetworkImage(photoUrl)
+                                        : null,
+                                    child: photoUrl.isEmpty
+                                        ? const Icon(
+                                            Icons.person,
+                                            color: Colors.blue,
+                                            size: 24,
+                                          )
+                                        : null,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -378,9 +317,10 @@ class _HomePageState extends State<HomePage> {
                                   'Bienvenue à notre plateforme'.tr(),
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimary.withOpacity(0.7),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary
+                                        .withOpacity(0.7),
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
@@ -401,7 +341,6 @@ class _HomePageState extends State<HomePage> {
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onPrimary,
-                            //letterSpacing: 1.5,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -409,9 +348,10 @@ class _HomePageState extends State<HomePage> {
                           tr('Bonjour, {}', args: [name]),
                           style: TextStyle(
                             fontSize: 16,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onPrimary.withOpacity(0.7),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimary
+                                .withOpacity(0.7),
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -435,10 +375,7 @@ class _HomePageState extends State<HomePage> {
                     buttonText: 'Réserver'.tr(),
                     color1: const Color(0xFF1976D2),
                     color2: const Color(0xFF42A5F5),
-                    onPressed: () {
-                      // Naviguer vers la page de réservation
-                      Navigator.pushNamed(context, '/reserver');
-                    },
+                    onPressed: _checkReservationPermission,
                   ),
                   const SizedBox(height: 16),
                   buildCard(
@@ -451,8 +388,8 @@ class _HomePageState extends State<HomePage> {
                     onPressed: _checkAddTripPermission,
                   ),
 
-                  // Ajouter la carte "Mes voitures" uniquement si l'utilisateur est validé
-                  if (_hasCar && _isValidated) ...[
+                  // Ajouter la carte "Mes voitures" uniquement si l'utilisateur a au moins une voiture
+                  if (_hasCar) ...[
                     const SizedBox(height: 16),
                     buildCard(
                       title: 'Gérez vos voitures 🚘'.tr(),
@@ -479,9 +416,8 @@ class _HomePageState extends State<HomePage> {
         onTap: _onItemTapped,
         backgroundColor: Theme.of(context).colorScheme.surface,
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(
-          context,
-        ).colorScheme.onSurface.withOpacity(0.5),
+        unselectedItemColor:
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -642,12 +578,6 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    // Nettoyer les ressources si nécessaire
-    super.dispose();
   }
 }
 

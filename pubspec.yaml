@@ -38,6 +38,8 @@ dependencies:
   flutter_custom_clippers: ^2.1.0
   cached_network_image: ^3.3.0
 
+  lottie: ^3.3.1
+
   
 
   flutter_animate: ^4.2.0  # Pour les animations fluides
@@ -75,6 +77,10 @@ flutter:
     - assets/images/drivinglicence.jpg
     - assets/images/monlogo_without_back.png
     - assets/images/monlogo11.png
+    - assets/images/passport.jpg
+    - assets/images/identity_card.jpg
+    - assets/images/identityVerification.png
+    - assets/animation/document_verification.json
       
 
     # Fichiers de traduction pour easy_localization
