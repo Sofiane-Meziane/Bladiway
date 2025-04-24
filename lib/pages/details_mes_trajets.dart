@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async'; // Import pour StreamSubscription
 import 'package:url_launcher/url_launcher.dart'; // Import pour launchUrl
 import 'chat_screen.dart'; // Import de la page de chat
+import '../services/notification_service.dart'; // Import du service de notification
 
 // Constantes pour les noms de champs Firestore
 const String FIELD_USER_ID = 'userId';
@@ -510,83 +511,127 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
           itemBuilder: (context, index) {
             final passenger = _passengers[index];
             final placesReservees = passenger['placesReservees'] ?? 1;
+            final passengerId = passenger['id'] as String?;
 
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4.0),
-              elevation: 2.0,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 8.0,
-                  horizontal: 4.0,
-                ),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage:
-                            passenger['profileImageUrl'] != null &&
-                                    passenger['profileImageUrl'].isNotEmpty
-                                ? NetworkImage(passenger['profileImageUrl'])
-                                : const AssetImage(
-                                      'assets/images/default_avatar.png',
-                                    )
-                                    as ImageProvider,
-                      ),
-                      title: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              '${passenger['prenom']} ${passenger['nom']}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[100],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '$placesReservees ${placesReservees > 1 ? 'places' : 'place'}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue[800],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      subtitle: Text(
-                        passenger['phone'] ?? 'Téléphone non disponible',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.phone, color: Colors.green),
-                          onPressed: () => _callPhoneNumber(passenger['phone']),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.message, color: Colors.blue),
-                          onPressed:
-                              () => _navigateToMessaging(passenger['id']),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return _buildPassengerCard(passenger, placesReservees, passengerId);
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildPassengerCard(
+    Map<String, dynamic> passenger,
+    int placesReservees,
+    String? passengerId,
+  ) {
+    final NotificationService notificationService = NotificationService();
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      elevation: 2.0,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+        child: Column(
+          children: [
+            ListTile(
+              leading: CircleAvatar(
+                backgroundImage:
+                    passenger['profileImageUrl'] != null &&
+                            passenger['profileImageUrl'].isNotEmpty
+                        ? NetworkImage(passenger['profileImageUrl'])
+                        : const AssetImage('assets/images/default_avatar.png')
+                            as ImageProvider,
+              ),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      '${passenger['prenom']} ${passenger['nom']}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$placesReservees ${placesReservees > 1 ? 'places' : 'place'}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[800],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              subtitle: Text(
+                passenger['phone'] ?? 'Téléphone non disponible',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.phone, color: Colors.green),
+                  onPressed: () => _callPhoneNumber(passenger['phone']),
+                ),
+                if (passengerId != null)
+                  StreamBuilder<int>(
+                    stream: notificationService
+                        .getUnreadMessagesCountFromPassenger(passengerId),
+                    builder: (context, snapshot) {
+                      final unreadCount = snapshot.data ?? 0;
+
+                      return Stack(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.message, color: Colors.blue),
+                            onPressed:
+                                () => _navigateToMessaging(passenger['id']),
+                          ),
+                          if (unreadCount > 0)
+                            Positioned(
+                              right: 5,
+                              top: 5,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Text(
+                                  unreadCount > 99 ? '99+' : '$unreadCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

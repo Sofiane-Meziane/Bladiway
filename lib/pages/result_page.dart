@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'confirmationPage.dart';
 import 'info_conducteur.dart';
 import '../widgets/trip_widgets.dart';
+import '../services/notification_service.dart';
 
 final user = FirebaseAuth.instance.currentUser;
 
@@ -13,10 +14,10 @@ class TripResultsPage extends StatelessWidget {
   final int requiredSeats;
 
   const TripResultsPage({
-    Key? key,
+    super.key,
     required this.trips,
     required this.requiredSeats,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -188,13 +189,13 @@ class ModifiedTripCard extends StatelessWidget {
   final void Function()? onDriverTap;
 
   const ModifiedTripCard({
-    Key? key,
+    super.key,
     required this.trip,
     required this.tripId,
     required this.placesDisponibles,
     this.onTap,
     this.onDriverTap,
-  }) : super(key: key);
+  });
 
   String _extractCity(String address) {
     if (address.contains(',')) {
@@ -540,11 +541,11 @@ class TripDetailPage extends StatelessWidget {
   final int requiredSeats;
 
   const TripDetailPage({
-    Key? key,
+    super.key,
     required this.trip,
     required this.tripId,
     required this.requiredSeats,
-  }) : super(key: key);
+  });
 
   // Méthode pour naviguer vers la page InfoConducteurPage
   void _showDriverInfo(BuildContext context, String driverId) async {
@@ -1002,57 +1003,59 @@ class TripDetailPage extends StatelessWidget {
     }
   }
 
-
   Future<void> _checkReservationPermission(BuildContext context) async {
-  // Récupérer l'instance de FirebaseAuth
-  final auth = FirebaseAuth.instance;
-  final firestore = FirebaseFirestore.instance;
-  
-  User? user = auth.currentUser;
-  if (user == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Vous devez être connecté pour continuer')),
-    );
-    return;
-  }
-  
-  try {
-    QuerySnapshot piecesSnapshot = await firestore
-        .collection('piece_identite')
-        .where('id_proprietaire', isEqualTo: user.uid)
-        .get();
-    
-    final pieces = piecesSnapshot.docs
-        .map((doc) => doc.data() as Map<String, dynamic>)
-        .toList();
-    
-    bool hasVerifiedID = pieces.any((piece) => piece['statut'] == 'verifie');
-    
-    if (hasVerifiedID) {
-      // Si l'utilisateur a une pièce vérifiée, on peut afficher le dialogue de réservation
-      _showReservationDialog(context);
-    } else {
-      // Si l'utilisateur n'a pas de pièce vérifiée, on le redirige vers la page verifier_passager
+    // Récupérer l'instance de FirebaseAuth
+    final auth = FirebaseAuth.instance;
+    final firestore = FirebaseFirestore.instance;
+
+    User? user = auth.currentUser;
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Vous devez faire vérifier votre pièce d\'identité avant de pouvoir réserver'),
-          duration: Duration(seconds: 3),
+          content: Text('Vous devez être connecté pour continuer'),
         ),
       );
-      
-      // Naviguer vers la page verifier_passager
-      Navigator.pushNamed(context, '/verifier_Passager');
+      return;
     }
-  } catch (e) {
-    print('Erreur lors de la vérification des conditions : $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Erreur lors de la vérification')),
-    );
+
+    try {
+      QuerySnapshot piecesSnapshot =
+          await firestore
+              .collection('piece_identite')
+              .where('id_proprietaire', isEqualTo: user.uid)
+              .get();
+
+      final pieces =
+          piecesSnapshot.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
+
+      bool hasVerifiedID = pieces.any((piece) => piece['statut'] == 'verifie');
+
+      if (hasVerifiedID) {
+        // Si l'utilisateur a une pièce vérifiée, on peut afficher le dialogue de réservation
+        _showReservationDialog(context);
+      } else {
+        // Si l'utilisateur n'a pas de pièce vérifiée, on le redirige vers la page verifier_passager
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Vous devez faire vérifier votre pièce d\'identité avant de pouvoir réserver',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        // Naviguer vers la page verifier_passager
+        Navigator.pushNamed(context, '/verifier_Passager');
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification des conditions : $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la vérification')),
+      );
+    }
   }
-}
-
-
-
 
   void _showReservationDialog(BuildContext context) async {
     // Récupérer les places disponibles
@@ -1154,6 +1157,7 @@ class TripDetailPage extends StatelessWidget {
     // Stocker une référence au BuildContext de navigation
     final NavigatorState navigator = Navigator.of(context);
     bool reservationSuccess = false;
+    String reservationId = '';
 
     try {
       // Récupérer les places disponibles
@@ -1182,6 +1186,19 @@ class TripDetailPage extends StatelessWidget {
           return;
         }
 
+        // Obtenir les informations du passager pour la notification
+        final passengerDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(currentUser.uid)
+                .get();
+
+        final passengerData = passengerDoc.data();
+        final passengerName =
+            passengerData != null
+                ? '${passengerData['prenom']} ${passengerData['nom']}'
+                : 'Un passager';
+
         // Mettre à jour le document trip avec les places restantes
         await FirebaseFirestore.instance.collection('trips').doc(tripId).update(
           {'placesDisponibles': availableSeats - requiredSeats},
@@ -1196,12 +1213,34 @@ class TripDetailPage extends StatelessWidget {
         }
 
         // Créer une nouvelle réservation avec tous les champs requis
-        await FirebaseFirestore.instance.collection('reservations').add({
-          'tripId': tripId,
-          'userId': currentUser.uid,
-          'seatsReserved': requiredSeats,
-          'date_reservation': Timestamp.now(),
-        });
+        final reservationRef = await FirebaseFirestore.instance
+            .collection('reservations')
+            .add({
+              'tripId': tripId,
+              'userId': currentUser.uid,
+              'seatsReserved': requiredSeats,
+              'date_reservation': FieldValue.serverTimestamp(),
+            });
+
+        reservationId = reservationRef.id;
+
+        // Envoyer une notification au conducteur avec des détails supplémentaires
+        final driverId = updatedTrip['userId'];
+        await NotificationService.createReservationNotification(
+          driverId: driverId,
+          passengerId: currentUser.uid,
+          passengerName: passengerName,
+          tripId: tripId,
+          tripDestination:
+              updatedTrip['arrivée'] is String
+                  ? updatedTrip['arrivée']
+                  : 'destination',
+          tripDate:
+              updatedTrip['date'] is String
+                  ? updatedTrip['date']
+                  : 'date prévue',
+          seatsReserved: requiredSeats,
+        );
 
         // Marquer la réservation comme réussie
         reservationSuccess = true;

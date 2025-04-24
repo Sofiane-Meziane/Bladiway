@@ -53,8 +53,7 @@ void main() async {
 class EvaluationCheckWrapper extends StatefulWidget {
   final Widget child;
 
-  const EvaluationCheckWrapper({Key? key, required this.child})
-    : super(key: key);
+  const EvaluationCheckWrapper({super.key, required this.child});
 
   @override
   _EvaluationCheckWrapperState createState() => _EvaluationCheckWrapperState();

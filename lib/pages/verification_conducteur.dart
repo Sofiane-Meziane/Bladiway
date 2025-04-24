@@ -30,7 +30,6 @@ class PermissionAddCarPage extends StatefulWidget {
 
 class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
   final PageController _pageController = PageController();
-  int _currentPage = 0;
   bool _isLoading = false;
 
   // Liste des pages à afficher (ici, une seule page pour cette tâche spécifique)
@@ -48,19 +47,11 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
     super.initState();
     _pageController.addListener(() {
       setState(() {
-        _currentPage = _pageController.page?.round() ?? 0;
       });
     });
   }
 
   // Navigue vers une page spécifique
-  void _navigateToPage(int index) {
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
 
   // Vérification des documents d'identité pour rediriger vers le bon écran
   Future<void> checkAndShowLicenseScreen(BuildContext context) async {
@@ -208,56 +199,6 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
     );
   }
 
-  void _showPermisRequiredDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            'Permis de conduire requis',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: const Text(
-            'Vous avez déjà soumis une pièce d\'identité, mais pour publier un trajet vous devez spécifiquement soumettre votre permis de conduire.',
-            style: TextStyle(height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Naviguer vers le formulaire avec permis présélectionné
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const IdentityVerificationScreen(
-                      forcedIdType: 'permis',
-                    ),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              ),
-              child: const Text('Soumettre mon permis'),
-            ),
-          ],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        );
-      },
-    );
-  }
 
   void _showPermisRejectedDialog() {
     showDialog(

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../services/notification_service.dart'; // Import du service de notification
 
 class ChatPage extends StatefulWidget {
   final String reservationId;
@@ -21,15 +22,78 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final NotificationService _notificationService = NotificationService();
 
   String receiverName = "Chargement...";
   String? receiverProfileImageUrl;
   String? senderProfileImageUrl;
+  bool _isDriver = false; // Indique si l'utilisateur actuel est conducteur
 
   @override
   void initState() {
     super.initState();
     _fetchUsersData();
+    _checkUserRole();
+    _markMessagesAsRead();
+  }
+
+  // Vérifier si l'utilisateur est conducteur ou passager
+  void _checkUserRole() async {
+    try {
+      final String currentUserId = _auth.currentUser?.uid ?? '';
+
+      // Récupérer la réservation pour identifier les rôles
+      DocumentSnapshot reservationDoc =
+          await _firestore
+              .collection('reservations')
+              .doc(widget.reservationId)
+              .get();
+
+      if (reservationDoc.exists) {
+        final reservationData = reservationDoc.data() as Map<String, dynamic>;
+        final String tripId = reservationData['tripId'] as String;
+
+        // Récupérer le trajet pour identifier le conducteur
+        DocumentSnapshot tripDoc =
+            await _firestore.collection('trips').doc(tripId).get();
+
+        if (tripDoc.exists) {
+          final tripData = tripDoc.data() as Map<String, dynamic>;
+          final String driverId = tripData['userId'] as String;
+
+          setState(() {
+            _isDriver = (currentUserId == driverId);
+          });
+        }
+      }
+    } catch (e) {
+      print("Error checking user role: $e");
+    }
+  }
+
+  // Marquer les messages comme lus lorsqu'on ouvre la conversation
+  void _markMessagesAsRead() async {
+    try {
+      final currentUserId = _auth.currentUser?.uid;
+      if (currentUserId != null) {
+        // Attendre un court instant pour que _isDriver soit défini
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        if (_isDriver) {
+          // Si l'utilisateur est conducteur, marquer les messages du passager comme lus
+          await _notificationService.markAllMessagesFromSenderAsRead(
+            widget.otherUserId,
+          );
+        } else {
+          // Si l'utilisateur est passager, marquer les messages du conducteur comme lus
+          await _notificationService.markAllMessagesFromDriverAsRead(
+            widget.otherUserId,
+          );
+        }
+      }
+    } catch (e) {
+      print("Error marking messages as read: $e");
+    }
   }
 
   // Fetch data for both receiver and sender
@@ -76,15 +140,53 @@ class _ChatPageState extends State<ChatPage> {
   void _sendMessage() async {
     if (_messageController.text.trim().isNotEmpty) {
       String currentUserId = _auth.currentUser!.uid;
+      String messageText = _messageController.text.trim();
       try {
+        // Envoi du message
         await _firestore.collection('messages').add({
           'reservationId': widget.reservationId,
           'senderId': currentUserId,
           'receiverId': widget.otherUserId,
-          'text': _messageController.text.trim(),
+          'text': messageText,
           'timestamp': FieldValue.serverTimestamp(),
         });
         _messageController.clear();
+
+        // Récupérer les informations sur l'expéditeur pour la notification
+        DocumentSnapshot senderDoc =
+            await _firestore.collection('users').doc(currentUserId).get();
+        String senderName = "Utilisateur";
+        if (senderDoc.exists) {
+          final senderData = senderDoc.data() as Map<String, dynamic>;
+          senderName =
+              "${senderData['prenom'] ?? ''} ${senderData['nom'] ?? 'Utilisateur'}"
+                  .trim();
+          if (senderName.isEmpty) senderName = "Utilisateur";
+        }
+
+        // Si l'utilisateur actuel est un conducteur, envoyer une notification spéciale
+        if (_isDriver) {
+          await NotificationService.sendDriverMessageNotification(
+            passengerId: widget.otherUserId,
+            driverId: currentUserId,
+            driverName: senderName,
+            body: messageText,
+            reservationId: widget.reservationId,
+          );
+        } else {
+          // Si c'est un passager, utiliser la notification standard
+          await NotificationService.sendMessageNotification(
+            receiverId: widget.otherUserId,
+            title: "Message de $senderName",
+            body: messageText,
+            type: "message",
+            data: {
+              'senderId': currentUserId,
+              'reservationId': widget.reservationId,
+              'otherUserId': currentUserId,
+            },
+          );
+        }
       } catch (e) {
         print("Error sending message: $e");
         // Optionally show a SnackBar to the user
@@ -372,9 +474,8 @@ class _ChatPageState extends State<ChatPage> {
                                   horizontal: 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainerHighest.withOpacity(
-                                    0.8,
-                                  ), // Use surfaceVariant
+                                  color: colorScheme.surfaceContainerHighest
+                                      .withOpacity(0.8), // Use surfaceVariant
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(

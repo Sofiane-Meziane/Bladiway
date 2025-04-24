@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/notification_service.dart'; // Import du service de notification
 import 'chat_screen.dart'; // Import de la page de chat
 import 'info_trajets.dart'; // Import de la page d'informations sur le conducteur
 
@@ -131,6 +132,34 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     int currentSeats,
   ) async {
     try {
+      // Récupérer les informations du trajet et du passager pour la notification
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      final tripDoc =
+          await FirebaseFirestore.instance
+              .collection('trips')
+              .doc(tripId)
+              .get();
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+
+      if (!tripDoc.exists || !userDoc.exists) {
+        throw Exception('Données du trajet ou de l\'utilisateur non trouvées');
+      }
+
+      final tripData = tripDoc.data() as Map<String, dynamic>;
+      final userData = userDoc.data() as Map<String, dynamic>;
+
+      final driverId = tripData['userId'] as String?;
+      final destination = tripData['arrivée'] as String? ?? 'destination';
+      final date = tripData['date'] as String? ?? 'date non spécifiée';
+      final passengerName =
+          '${userData['prenom'] ?? ''} ${userData['nom'] ?? ''}'.trim();
+
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         DocumentReference tripRef = FirebaseFirestore.instance
             .collection('trips')
@@ -180,6 +209,20 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           transaction.update(tripRef, {'status': 'en attente'});
         }
       });
+
+      // Envoyer une notification au conducteur
+      if (driverId != null && driverId != currentUser.uid) {
+        await NotificationService.createSeatsModificationNotification(
+          driverId: driverId,
+          passengerId: currentUser.uid,
+          passengerName: passengerName,
+          tripId: tripId,
+          tripDestination: destination,
+          tripDate: date,
+          oldSeatsCount: currentSeats,
+          newSeatsCount: newSeats,
+        );
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -824,6 +867,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                   ),
                                                 );
                                               },
+                                              isContactButton: true,
+                                              driverId: addedBy,
                                             ),
                                             _buildActionButton(
                                               context,
@@ -868,145 +913,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                   Icons.cancel,
                                                   'Annuler',
                                                   Colors.red,
-                                                  () async {
-                                                    try {
-                                                      await FirebaseFirestore.instance.runTransaction((
-                                                        transaction,
-                                                      ) async {
-                                                        DocumentReference
-                                                        tripRef =
-                                                            FirebaseFirestore
-                                                                .instance
-                                                                .collection(
-                                                                  'trips',
-                                                                )
-                                                                .doc(tripId);
-                                                        DocumentSnapshot
-                                                        tripSnapshot =
-                                                            await transaction
-                                                                .get(tripRef);
-
-                                                        if (!tripSnapshot
-                                                            .exists) {
-                                                          throw Exception(
-                                                            'Trajet non trouvé',
-                                                          );
-                                                        }
-
-                                                        Map<String, dynamic>
-                                                        tripData =
-                                                            tripSnapshot.data()
-                                                                as Map<
-                                                                  String,
-                                                                  dynamic
-                                                                >;
-
-                                                        int totalPlaces =
-                                                            tripData['nbrPlaces']
-                                                                    is int
-                                                                ? tripData['nbrPlaces']
-                                                                : int.tryParse(
-                                                                      tripData['nbrPlaces']
-                                                                          .toString(),
-                                                                    ) ??
-                                                                    0;
-
-                                                        int placesDisponibles =
-                                                            tripData['placesDisponibles']
-                                                                    is int
-                                                                ? tripData['placesDisponibles']
-                                                                : int.tryParse(
-                                                                      tripData['placesDisponibles']
-                                                                          .toString(),
-                                                                    ) ??
-                                                                    totalPlaces;
-
-                                                        // Assurez-vous que seatsReserved est un int
-                                                        int seats =
-                                                            seatsReserved is int
-                                                                ? seatsReserved
-                                                                : (seatsReserved
-                                                                        is num
-                                                                    ? seatsReserved
-                                                                        .toInt()
-                                                                    : int.tryParse(
-                                                                          seatsReserved
-                                                                              .toString(),
-                                                                        ) ??
-                                                                        1);
-
-                                                        int
-                                                        newPlacesDisponibles =
-                                                            placesDisponibles +
-                                                            seats;
-
-                                                        // Mettre à jour d'abord le nombre de places disponibles
-                                                        transaction.update(
-                                                          tripRef,
-                                                          {
-                                                            'placesDisponibles':
-                                                                newPlacesDisponibles,
-                                                          },
-                                                        );
-
-                                                        // Ensuite, mettre à jour le statut en fonction du nombre de places disponibles
-                                                        if (newPlacesDisponibles ==
-                                                            0) {
-                                                          transaction.update(
-                                                            tripRef,
-                                                            {
-                                                              'status':
-                                                                  'completé',
-                                                            },
-                                                          );
-                                                        } else if (tripData['status'] ==
-                                                                'completé' &&
-                                                            newPlacesDisponibles >
-                                                                0) {
-                                                          transaction.update(
-                                                            tripRef,
-                                                            {
-                                                              'status':
-                                                                  'en attente',
-                                                            },
-                                                          );
-                                                        }
-
-                                                        DocumentReference
-                                                        reservationRef =
-                                                            FirebaseFirestore
-                                                                .instance
-                                                                .collection(
-                                                                  'reservations',
-                                                                )
-                                                                .doc(
-                                                                  reservationId,
-                                                                );
-                                                        transaction.delete(
-                                                          reservationRef,
-                                                        );
-                                                      });
-
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                            'Réservation annulée avec succès',
-                                                          ),
-                                                        ),
-                                                      );
-                                                    } catch (e) {
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                            'Erreur lors de l\'annulation: $e',
-                                                          ),
-                                                        ),
-                                                      );
-                                                    }
+                                                  () {
+                                                    _showCancelConfirmationDialog(
+                                                      context,
+                                                      reservationId,
+                                                      tripId,
+                                                      seatsReserved,
+                                                    );
                                                   },
                                                 ),
                                           ],
@@ -1131,8 +1044,69 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     IconData icon,
     String label,
     Color color,
-    VoidCallback onPressed,
-  ) {
+    VoidCallback onPressed, {
+    bool isContactButton = false,
+    String? driverId,
+  }) {
+    if (isContactButton && driverId != null) {
+      // Si c'est un bouton de contact et qu'il y a un ID de conducteur, afficher le badge avec le nombre de messages non lus
+      final NotificationService notificationService = NotificationService();
+
+      return Expanded(
+        child: StreamBuilder<int>(
+          stream: notificationService.getUnreadMessagesCountFromDriver(
+            driverId,
+          ),
+          builder: (context, snapshot) {
+            final unreadCount = snapshot.data ?? 0;
+
+            return Stack(
+              children: [
+                TextButton.icon(
+                  icon: Icon(icon, color: color, size: 18),
+                  label: Text(label, style: TextStyle(color: color)),
+                  onPressed: onPressed,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      side: BorderSide(color: color.withOpacity(0.3)),
+                    ),
+                  ),
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: 10,
+                    top: 5,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        unreadCount > 99 ? '99+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      );
+    }
+
+    // Version standard sans badge
     return Expanded(
       child: TextButton.icon(
         icon: Icon(icon, color: color, size: 18),
@@ -1172,6 +1146,171 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       default:
         return theme.colorScheme.primary;
     }
+  }
+
+  void _showCancelConfirmationDialog(
+    BuildContext context,
+    String reservationId,
+    String tripId,
+    dynamic seatsReserved,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmer l\'annulation'),
+          content: const Text(
+            'Êtes-vous sûr de vouloir annuler cette réservation ?',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Non',
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Fermer le dialogue
+
+                try {
+                  // Récupération des informations pour la notification avant de supprimer la réservation
+                  final currentUser = FirebaseAuth.instance.currentUser;
+                  if (currentUser == null) return;
+
+                  // Récupérer les infos du trajet
+                  final tripDoc =
+                      await FirebaseFirestore.instance
+                          .collection('trips')
+                          .doc(tripId)
+                          .get();
+
+                  if (!tripDoc.exists) {
+                    throw Exception('Trajet non trouvé');
+                  }
+
+                  final tripData = tripDoc.data() as Map<String, dynamic>;
+                  final driverId = tripData['userId'] as String?;
+                  final destination =
+                      tripData['arrivée'] as String? ?? 'destination';
+                  final date =
+                      tripData['date'] as String? ?? 'date non spécifiée';
+
+                  // Récupérer le nom du passager courant
+                  final userDoc =
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(currentUser.uid)
+                          .get();
+
+                  final userData = userDoc.data();
+                  final passengerName =
+                      userData != null
+                          ? '${userData['prenom'] ?? ''} ${userData['nom'] ?? ''}'
+                          : 'Un passager';
+
+                  await FirebaseFirestore.instance.runTransaction((
+                    transaction,
+                  ) async {
+                    DocumentReference tripRef = FirebaseFirestore.instance
+                        .collection('trips')
+                        .doc(tripId);
+                    DocumentSnapshot tripSnapshot = await transaction.get(
+                      tripRef,
+                    );
+
+                    if (!tripSnapshot.exists) {
+                      throw Exception('Trajet non trouvé');
+                    }
+
+                    Map<String, dynamic> tripData =
+                        tripSnapshot.data() as Map<String, dynamic>;
+
+                    int totalPlaces =
+                        tripData['nbrPlaces'] is int
+                            ? tripData['nbrPlaces']
+                            : int.tryParse(tripData['nbrPlaces'].toString()) ??
+                                0;
+
+                    int placesDisponibles =
+                        tripData['placesDisponibles'] is int
+                            ? tripData['placesDisponibles']
+                            : int.tryParse(
+                                  tripData['placesDisponibles'].toString(),
+                                ) ??
+                                totalPlaces;
+
+                    // Assurez-vous que seatsReserved est un int
+                    int seats =
+                        seatsReserved is int
+                            ? seatsReserved
+                            : (seatsReserved is num
+                                ? seatsReserved.toInt()
+                                : int.tryParse(seatsReserved.toString()) ?? 1);
+
+                    int newPlacesDisponibles = placesDisponibles + seats;
+
+                    // Mettre à jour d'abord le nombre de places disponibles
+                    transaction.update(tripRef, {
+                      'placesDisponibles': newPlacesDisponibles,
+                    });
+
+                    // Ensuite, mettre à jour le statut en fonction du nombre de places disponibles
+                    if (newPlacesDisponibles == 0) {
+                      transaction.update(tripRef, {'status': 'completé'});
+                    } else if (tripData['status'] == 'completé' &&
+                        newPlacesDisponibles > 0) {
+                      transaction.update(tripRef, {'status': 'en attente'});
+                    }
+
+                    DocumentReference reservationRef = FirebaseFirestore
+                        .instance
+                        .collection('reservations')
+                        .doc(reservationId);
+                    transaction.delete(reservationRef);
+                  });
+
+                  // Après la transaction réussie, envoyer la notification au conducteur
+                  if (driverId != null) {
+                    await NotificationService.createCancellationNotification(
+                      driverId: driverId,
+                      passengerId: currentUser.uid,
+                      passengerName: passengerName.trim(),
+                      tripId: tripId,
+                      tripDestination: destination,
+                      tripDate: date,
+                      seatsReserved:
+                          seatsReserved is int
+                              ? seatsReserved
+                              : (seatsReserved is num
+                                  ? seatsReserved.toInt()
+                                  : int.tryParse(seatsReserved.toString()) ??
+                                      1),
+                    );
+                  }
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Réservation annulée avec succès'),
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erreur lors de l\'annulation: $e')),
+                  );
+                }
+              },
+              child: const Text('Oui, annuler'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 

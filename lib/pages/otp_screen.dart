@@ -100,10 +100,16 @@ class _OTPScreenState extends State<OTPScreen> {
         builder: (BuildContext context) {
           return AlertDialog(
             content: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const CircularProgressIndicator(),
                 const SizedBox(width: 20),
-                const Text("Vérification en cours..."),
+                Flexible(
+                  child: const Text(
+                    "Vérification en cours...",
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           );
@@ -247,6 +253,13 @@ class _OTPScreenState extends State<OTPScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    // Obtenir la taille de l'écran pour le responsive design
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Calculer la taille adaptative des champs OTP
+    final otpFieldWidth = (screenWidth - 64) / 6;
+    final otpFieldSize = otpFieldWidth > 50 ? 50.0 : otpFieldWidth - 8;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -259,115 +272,128 @@ class _OTPScreenState extends State<OTPScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 40),
-              Text(
-                'Vérification OTP',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.primary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Entrez le code de 6 chiffres envoyé à votre numéro de téléphone',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(6, (index) {
-                  return Container(
-                    width: 50,
-                    height: 60,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    child: TextField(
-                      controller: _otpControllers[index],
-                      focusNode: _focusNodes[index],
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        LengthLimitingTextInputFormatter(1),
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: colorScheme.primary,
-                            width: 2,
-                          ),
-                        ),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: colorScheme.onSurface.withOpacity(0.3),
-                            width: 2,
-                          ),
-                        ),
-                        errorBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.red, width: 2),
-                        ),
-                      ),
-                      onChanged: (value) => _onOTPChanged(index, value),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  minimumSize: const Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  elevation: 3,
-                ),
-                onPressed: _verifyOTP,
-                child: const Text(
-                  'Vérifier',
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(height: screenHeight * 0.04),
+                Text(
+                  'Vérification OTP',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: _resendOTP,
-                child: Text(
-                  'Renvoyer le code',
-                  style: TextStyle(
+                    fontSize: screenWidth < 360 ? 24 : 28,
+                    fontWeight: FontWeight.bold,
                     color: colorScheme.primary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: screenHeight * 0.02),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Text(
+                    'Entrez le code de 6 chiffres envoyé à votre numéro de téléphone',
+                    style: TextStyle(
+                      fontSize: screenWidth < 360 ? 14 : 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: screenHeight * 0.04),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(6, (index) {
+                      return Container(
+                        width: otpFieldSize,
+                        height: otpFieldSize * 1.2,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        child: TextField(
+                          controller: _otpControllers[index],
+                          focusNode: _focusNodes[index],
+                          textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(1),
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          style: TextStyle(
+                            fontSize: otpFieldSize * 0.45,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest,
+                            contentPadding: EdgeInsets.zero,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: colorScheme.primary,
+                                width: 2,
+                              ),
+                            ),
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: colorScheme.onSurface.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            errorBorder: const UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.red,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          onChanged: (value) => _onOTPChanged(index, value),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.05),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    minimumSize: Size(screenWidth * 0.8, 56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    elevation: 3,
+                  ),
+                  onPressed: _verifyOTP,
+                  child: Text(
+                    'Vérifier',
+                    style: TextStyle(
+                      fontSize: screenWidth < 360 ? 16 : 18,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.02),
+                TextButton(
+                  onPressed: _resendOTP,
+                  child: Text(
+                    'Renvoyer le code',
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: screenWidth < 360 ? 14 : 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.02),
+              ],
+            ),
           ),
         ),
       ),

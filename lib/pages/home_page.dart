@@ -6,6 +6,8 @@ import 'package:easy_localization/easy_localization.dart';
 
 import 'settings_screen.dart';
 import 'mes_voitures_page.dart';
+import 'notifications_page.dart';
+import '../services/notification_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,6 +26,7 @@ class _HomePageState extends State<HomePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late Stream<DocumentSnapshot> _userStream;
+  final NotificationService _notificationService = NotificationService();
 
   @override
   void initState() {
@@ -59,11 +62,12 @@ class _HomePageState extends State<HomePage> {
     try {
       User? user = _auth.currentUser;
       if (user != null) {
-        QuerySnapshot carsSnapshot = await _firestore
-            .collection('cars')
-            .where('id_proprietaire', isEqualTo: user.uid)
-            .limit(1)
-            .get();
+        QuerySnapshot carsSnapshot =
+            await _firestore
+                .collection('cars')
+                .where('id_proprietaire', isEqualTo: user.uid)
+                .limit(1)
+                .get();
 
         setState(() {
           _hasCar = carsSnapshot.docs.isNotEmpty;
@@ -119,134 +123,150 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> _checkAddTripPermission() async {
-  User? user = _auth.currentUser;
-  if (user == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Vous devez être connecté pour continuer'.tr())),
+  void _navigateToNotifications() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const NotificationsPage()),
     );
-    return;
   }
 
-  try {
-    // Récupérer le permis depuis la table piece_identite
-    QuerySnapshot permisSnapshot = await _firestore
-        .collection('piece_identite')
-        .where('id_proprietaire', isEqualTo: user.uid)
-        .where('type_piece', isEqualTo: 'permis')
-        .limit(1)
-        .get();
+  Future<void> _checkAddTripPermission() async {
+    User? user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Vous devez être connecté pour continuer'.tr())),
+      );
+      return;
+    }
 
-    print('Permis doc trouvé: ${permisSnapshot.docs.isNotEmpty}');
-    print('Données du permis: ${permisSnapshot.docs.isNotEmpty ? permisSnapshot.docs.first.data() : "Aucune donnée"}');
+    try {
+      // Récupérer le permis depuis la table piece_identite
+      QuerySnapshot permisSnapshot =
+          await _firestore
+              .collection('piece_identite')
+              .where('id_proprietaire', isEqualTo: user.uid)
+              .where('type_piece', isEqualTo: 'permis')
+              .limit(1)
+              .get();
 
-    bool hasVerifiedLicense = false;
-    bool hasPendingOrNoLicense = true;
+      print('Permis doc trouvé: ${permisSnapshot.docs.isNotEmpty}');
+      print(
+        'Données du permis: ${permisSnapshot.docs.isNotEmpty ? permisSnapshot.docs.first.data() : "Aucune donnée"}',
+      );
 
-    if (permisSnapshot.docs.isNotEmpty) {
-      var permisData = permisSnapshot.docs.first.data() as Map<String, dynamic>;
-      String statut = permisData['statut'];
-      String? dateExpirationStr = permisData['date_expiration'];
+      bool hasVerifiedLicense = false;
+      bool hasPendingOrNoLicense = true;
 
-      DateTime? dateExpiration;
-      if (dateExpirationStr != null) {
-        try {
-          dateExpiration = DateTime.parse(dateExpirationStr);
-        } catch (e) {
-          print('Erreur de parsing de la date d\'expiration: $e');
+      if (permisSnapshot.docs.isNotEmpty) {
+        var permisData =
+            permisSnapshot.docs.first.data() as Map<String, dynamic>;
+        String statut = permisData['statut'];
+        String? dateExpirationStr = permisData['date_expiration'];
+
+        DateTime? dateExpiration;
+        if (dateExpirationStr != null) {
+          try {
+            dateExpiration = DateTime.parse(dateExpirationStr);
+          } catch (e) {
+            print('Erreur de parsing de la date d\'expiration: $e');
+          }
         }
+
+        bool isLicenseExpired =
+            dateExpiration == null || dateExpiration.isBefore(DateTime.now());
+
+        hasVerifiedLicense = statut == 'verifie' && !isLicenseExpired;
+        hasPendingOrNoLicense =
+            statut == 'en cours' || statut == 'refuse' || isLicenseExpired;
       }
 
-      bool isLicenseExpired = dateExpiration == null || dateExpiration.isBefore(DateTime.now());
+      // Récupérer les voitures
+      QuerySnapshot carsSnapshot =
+          await _firestore
+              .collection('cars')
+              .where('id_proprietaire', isEqualTo: user.uid)
+              .limit(1)
+              .get();
 
-      hasVerifiedLicense = statut == 'verifie' && !isLicenseExpired;
-      hasPendingOrNoLicense = statut == 'en cours' || statut == 'refuse' || isLicenseExpired;
-    }
+      bool hasCar = carsSnapshot.docs.isNotEmpty;
 
-    // Récupérer les voitures
-    QuerySnapshot carsSnapshot = await _firestore
-        .collection('cars')
-        .where('id_proprietaire', isEqualTo: user.uid)
-        .limit(1)
-        .get();
+      print('Nombre de voitures: ${carsSnapshot.docs.length}');
+      print('hasVerifiedLicense: $hasVerifiedLicense');
+      print('hasCar: $hasCar');
+      print('hasPendingOrNoLicense: $hasPendingOrNoLicense');
 
-    bool hasCar = carsSnapshot.docs.isNotEmpty;
+      if (_hasCar != hasCar) {
+        setState(() {
+          _hasCar = hasCar;
+        });
+      }
 
-    print('Nombre de voitures: ${carsSnapshot.docs.length}');
-    print('hasVerifiedLicense: $hasVerifiedLicense');
-    print('hasCar: $hasCar');
-    print('hasPendingOrNoLicense: $hasPendingOrNoLicense');
-
-    if (_hasCar != hasCar) {
-      setState(() {
-        _hasCar = hasCar;
-      });
-    }
-
-    // Redirection
-    if (hasVerifiedLicense && hasCar) {
-      Navigator.pushNamed(context, '/info_trajet');
-    } else {
-      Navigator.pushNamed(context, '/verifier_Conducteur');
-    }
-  } catch (e) {
-    print('Erreur lors de la vérification des conditions : $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Erreur lors de la vérification'.tr())),
-    );
-  }
-}
-
-
-
-
-Future<void> _checkReservationPermission() async {
-  User? user = _auth.currentUser;
-
-  if (user == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Vous devez être connecté pour continuer'.tr())),
-    );
-    return;
-  }
-
-  try {
-    QuerySnapshot piecesSnapshot = await _firestore
-        .collection('piece_identite')
-        .where('id_proprietaire', isEqualTo: user.uid)
-        .get();
-
-    final pieces = piecesSnapshot.docs
-        .map((doc) => doc.data() as Map<String, dynamic>)
-        .toList();
-
-    bool hasVerifiedID = pieces.any((piece) => piece['statut'] == 'verifie');
-    bool hasPendingOrRefusedID = pieces.isEmpty ||
-        pieces.any((piece) =>
-            piece['statut'] == 'en cours' || piece['statut'] == 'refuse');
-
-    if (hasVerifiedID) {
-      Navigator.pushNamed(context, '/reserver');
-    } else if (hasPendingOrRefusedID) {
-      Navigator.pushNamed(context, '/verifier_Passager');
-    } else {
+      // Redirection
+      if (hasVerifiedLicense && hasCar) {
+        Navigator.pushNamed(context, '/info_trajet');
+      } else {
+        Navigator.pushNamed(context, '/verifier_Conducteur');
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification des conditions : $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Vous devez soumettre une pièce d\'identité pour réserver un trajet'.tr(),
-          ),
-          duration: const Duration(seconds: 3),
-        ),
+        SnackBar(content: Text('Erreur lors de la vérification'.tr())),
       );
     }
-  } catch (e) {
-    print('Erreur lors de la vérification des conditions : $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Erreur lors de la vérification'.tr())),
-    );
   }
-}
 
+  Future<void> _checkReservationPermission() async {
+    User? user = _auth.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Vous devez être connecté pour continuer'.tr())),
+      );
+      return;
+    }
+
+    try {
+      QuerySnapshot piecesSnapshot =
+          await _firestore
+              .collection('piece_identite')
+              .where('id_proprietaire', isEqualTo: user.uid)
+              .get();
+
+      final pieces =
+          piecesSnapshot.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
+
+      bool hasVerifiedID = pieces.any((piece) => piece['statut'] == 'verifie');
+      bool hasPendingOrRefusedID =
+          pieces.isEmpty ||
+          pieces.any(
+            (piece) =>
+                piece['statut'] == 'en cours' || piece['statut'] == 'refuse',
+          );
+
+      if (hasVerifiedID) {
+        Navigator.pushNamed(context, '/reserver');
+      } else if (hasPendingOrRefusedID) {
+        Navigator.pushNamed(context, '/verifier_Passager');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Vous devez soumettre une pièce d\'identité pour réserver un trajet'
+                  .tr(),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification des conditions : $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la vérification'.tr())),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -300,16 +320,18 @@ Future<void> _checkReservationPermission() async {
                                   child: CircleAvatar(
                                     radius: 20,
                                     backgroundColor: Colors.white,
-                                    backgroundImage: photoUrl.isNotEmpty
-                                        ? NetworkImage(photoUrl)
-                                        : null,
-                                    child: photoUrl.isEmpty
-                                        ? const Icon(
-                                            Icons.person,
-                                            color: Colors.blue,
-                                            size: 24,
-                                          )
-                                        : null,
+                                    backgroundImage:
+                                        photoUrl.isNotEmpty
+                                            ? NetworkImage(photoUrl)
+                                            : null,
+                                    child:
+                                        photoUrl.isEmpty
+                                            ? const Icon(
+                                              Icons.person,
+                                              color: Colors.blue,
+                                              size: 24,
+                                            )
+                                            : null,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -317,19 +339,66 @@ Future<void> _checkReservationPermission() async {
                                   'Bienvenue à notre plateforme'.tr(),
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimary
-                                        .withOpacity(0.7),
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimary.withOpacity(0.7),
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
                               ],
                             ),
-                            Icon(
-                              Icons.notifications_none,
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              size: 28,
+                            StreamBuilder<int>(
+                              stream:
+                                  _notificationService
+                                      .getUnreadNotificationsCount(),
+                              builder: (context, snapshot) {
+                                int unreadCount = snapshot.data ?? 0;
+
+                                return Stack(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.notifications_none,
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.onPrimary,
+                                        size: 28,
+                                      ),
+                                      onPressed: _navigateToNotifications,
+                                    ),
+                                    if (unreadCount > 0)
+                                      Positioned(
+                                        right: 0,
+                                        top: 0,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 18,
+                                            minHeight: 18,
+                                          ),
+                                          child: Text(
+                                            unreadCount > 99
+                                                ? '99+'
+                                                : '$unreadCount',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -348,10 +417,9 @@ Future<void> _checkReservationPermission() async {
                           tr('Bonjour, {}', args: [name]),
                           style: TextStyle(
                             fontSize: 16,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimary
-                                .withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimary.withOpacity(0.7),
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -416,8 +484,9 @@ Future<void> _checkReservationPermission() async {
         onTap: _onItemTapped,
         backgroundColor: Theme.of(context).colorScheme.surface,
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor:
-            Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+        unselectedItemColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withOpacity(0.5),
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -426,20 +495,104 @@ Future<void> _checkReservationPermission() async {
             icon: const Icon(Icons.home),
             label: 'Accueil'.tr(),
           ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.check_circle),
-            label: 'Réservations'.tr(),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.directions_car),
-            label: 'Mes trajets'.tr(),
-          ),
+          _buildReservationsIconWithBadge(context),
+          _buildMessageIconWithBadge(context),
           BottomNavigationBarItem(
             icon: const Icon(Icons.settings),
             label: 'Paramètres'.tr(),
           ),
         ],
       ),
+    );
+  }
+
+  BottomNavigationBarItem _buildReservationsIconWithBadge(
+    BuildContext context,
+  ) {
+    return BottomNavigationBarItem(
+      icon: Stack(
+        children: [
+          const Icon(Icons.check_circle),
+          StreamBuilder<int>(
+            stream: _notificationService.getPassengerUnreadMessagesCount(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data == 0) {
+                return const SizedBox.shrink();
+              }
+
+              return Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(1),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 12,
+                    minHeight: 12,
+                  ),
+                  child: Text(
+                    snapshot.data! > 99 ? '99+' : '${snapshot.data}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      label: 'Réservations'.tr(),
+    );
+  }
+
+  BottomNavigationBarItem _buildMessageIconWithBadge(BuildContext context) {
+    return BottomNavigationBarItem(
+      icon: Stack(
+        children: [
+          const Icon(Icons.directions_car),
+          StreamBuilder<int>(
+            stream: _notificationService.getUnreadMessagesCount(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data == 0) {
+                return const SizedBox.shrink();
+              }
+
+              return Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(1),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 12,
+                    minHeight: 12,
+                  ),
+                  child: Text(
+                    snapshot.data! > 99 ? '99+' : '${snapshot.data}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      label: 'Mes trajets'.tr(),
     );
   }
 

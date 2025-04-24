@@ -9,8 +9,8 @@ class VerificationPendingScreen extends StatefulWidget {
 
 const VerificationPendingScreen({
   this.documentType,
-  Key? key,
-}) : super(key: key);
+  super.key,
+});
 
   @override
   _VerificationPendingScreenState createState() => _VerificationPendingScreenState();
@@ -18,7 +18,6 @@ const VerificationPendingScreen({
 
 class _VerificationPendingScreenState extends State<VerificationPendingScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  DocumentSnapshot? _documentData;
   bool _isLoading = true;
 
   String _submissionDate = '';
@@ -59,7 +58,6 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> w
       if (docSnapshot.docs.isNotEmpty) {
         final doc = docSnapshot.docs.first;
         setState(() {
-          _documentData = doc;
           _isLoading = false;
 
           Timestamp timestamp = doc['date_soumission'] as Timestamp;
