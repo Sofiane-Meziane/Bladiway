@@ -77,7 +77,11 @@ class _OTPScreenState extends State<OTPScreen> {
       final String? prenom = arguments['prenom'];
       final String? dateNaissance = arguments['dateNaissance'];
       final String? genre = arguments['genre'];
-      final File? imageFile = arguments['imageFile'];
+      final String? imagePath = arguments['imagePath'];
+      File? imageFile;
+      if (imagePath != null && imagePath.isNotEmpty) {
+        imageFile = File(imagePath);
+      }
 
       if (verificationId == null ||
           email == null ||
@@ -116,23 +120,25 @@ class _OTPScreenState extends State<OTPScreen> {
         },
       );
 
-      UserCredential userCredential = await _auth
-          .createUserWithEmailAndPassword(email: email, password: password);
-      User? user = userCredential.user;
-
-      if (user != null) {
-        try {
-          PhoneAuthCredential credential = PhoneAuthProvider.credential(
-            verificationId: verificationId,
-            smsCode: otp,
+      try {
+        PhoneAuthCredential credential = PhoneAuthProvider.credential(
+          verificationId: verificationId,
+          smsCode: otp,
+        );
+        // Authentifier l'utilisateur avec le téléphone
+        UserCredential phoneUserCredential = await _auth.signInWithCredential(
+          credential,
+        );
+        User? user = phoneUserCredential.user;
+        if (user != null) {
+          // Lier l'email/password
+          AuthCredential emailCredential = EmailAuthProvider.credential(
+            email: email,
+            password: password,
           );
-
-          await user.linkWithCredential(credential);
-
+          await user.linkWithCredential(emailCredential);
           String? profileImageUrl;
           profileImageUrl = await _uploadProfileImage(user.uid, imageFile);
-
-          // Ajout du champ isValidated initialisé à false
           await _firestore.collection('users').doc(user.uid).set({
             'nom': nom,
             'prenom': prenom,
@@ -144,33 +150,33 @@ class _OTPScreenState extends State<OTPScreen> {
             'blockStatus': 'no',
             'phoneVerified': true,
             'profileImageUrl': profileImageUrl,
-            'isValidated': false, // Nouveau champ ajouté ici
+            'isValidated': false,
           });
-
           if (mounted) Navigator.pop(context);
-
           if (mounted) {
             Navigator.pushReplacementNamed(context, '/home');
           }
-        } on FirebaseAuthException catch (e) {
-          if (mounted) Navigator.pop(context);
-          await user.delete();
-          String errorMessage;
-          switch (e.code) {
-            case 'invalid-verification-code':
-              errorMessage = 'Code OTP incorrect';
-              break;
-            case 'session-expired':
-              errorMessage =
-                  'La session a expiré. Veuillez demander un nouveau code';
-              break;
-            default:
-              errorMessage = 'Une erreur est survenue : ${e.code}';
-          }
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(errorMessage)));
         }
+      } on FirebaseAuthException catch (e) {
+        if (mounted) Navigator.pop(context);
+        String errorMessage;
+        switch (e.code) {
+          case 'invalid-verification-code':
+            errorMessage = 'Code OTP incorrect';
+            break;
+          case 'session-expired':
+            errorMessage =
+                'La session a expiré. Veuillez demander un nouveau code';
+            break;
+          case 'email-already-in-use':
+            errorMessage = 'Cet email est déjà utilisé';
+            break;
+          default:
+            errorMessage = 'Une erreur est survenue : \\${e.code}';
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     } catch (e) {
       Navigator.pop(context);
@@ -218,7 +224,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 'password': arguments['password'],
                 'dateNaissance': arguments['dateNaissance'],
                 'genre': arguments['genre'],
-                'imageFile': arguments['imageFile'],
+                'imagePath': arguments['imagePath'], // Correction ici
               },
             );
           }

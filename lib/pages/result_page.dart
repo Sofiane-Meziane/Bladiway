@@ -1157,7 +1157,6 @@ class TripDetailPage extends StatelessWidget {
     // Stocker une référence au BuildContext de navigation
     final NavigatorState navigator = Navigator.of(context);
     bool reservationSuccess = false;
-    String reservationId = '';
 
     try {
       // Récupérer les places disponibles
@@ -1213,16 +1212,7 @@ class TripDetailPage extends StatelessWidget {
         }
 
         // Créer une nouvelle réservation avec tous les champs requis
-        final reservationRef = await FirebaseFirestore.instance
-            .collection('reservations')
-            .add({
-              'tripId': tripId,
-              'userId': currentUser.uid,
-              'seatsReserved': requiredSeats,
-              'date_reservation': FieldValue.serverTimestamp(),
-            });
 
-        reservationId = reservationRef.id;
 
         // Envoyer une notification au conducteur avec des détails supplémentaires
         final driverId = updatedTrip['userId'];

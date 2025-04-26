@@ -8,7 +8,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -124,7 +123,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } on FirebaseException catch (e) {
       setState(() {
         if (e.code == 'permission-denied') {
-          _phoneError = 'Permission refusée pour accéder à la base de données'.tr();
+          _phoneError =
+              'Permission refusée pour accéder à la base de données'.tr();
         } else {
           _phoneError = 'Erreur Firebase : ${e.message}'.tr();
         }
@@ -175,7 +175,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
       setState(() {
         if (e.code == 'invalid-email') {
-          _emailError = 'Le format de l\'email est invalide (selon Firebase)'.tr();
+          _emailError =
+              'Le format de l\'email est invalide (selon Firebase)'.tr();
         } else if (e.code == 'too-many-requests') {
           _emailError = 'Trop de tentatives. Réessayez plus tard.'.tr();
         } else {
@@ -247,7 +248,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      cMethods.displaySnackBar('Erreur inattendue : ${e.toString()}'.tr(), context);
+      cMethods.displaySnackBar(
+        'Erreur inattendue : ${e.toString()}'.tr(),
+        context,
+      );
       print('Erreur dans startSignUpProcess : $e');
     }
   }
@@ -286,7 +290,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 'password': _passwordController.text.trim(),
                 'dateNaissance': _dateNaissanceController.text.trim(),
                 'genre': _selectedGenre,
-                'imageFile': _imageFile,
+                'imagePath': _imageFile?.path, // Correction ici
               },
             );
           } else {
@@ -302,7 +306,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de la vérification : ${e.toString()}'.tr()),
+            content: Text(
+              'Erreur lors de la vérification : ${e.toString()}'.tr(),
+            ),
           ),
         );
       }
@@ -466,7 +472,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   validator:
                       (value) =>
-                          value!.isEmpty ? 'Veuillez entrer votre nom'.tr() : null,
+                          value!.isEmpty
+                              ? 'Veuillez entrer votre nom'.tr()
+                              : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -493,7 +501,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     errorText: _emailError,
                   ),
                   validator: (value) {
-                    if (value!.isEmpty) return 'Veuillez entrer votre email'.tr();
+                    if (value!.isEmpty)
+                      return 'Veuillez entrer votre email'.tr();
                     final emailRegex = RegExp(
                       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                     );
@@ -549,7 +558,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   validator:
                       (value) =>
                           value!.isEmpty
-                              ? 'Veuillez sélectionner votre date de naissance'.tr()
+                              ? 'Veuillez sélectionner votre date de naissance'
+                                  .tr()
                               : null,
                 ),
                 const SizedBox(height: 16),
@@ -601,7 +611,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       return 'Veuillez entrer un mot de passe'.tr();
                     }
                     return value.length < 8
-                        ? 'Le mot de passe doit contenir au moins 8 caractères'.tr()
+                        ? 'Le mot de passe doit contenir au moins 8 caractères'
+                            .tr()
                         : null;
                   },
                 ),
