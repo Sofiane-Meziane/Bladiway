@@ -14,6 +14,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart'; // Décommenté ici
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -28,6 +29,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await EasyLocalization.ensureInitialized();
+
+  // Activation de Firebase App Check avec mode Debug
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.debug,
+    appleProvider: AppleProvider.debug,
+  );
 
   final themeProvider = ThemeProvider();
 
@@ -65,7 +72,6 @@ class _EvaluationCheckWrapperState extends State<EvaluationCheckWrapper> {
   @override
   void initState() {
     super.initState();
-    // Vérifier les évaluations en attente après que le widget soit construit
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPendingEvaluations();
     });
@@ -108,7 +114,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.dark(
           primary: const Color(0xFF2196F3),
           secondary: Colors.white,
-          surface: Colors.grey[800]!,
+          surface: Colors.grey,
         ),
       ),
       themeMode: themeProvider.themeMode,
@@ -120,7 +126,6 @@ class MyApp extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Utiliser le wrapper pour les utilisateurs connectés
           if (snapshot.hasData) {
             return EvaluationCheckWrapper(child: const HomePage());
           }
@@ -135,7 +140,9 @@ class MyApp extends StatelessWidget {
         '/settings':
             (context) => EvaluationCheckWrapper(child: const ParametresPage()),
         '/verifier_Passager':
-            (context) => EvaluationCheckWrapper(child: const IdentityRequestPassengerPage()),
+            (context) => EvaluationCheckWrapper(
+              child: const IdentityRequestPassengerPage(),
+            ),
         '/profile':
             (context) => EvaluationCheckWrapper(child: const ProfileScreen()),
         '/presentation': (context) => const PresentationPage(),

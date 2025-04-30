@@ -17,14 +17,14 @@ class EvaluationPage extends StatefulWidget {
   final String currentUserId; // ID de l'utilisateur qui évalue
   final VoidCallback
   onReviewSubmitted; // Callback pour notifier le rafraîchissement
-  final String? evaluationId; // ID de l'évaluation en attente (optionnel)
+  final String tripId; // Ajout de l'identifiant du trajet
 
   const EvaluationPage({
     super.key,
     required this.userId,
     required this.currentUserId,
     required this.onReviewSubmitted,
-    this.evaluationId,
+    required this.tripId, // Ajouté
   });
 
   @override
@@ -46,29 +46,27 @@ class _EvaluationPageState extends State<EvaluationPage> {
     _checkExistingReview();
   }
 
-  // Nouvelle méthode pour vérifier si un avis existe déjà
+  // Vérifie si l'utilisateur actuel a déjà laissé un avis pour ce conducteur
   Future<void> _checkExistingReview() async {
     try {
-      // Vérifie si l'utilisateur actuel a déjà laissé un avis pour ce conducteur
       final querySnapshot =
           await FirebaseFirestore.instance
               .collection('reviews')
               .where('reviewerId', isEqualTo: widget.currentUserId)
               .where('ratedUserId', isEqualTo: widget.userId)
+              .where('tripId', isEqualTo: widget.tripId)
               .get();
 
       if (mounted) {
         setState(() {
           hasAlreadyReviewed = querySnapshot.docs.isNotEmpty;
           if (hasAlreadyReviewed && mounted) {
-            // Si un avis existe déjà, afficher un message et fermer la page après un court délai
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text("Vous avez déjà évalué cet utilisateur."),
                 duration: Duration(seconds: 2),
               ),
             );
-
             Future.delayed(const Duration(seconds: 2), () {
               if (mounted) {
                 Navigator.of(context).pop();
@@ -93,7 +91,6 @@ class _EvaluationPageState extends State<EvaluationPage> {
   }
 
   Future<void> submitReview() async {
-    // Vérifier à nouveau avant de soumettre
     if (hasAlreadyReviewed) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Vous avez déjà évalué cet utilisateur.")),
@@ -109,96 +106,53 @@ class _EvaluationPageState extends State<EvaluationPage> {
       return;
     }
 
-    // Désactiver les boutons pendant le traitement
     setState(() {
       isLoading = true;
     });
 
     try {
-      // D'abord, marquer l'évaluation comme complétée pour éviter qu'elle ne soit affichée à nouveau
-      if (widget.evaluationId != null) {
-        await FirebaseFirestore.instance
-            .collection('evaluations_pending')
-            .doc(widget.evaluationId)
-            .update({'isCompleted': true});
-      }
-
-      // Ensuite, sauvegarder l'avis
       await FirebaseFirestore.instance.collection('reviews').add({
         'ratedUserId': widget.userId,
         'reviewerId': widget.currentUserId,
+        'tripId': widget.tripId, // Ajouté
         'rating': _rating,
         'comment': _commentController.text,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      widget.onReviewSubmitted(); // Appeler le callback pour rafraîchir
-
-      // Attendre un court instant pour s'assurer que les mises à jour sont bien prises en compte
+      widget.onReviewSubmitted();
       await Future.delayed(const Duration(milliseconds: 300));
 
-      // Vérifier si le widget est toujours monté avant d'afficher le message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Évaluation soumise avec succès !")),
         );
-
-        // Fermer la page
         Navigator.of(context).pop();
       }
     } catch (e) {
-      // En cas d'erreur, réactiver les boutons
       setState(() {
         isLoading = false;
       });
-
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Erreur: ${e.toString()}")));
+        ).showSnackBar(SnackBar(content: Text("Erreur: " + e.toString())));
       }
     }
   }
 
   Future<void> skipReview() async {
-    // Désactiver les boutons pendant le traitement
     setState(() {
       isLoading = true;
     });
-
-    try {
-      // Si c'est une évaluation en attente, la marquer comme complétée même si l'utilisateur passe
-      if (widget.evaluationId != null) {
-        await FirebaseFirestore.instance
-            .collection('evaluations_pending')
-            .doc(widget.evaluationId)
-            .update({'isCompleted': true, 'skipped': true});
-      }
-
-      // Attendre un court instant pour s'assurer que les mises à jour sont bien prises en compte
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      // Fermer la page
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      // En cas d'erreur, réactiver les boutons
-      setState(() {
-        isLoading = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Erreur: ${e.toString()}")));
-      }
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (mounted) {
+      Navigator.of(context).pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Si l'utilisateur a déjà donné un avis, afficher un indicateur de chargement pendant la fermeture
     if (hasAlreadyReviewed) {
       return Scaffold(
         appBar: AppBar(
@@ -220,18 +174,16 @@ class _EvaluationPageState extends State<EvaluationPage> {
     }
 
     return Scaffold(
-      resizeToAvoidBottomInset: true, // Évite les problèmes avec le clavier
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text("Évaluer l'utilisateur"),
-        backgroundColor: Color(0xFF2196F3), // Couleur de l'AppBar en bleu
+        backgroundColor: Color(0xFF2196F3),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
         child:
             isLoading && userData == null
-                ? Center(
-                  child: CircularProgressIndicator(),
-                ) // Indicateur de chargement initial
+                ? Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -242,7 +194,7 @@ class _EvaluationPageState extends State<EvaluationPage> {
                             userData?['profileImageUrl'] != null
                                 ? NetworkImage(userData!['profileImageUrl'])
                                 : AssetImage('assets/default_avatar.png')
-                                    as ImageProvider, // Image par défaut
+                                    as ImageProvider,
                       ),
                       SizedBox(height: 10),
                       Text(
@@ -277,22 +229,18 @@ class _EvaluationPageState extends State<EvaluationPage> {
                           labelText: "Laissez un commentaire (facultatif)",
                         ),
                         maxLines: 3,
-                        enabled: !isLoading, // Désactiver pendant le chargement
+                        enabled: !isLoading,
                       ),
                       SizedBox(height: 20),
                       isLoading && userData != null
-                          ? Center(
-                            child: CircularProgressIndicator(),
-                          ) // Indicateur pendant la soumission
+                          ? Center(child: CircularProgressIndicator())
                           : Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               ElevatedButton(
                                 onPressed: isLoading ? null : submitReview,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(
-                                    0xFF2196F3,
-                                  ), // Couleur du bouton en bleu
+                                  backgroundColor: Color(0xFF2196F3),
                                   padding: EdgeInsets.symmetric(
                                     vertical: 12,
                                     horizontal: 24,

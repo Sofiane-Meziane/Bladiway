@@ -1211,8 +1211,13 @@ class TripDetailPage extends StatelessWidget {
               .update({'status': 'completé'});
         }
 
-        // Créer une nouvelle réservation avec tous les champs requis
-
+        // Créer une nouvelle réservation dans la collection 'reservations' avec les attributs demandés
+        await FirebaseFirestore.instance.collection('reservations').add({
+          'date_reservation': FieldValue.serverTimestamp(),
+          'seatsReserved': requiredSeats,
+          'tripId': tripId,
+          'userId': currentUser.uid,
+        });
 
         // Envoyer une notification au conducteur avec des détails supplémentaires
         final driverId = updatedTrip['userId'];

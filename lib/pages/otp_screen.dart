@@ -173,6 +173,12 @@ class _OTPScreenState extends State<OTPScreen> {
             break;
           default:
             errorMessage = 'Une erreur est survenue : \\${e.code}';
+            if (e.message != null) {
+              errorMessage += '\nMessage: \\${e.message}';
+            }
+            print(
+              'FirebaseAuthException: code=\\${e.code}, message=\\${e.message}, details=\\${e.toString()}',
+            );
         }
         ScaffoldMessenger.of(
           context,

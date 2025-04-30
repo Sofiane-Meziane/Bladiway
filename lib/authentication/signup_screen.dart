@@ -501,8 +501,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     errorText: _emailError,
                   ),
                   validator: (value) {
-                    if (value!.isEmpty)
+                    if (value!.isEmpty) {
                       return 'Veuillez entrer votre email'.tr();
+                    }
                     final emailRegex = RegExp(
                       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                     );

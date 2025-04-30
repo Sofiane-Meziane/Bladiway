@@ -888,6 +888,39 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         'cancelledAt': FieldValue.serverTimestamp(),
       });
 
+      // ENVOI DES NOTIFICATIONS D'ANNULATION AUX PASSAGERS
+      if (_passengers.isNotEmpty) {
+        final currentUser = _auth.currentUser;
+        final tripData = _tripData;
+        String tripDepart = tripData?[FIELD_DEPART] ?? '';
+        String tripArrivee = tripData?[FIELD_ARRIVEE] ?? '';
+        String tripDate = tripData?[FIELD_DATE] ?? '';
+        String tripHeure = tripData?[FIELD_HEURE] ?? '';
+        String driverName = '';
+        if (currentUser != null) {
+          final driverDoc =
+              await _firestore.collection('users').doc(currentUser.uid).get();
+          if (driverDoc.exists) {
+            final d = driverDoc.data() as Map<String, dynamic>;
+            driverName = "${d['prenom'] ?? ''} ${d['nom'] ?? ''}".trim();
+          }
+        }
+        for (final passenger in _passengers) {
+          final passengerId = passenger['id'];
+          await _firestore.collection('notifications').add({
+            'userId': passengerId,
+            'type': 'cancellation',
+            'title': 'Trajet annulé',
+            'message':
+                'Le conducteur${driverName.isNotEmpty ? " $driverName" : ""} a annulé le trajet du $tripDate à $tripHeure ($tripDepart → $tripArrivee). Raison : $reason',
+            'createdAt': FieldValue.serverTimestamp(),
+            'isRead': false,
+            'tripId': widget.tripId,
+            'driverId': currentUser?.uid,
+          });
+        }
+      }
+
       setState(() {
         _isProcessing = false;
       });

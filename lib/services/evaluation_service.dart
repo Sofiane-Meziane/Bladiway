@@ -10,64 +10,71 @@ class EvaluationService {
   // Variable statique pour suivre si une page d'évaluation est déjà ouverte
   static bool _isEvaluationPageOpen = false;
 
-  // Vérifier si l'utilisateur a des évaluations en attente
+  // Vérifier si l'utilisateur a des évaluations en attente (basé uniquement sur 'reviews')
   Future<void> checkPendingEvaluations(BuildContext context) async {
-    // Si une page d'évaluation est déjà ouverte, ne pas en afficher une autre
     if (_isEvaluationPageOpen) return;
 
     try {
       final user = _auth.currentUser;
       if (user == null) return;
-
       final String passengerId = user.uid;
 
-      // Rechercher les évaluations en attente pour cet utilisateur qui ne sont pas complétées
-      final querySnapshot =
+      // Récupérer les trajets terminés où l'utilisateur était passager
+      final reservationsSnapshot =
           await _firestore
-              .collection('evaluations_pending')
-              .where('passengerId', isEqualTo: passengerId)
-              .where('isCompleted', isEqualTo: false)
-              .limit(1) // On ne traite qu'une évaluation à la fois
+              .collection('reservations')
+              .where('userId', isEqualTo: passengerId)
               .get();
 
-      if (querySnapshot.docs.isEmpty) return;
+      for (var reservationDoc in reservationsSnapshot.docs) {
+        final reservationData = reservationDoc.data();
+        final String tripId = reservationData['tripId'] ?? '';
+        if (tripId.isEmpty) continue;
 
-      // Récupérer la première évaluation en attente
-      final evaluationDoc = querySnapshot.docs.first;
-      final evaluationData = evaluationDoc.data();
-      final String driverId = evaluationData['driverId'] as String? ?? '';
+        // Vérifier que le trajet est terminé
+        final tripDoc = await _firestore.collection('trips').doc(tripId).get();
+        if (!tripDoc.exists) continue;
+        final tripData = tripDoc.data() as Map<String, dynamic>;
+        if (tripData['status'] != 'terminé') continue;
 
-      if (driverId.isEmpty) return;
+        // Récupérer le conducteur
+        final String driverId = tripData['userId'] ?? '';
+        if (driverId.isEmpty) continue;
+        if (driverId == passengerId) continue; // Ne pas s'auto-évaluer
 
-      // Vérifier si le contexte est toujours valide avant d'afficher
-      if (!context.mounted) return;
+        // Vérifier si un avis existe déjà
+        final reviewQuery =
+            await _firestore
+                .collection('reviews')
+                .where('reviewerId', isEqualTo: passengerId)
+                .where('ratedUserId', isEqualTo: driverId)
+                .where('tripId', isEqualTo: tripId)
+                .get();
+        if (reviewQuery.docs.isNotEmpty) continue;
 
-      // Marquer qu'une page d'évaluation est en cours d'affichage
-      _isEvaluationPageOpen = true;
+        // Vérifier si le contexte est toujours valide avant d'afficher
+        if (!context.mounted) return;
 
-      // Afficher la page d'évaluation
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => EvaluationPage(
-                  userId: driverId,
-                  currentUserId: passengerId,
-                  evaluationId: evaluationDoc.id,
-                  onReviewSubmitted: () {
-                    // Pas besoin d'action supplémentaire ici,
-                    // car l'évaluation sera marquée comme complétée dans submitReview
-                  },
-                ),
-          ),
-        ).then((_) {
-          // Une fois la page fermée, réinitialiser le drapeau
-          _isEvaluationPageOpen = false;
+        _isEvaluationPageOpen = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => EvaluationPage(
+                    userId: driverId,
+                    currentUserId: passengerId,
+                    tripId: tripId, // Ajouté
+                    onReviewSubmitted: () {},
+                  ),
+            ),
+          ).then((_) {
+            _isEvaluationPageOpen = false;
+          });
         });
-      });
+        break; // On ne traite qu'une évaluation à la fois
+      }
     } catch (e) {
-      // En cas d'erreur, réinitialiser le drapeau
       _isEvaluationPageOpen = false;
       print('Erreur lors de la vérification des évaluations en attente: $e');
     }

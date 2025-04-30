@@ -243,14 +243,6 @@ class _ChatPageState extends State<ChatPage> {
                   _firestore
                       .collection('messages')
                       .where('reservationId', isEqualTo: widget.reservationId)
-                      .where(
-                        'senderId',
-                        whereIn: [currentUserId, widget.otherUserId],
-                      )
-                      .where(
-                        'receiverId',
-                        whereIn: [currentUserId, widget.otherUserId],
-                      )
                       .orderBy('timestamp', descending: false)
                       .snapshots(),
               builder: (context, snapshot) {
