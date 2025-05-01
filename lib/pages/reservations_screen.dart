@@ -1061,7 +1061,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   }) {
     if (isContactButton && driverId != null && reservationId != null) {
       final NotificationService notificationService = NotificationService();
-      return Expanded(
+      return Flexible(
+        fit: FlexFit.tight,
         child: StreamBuilder<int>(
           stream: notificationService
               .getUnreadMessagesCountFromDriverForReservation(
@@ -1085,16 +1086,16 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                 children: [
                   Icon(icon, color: color, size: 18),
                   if (unreadCount > 0) ...[
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 2),
                     Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(1),
                       decoration: const BoxDecoration(
                         color: Colors.red,
                         shape: BoxShape.circle,
                       ),
                       constraints: const BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 16,
+                        minWidth: 12,
+                        minHeight: 12,
                       ),
                       child: Text(
                         unreadCount > 99 ? '99+' : '$unreadCount',
@@ -1107,8 +1108,14 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(width: 6),
-                  Text(label, style: TextStyle(color: color)),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: TextStyle(color: color),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -1118,10 +1125,15 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     }
 
     // Version standard sans badge
-    return Expanded(
+    return Flexible(
+      fit: FlexFit.tight,
       child: TextButton.icon(
         icon: Icon(icon, color: color, size: 18),
-        label: Text(label, style: TextStyle(color: color)),
+        label: Text(
+          label,
+          style: TextStyle(color: color),
+          overflow: TextOverflow.ellipsis,
+        ),
         onPressed: onPressed,
         style: TextButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 8),
