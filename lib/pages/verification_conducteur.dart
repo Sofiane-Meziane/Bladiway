@@ -38,7 +38,8 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
       title: 'Complétez votre profil pour publier un trajet',
       description:
           'Pour publier un trajet, vous devez scanner votre permis de conduire valide et ajouter au moins une voiture.',
-      imagePath: 'assets/images/licenceVerification.jpg', // Mettez ici l'image appropriée
+      imagePath:
+          'assets/images/licenceVerification.jpg', // Mettez ici l'image appropriée
     ),
   ];
 
@@ -46,8 +47,7 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
   void initState() {
     super.initState();
     _pageController.addListener(() {
-      setState(() {
-      });
+      setState(() {});
     });
   }
 
@@ -62,7 +62,9 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        _showErrorSnackBar('Vous devez être connecté pour accéder à cette fonctionnalité');
+        _showErrorSnackBar(
+          'Vous devez être connecté pour accéder à cette fonctionnalité',
+        );
         setState(() {
           _isLoading = false;
         });
@@ -70,13 +72,17 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
       }
 
       // Récupérer tous les documents de type permis pour cet utilisateur
-      final docsSnapshot = await FirebaseFirestore.instance
-          .collection('piece_identite')
-          .where('id_proprietaire', isEqualTo: user.uid)
-          .where('type_piece', isEqualTo: 'permis')
-          .orderBy('date_soumission', descending: true) // Tri par date de soumission décroissante
-          .limit(1) // On ne récupère que le plus récent
-          .get();
+      final docsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('piece_identite')
+              .where('id_proprietaire', isEqualTo: user.uid)
+              .where('type_piece', isEqualTo: 'permis')
+              .orderBy(
+                'date_soumission',
+                descending: true,
+              ) // Tri par date de soumission décroissante
+              .limit(1) // On ne récupère que le plus récent
+              .get();
 
       setState(() {
         _isLoading = false;
@@ -85,13 +91,15 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
       if (docsSnapshot.docs.isNotEmpty) {
         final doc = docsSnapshot.docs.first;
         final String statutDoc = doc['statut'] as String;
-        
+
         // Vérification de l'expiration du permis
         if (doc.data().containsKey('date_expiration')) {
           final String expirationDateStr = doc['date_expiration'] as String;
-          final DateTime expirationDate = DateFormat('yyyy-MM-dd').parse(expirationDateStr);
+          final DateTime expirationDate = DateFormat(
+            'yyyy-MM-dd',
+          ).parse(expirationDateStr);
           final DateTime today = DateTime.now();
-          
+
           if (expirationDate.isBefore(today)) {
             // Le permis est expiré
             if (!mounted) return;
@@ -104,14 +112,14 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
 
         if (statutDoc == 'verifie') {
           // Permis vérifié et non expiré, l'utilisateur peut continuer
-          Navigator.pushNamed(context, '/add_car');
+          Navigator.pushNamed(context, '/verification_encours');
         } else if (statutDoc == 'en cours') {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => VerificationPendingScreen(
-                documentType: 'permis',
-              ),
+              builder:
+                  (context) =>
+                      VerificationPendingScreen(documentType: 'permis'),
             ),
           );
         } else if (statutDoc == 'refuse') {
@@ -120,9 +128,9 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const IdentityVerificationScreen(
-                forcedIdType: 'permis',
-              ),
+              builder:
+                  (context) =>
+                      const IdentityVerificationScreen(forcedIdType: 'permis'),
             ),
           );
         }
@@ -132,9 +140,9 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const IdentityVerificationScreen(
-              forcedIdType: 'permis',
-            ),
+            builder:
+                (context) =>
+                    const IdentityVerificationScreen(forcedIdType: 'permis'),
           ),
         );
       }
@@ -143,7 +151,9 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Une erreur est survenue. Veuillez réessayer plus tard.');
+      _showErrorSnackBar(
+        'Une erreur est survenue. Veuillez réessayer plus tard.',
+      );
     }
   }
 
@@ -156,7 +166,9 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        _showErrorSnackBar('Vous devez être connecté pour accéder à cette fonctionnalité');
+        _showErrorSnackBar(
+          'Vous devez être connecté pour accéder à cette fonctionnalité',
+        );
         setState(() {
           _isLoading = false;
         });
@@ -164,11 +176,12 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
       }
 
       // Vérifier si l'utilisateur a déjà au moins une voiture
-      final carsSnapshot = await FirebaseFirestore.instance
-          .collection('voitures')
-          .where('user_id', isEqualTo: user.uid)
-          .limit(1)
-          .get();
+      final carsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('voitures')
+              .where('user_id', isEqualTo: user.uid)
+              .limit(1)
+              .get();
 
       setState(() {
         _isLoading = false;
@@ -189,16 +202,17 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Une erreur est survenue. Veuillez réessayer plus tard.');
+      _showErrorSnackBar(
+        'Une erreur est survenue. Veuillez réessayer plus tard.',
+      );
     }
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
-
 
   void _showPermisRejectedDialog() {
     showDialog(
@@ -230,9 +244,10 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const IdentityVerificationScreen(
-                      forcedIdType: 'permis',
-                    ),
+                    builder:
+                        (context) => const IdentityVerificationScreen(
+                          forcedIdType: 'permis',
+                        ),
                   ),
                 );
               },
@@ -282,9 +297,10 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const IdentityVerificationScreen(
-                      forcedIdType: 'permis',
-                    ),
+                    builder:
+                        (context) => const IdentityVerificationScreen(
+                          forcedIdType: 'permis',
+                        ),
                   ),
                 );
               },
@@ -319,6 +335,17 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
       body: SafeArea(
         child: Stack(
           children: [
+            // Bouton de retour
+            Positioned(
+              top: 10,
+              left: 10,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                color: theme.colorScheme.primary,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            // Contenu principal
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
@@ -340,11 +367,12 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
                       controller: _pageController,
                       physics: const BouncingScrollPhysics(),
                       itemCount: _pages.length,
-                      itemBuilder: (context, index) =>
-                          _buildPageContent(_pages[index], size),
+                      itemBuilder:
+                          (context, index) =>
+                              _buildPageContent(_pages[index], size),
                     ),
                   ),
-                  
+
                   // Boutons d'action
                   const SizedBox(height: 30),
                   _ActionButton(
@@ -360,7 +388,8 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
                   const SizedBox(height: 12),
                   // Bouton Skip
                   TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/info_trajet'),
+                    onPressed:
+                        () => Navigator.pushNamed(context, '/info_trajet'),
                     child: Text(
                       "Skip et continuer",
                       style: TextStyle(
@@ -377,9 +406,7 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
             if (_isLoading)
               Container(
                 color: Colors.black.withOpacity(0.3),
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: const Center(child: CircularProgressIndicator()),
               ),
           ],
         ),

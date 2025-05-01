@@ -9,10 +9,12 @@ class IdentityRequestPassengerPage extends StatefulWidget {
   const IdentityRequestPassengerPage({super.key});
 
   @override
-  State<IdentityRequestPassengerPage> createState() => _IdentityRequestPassengerPageState();
+  State<IdentityRequestPassengerPage> createState() =>
+      _IdentityRequestPassengerPageState();
 }
 
-class _IdentityRequestPassengerPageState extends State<IdentityRequestPassengerPage> {
+class _IdentityRequestPassengerPageState
+    extends State<IdentityRequestPassengerPage> {
   bool _isLoading = false;
 
   Future<void> checkAndShowIdentityScreen(BuildContext context) async {
@@ -21,18 +23,24 @@ class _IdentityRequestPassengerPageState extends State<IdentityRequestPassengerP
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        _showErrorSnackBar('Vous devez être connecté pour accéder à cette fonctionnalité');
+        _showErrorSnackBar(
+          'Vous devez être connecté pour accéder à cette fonctionnalité',
+        );
         setState(() => _isLoading = false);
         return;
       }
 
       // Récupérer toutes les pièces d'identité de l'utilisateur et les trier par date de soumission
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('piece_identite')
-          .where('id_proprietaire', isEqualTo: user.uid)
-          .orderBy('date_soumission', descending: true)  // Tri par date décroissante pour avoir la plus récente
-          .limit(1)  // Limite à 1 résultat (la plus récente)
-          .get();
+      final querySnapshot =
+          await FirebaseFirestore.instance
+              .collection('piece_identite')
+              .where('id_proprietaire', isEqualTo: user.uid)
+              .orderBy(
+                'date_soumission',
+                descending: true,
+              ) // Tri par date décroissante pour avoir la plus récente
+              .limit(1) // Limite à 1 résultat (la plus récente)
+              .get();
 
       setState(() => _isLoading = false);
 
@@ -41,7 +49,7 @@ class _IdentityRequestPassengerPageState extends State<IdentityRequestPassengerP
       if (querySnapshot.docs.isNotEmpty) {
         final doc = querySnapshot.docs.first;
         final String statutDoc = doc['statut'] as String;
-        
+
         // Afficher la date de soumission pour debug si nécessaire
         // final Timestamp dateSubmitted = doc['date_soumission'] as Timestamp;
         // print("Date de soumission: ${dateSubmitted.toDate()}");
@@ -64,7 +72,9 @@ class _IdentityRequestPassengerPageState extends State<IdentityRequestPassengerP
     } catch (e) {
       print("Erreur: $e");
       setState(() => _isLoading = false);
-      _showErrorSnackBar('Une erreur est survenue. Veuillez réessayer plus tard.');
+      _showErrorSnackBar(
+        'Une erreur est survenue. Veuillez réessayer plus tard.',
+      );
     }
   }
 
@@ -80,37 +90,42 @@ class _IdentityRequestPassengerPageState extends State<IdentityRequestPassengerP
   void _showRejectedDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(
-          'Pièce refusée',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.error,
-            fontWeight: FontWeight.bold,
+      builder:
+          (_) => AlertDialog(
+            title: Text(
+              'Pièce refusée',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const Text(
+              'Votre pièce a été refusée. Veuillez la soumettre à nouveau avec une image claire.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _navigateToScanner();
+                },
+                child: const Text('Soumettre à nouveau'),
+              ),
+            ],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ),
-        content: const Text('Votre pièce a été refusée. Veuillez la soumettre à nouveau avec une image claire.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _navigateToScanner();
-            },
-            child: const Text('Soumettre à nouveau'),
-          ),
-        ],
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
     );
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -123,6 +138,17 @@ class _IdentityRequestPassengerPageState extends State<IdentityRequestPassengerP
       body: SafeArea(
         child: Stack(
           children: [
+            // Bouton de retour
+            Positioned(
+              top: 10,
+              left: 10,
+              child: IconButton(
+                color: theme.colorScheme.primary,
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            // Contenu principal
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
@@ -146,11 +172,12 @@ class _IdentityRequestPassengerPageState extends State<IdentityRequestPassengerP
                           child: Image.asset(
                             'assets/images/identityVerification.png',
                             fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                              Icons.broken_image,
-                              size: 100,
-                              color: theme.colorScheme.onSurface,
-                            ),
+                            errorBuilder:
+                                (context, error, stackTrace) => Icon(
+                                  Icons.broken_image,
+                                  size: 100,
+                                  color: theme.colorScheme.onSurface,
+                                ),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -216,10 +243,7 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
 
-  const _ActionButton({
-    required this.label,
-    required this.onPressed,
-  });
+  const _ActionButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
