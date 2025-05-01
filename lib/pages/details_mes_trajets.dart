@@ -817,37 +817,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         FIELD_STATUS: newStatus,
       });
 
-      // Si le statut passe à "terminé", créer des notifications d'évaluation pour tous les passagers
-      if (newStatus == STATUS_TERMINE && _passengers.isNotEmpty) {
-        final currentUser = _auth.currentUser;
-        if (currentUser != null) {
-          // Récupérer toutes les réservations pour ce trajet
-          final reservationsSnapshot =
-              await _firestore
-                  .collection('reservations')
-                  .where('tripId', isEqualTo: widget.tripId)
-                  .get();
-
-          for (var reservationDoc in reservationsSnapshot.docs) {
-            final reservationData = reservationDoc.data();
-            final passengerId = reservationData['userId'] as String?;
-
-            // S'assurer que ce n'est pas le conducteur lui-même
-            if (passengerId != null && passengerId != currentUser.uid) {
-              // Créer une entrée dans la collection 'evaluations_pending'
-              await _firestore.collection('evaluations_pending').add({
-                'tripId': widget.tripId,
-                'driverId': currentUser.uid,
-                'passengerId': passengerId,
-                'reservationId': reservationDoc.id,
-                'createdAt': FieldValue.serverTimestamp(),
-                'isCompleted': false,
-                'skipped': false,
-              });
-            }
-          }
-        }
-      }
+      // Si le statut passe à "terminé", ne rien faire ici (la détection des évaluations à faire se fait côté client via la collection 'reviews')
 
       setState(() {
         _isProcessing = false;

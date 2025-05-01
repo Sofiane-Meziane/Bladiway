@@ -795,14 +795,20 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                       icon: Icon(
                                                         Icons.edit,
                                                         color:
-                                                            status == 'terminé'
+                                                            (status ==
+                                                                        'terminé' ||
+                                                                    status ==
+                                                                        'annulé')
                                                                 ? Colors.grey
                                                                 : theme
                                                                     .colorScheme
                                                                     .primary,
                                                       ),
                                                       onPressed:
-                                                          status == 'terminé'
+                                                          (status ==
+                                                                      'terminé' ||
+                                                                  status ==
+                                                                      'annulé')
                                                               ? null
                                                               : () {
                                                                 _showModifySeatsDialog(
@@ -822,8 +828,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                 top: 8.0,
                                               ),
                                               child:
-                                                  status == 'terminé'
-                                                      ? Container() // Ne pas afficher les places disponibles si le trajet est terminé
+                                                  (status == 'terminé' ||
+                                                          status == 'annulé')
+                                                      ? Container() // Ne pas afficher les places disponibles si le trajet est terminé ou annulé
                                                       : Text(
                                                         'Places encore disponibles: $placesDisponibles',
                                                         style: TextStyle(
@@ -908,6 +915,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                             ),
                                             status == 'terminé'
                                                 ? Container() // Ne pas afficher le bouton d'annulation si le trajet est terminé
+                                                : status == 'annulé'
+                                                ? Container() // Ne pas afficher le bouton d'annulation si le trajet est annulé
                                                 : _buildActionButton(
                                                   context,
                                                   Icons.cancel,
