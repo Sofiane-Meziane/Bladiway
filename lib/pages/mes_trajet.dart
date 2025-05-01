@@ -38,6 +38,31 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // Ajout pour la barre de navigation
+  int _selectedIndex = 2; // 2 pour "Mes trajets"
+  void _onItemTapped(int index) {
+    if (_selectedIndex != index) {
+      String route = '';
+      switch (index) {
+        case 0:
+          route = '/home';
+          break;
+        case 1:
+          route = '/reservations';
+          break;
+        case 2:
+          route = '/trips';
+          break;
+        case 3:
+          route = '/settings';
+          break;
+      }
+      if (route.isNotEmpty) {
+        Navigator.pushReplacementNamed(context, route);
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -269,6 +294,34 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
                         );
                       },
                     ),
+          ),
+        ],
+      ),
+      // Ajout de la BottomNavigationBar
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withOpacity(0.5),
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check_circle),
+            label: 'Réservations',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.directions_car),
+            label: 'Mes trajets',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Paramètres',
           ),
         ],
       ),
