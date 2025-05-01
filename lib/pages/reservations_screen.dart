@@ -876,6 +876,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                               },
                                               isContactButton: true,
                                               driverId: addedBy,
+                                              reservationId: reservationId,
                                             ),
                                             _buildActionButton(
                                               context,
@@ -1056,16 +1057,19 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     VoidCallback onPressed, {
     bool isContactButton = false,
     String? driverId,
+    String? reservationId,
   }) {
-    if (isContactButton && driverId != null) {
-      // Si c'est un bouton de contact et qu'il y a un ID de conducteur, afficher le badge avec le nombre de messages non lus
+    if (isContactButton && driverId != null && reservationId != null) {
+      // Afficher le badge uniquement pour les messages non lus de ce conducteur ET cette réservation
       final NotificationService notificationService = NotificationService();
 
       return Expanded(
         child: StreamBuilder<int>(
-          stream: notificationService.getUnreadMessagesCountFromDriver(
-            driverId,
-          ),
+          stream: notificationService
+              .getUnreadMessagesCountFromDriverForReservation(
+                driverId,
+                reservationId,
+              ),
           builder: (context, snapshot) {
             final unreadCount = snapshot.data ?? 0;
 

@@ -137,6 +137,26 @@ class NotificationService {
         .map((snapshot) => snapshot.docs.length);
   }
 
+  // Récupérer le nombre de messages non lus envoyés par un conducteur spécifique pour une réservation donnée
+  Stream<int> getUnreadMessagesCountFromDriverForReservation(
+    String driverId,
+    String reservationId,
+  ) {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value(0);
+    }
+
+    return _notificationsCollection
+        .where('userId', isEqualTo: user.uid)
+        .where('isRead', isEqualTo: false)
+        .where('type', isEqualTo: 'driver_message')
+        .where('data.driverId', isEqualTo: driverId)
+        .where('data.reservationId', isEqualTo: reservationId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
   // Vérifier si un passager spécifique a envoyé des messages non lus
   Stream<bool> hasUnreadMessagesFromPassenger(String passengerId) {
     final user = _auth.currentUser;
@@ -442,7 +462,8 @@ class NotificationService {
     required String driverId,
     required String driverName,
     required String body,
-    required String reservationId, required String tripId,
+    required String reservationId,
+    required String tripId,
   }) async {
     try {
       await _notificationsCollection.add(
