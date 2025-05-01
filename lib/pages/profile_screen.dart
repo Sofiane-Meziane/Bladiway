@@ -8,6 +8,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:bladiway/methods/commun_methods.dart';
 import 'package:bladiway/widgets/settings_widgets.dart';
 import 'package:bladiway/methods/user_data_notifier.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,7 +17,8 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  // Changement ici : TickerProviderStateMixin au lieu de SingleTickerProviderStateMixin
   final _formKey = GlobalKey<FormState>();
 
   // Contrôleurs de saisie
@@ -25,7 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _dateNaissanceController =
-  TextEditingController();
+      TextEditingController();
 
   String? _selectedGenre;
   // Liste des genres avec seulement Homme et Femme
@@ -38,11 +40,19 @@ class _ProfileScreenState extends State<ProfileScreen>
   String? _profileImageUrl; // URL de la photo de profil actuelle
   File? _newProfileImage; // Nouvelle image sélectionnée
 
+  // Variables pour la section des avis
+  bool _isLoadingReviews = false;
+  List<Map<String, dynamic>> _reviewsList = [];
+  Map<String, dynamic> _reviewersData = {};
+
   final ImagePicker _picker = ImagePicker();
 
   // Animation pour le champ "Genre" lors de l'édition
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
+
+  // Animation pour la transition entre les onglets
+  TabController? _tabController;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -52,6 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   void initState() {
     super.initState();
     _loadUserData();
+    _tabController = TabController(length: 2, vsync: this);
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -72,6 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     _phoneController.dispose();
     _dateNaissanceController.dispose();
     _animationController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -101,6 +113,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           );
         }
       }
+      // Après avoir chargé les données de l'utilisateur, charger les avis
+      await _loadUserReviews();
     } catch (e) {
       CommunMethods().displaySnackBar(
         '${'Erreur'.tr()} : ${e.toString()}',
@@ -108,6 +122,77 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  /// Charge les avis laissés par les passagers pour les trajets du conducteur
+  Future<void> _loadUserReviews() async {
+    if (_uid == null) return;
+
+    setState(() => _isLoadingReviews = true);
+
+    try {
+      // Récupérer les avis où le conducteur est l'utilisateur actuel
+      final QuerySnapshot reviewsSnapshot =
+          await _firestore
+              .collection('reviews')
+              .where('ratedUserId', isEqualTo: _uid)
+              .orderBy('timestamp', descending: true)
+              .get();
+
+      final List<Map<String, dynamic>> reviews = [];
+      final Map<String, dynamic> reviewersInfo = {};
+      final List<String> reviewerIds = [];
+
+      for (var doc in reviewsSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        reviews.add({
+          'id': doc.id,
+          'comment': data['comment'] ?? '',
+          'rating': data['rating'] ?? 0.0,
+          'reviewerId': data['reviewerId'] ?? '',
+          'timestamp': data['timestamp'],
+          'tripId': data['tripId'] ?? '',
+        });
+
+        // Collecter les IDs des reviewers pour récupérer leurs infos
+        if (data['reviewerId'] != null &&
+            data['reviewerId'].toString().isNotEmpty) {
+          reviewerIds.add(data['reviewerId'].toString());
+        }
+      }
+
+      // Récupérer les informations des reviewers
+      for (String reviewerId in reviewerIds) {
+        try {
+          final userDoc =
+              await _firestore.collection('users').doc(reviewerId).get();
+          if (userDoc.exists) {
+            final userData = userDoc.data() as Map<String, dynamic>;
+            reviewersInfo[reviewerId] = {
+              'nom': userData['nom'] ?? '',
+              'prenom': userData['prenom'] ?? '',
+              'profileImageUrl': userData['profileImageUrl'] ?? '',
+            };
+          }
+        } catch (e) {
+          print(
+            'Erreur lors de la récupération des informations du reviewer: $e',
+          );
+        }
+      }
+
+      setState(() {
+        _reviewsList = reviews;
+        _reviewersData = reviewersInfo;
+      });
+    } catch (e) {
+      CommunMethods().displaySnackBar(
+        '${'Erreur lors du chargement des avis'.tr()} : ${e.toString()}',
+        context,
+      );
+    } finally {
+      setState(() => _isLoadingReviews = false);
     }
   }
 
@@ -205,7 +290,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         newProfileImageUrl ?? _profileImageUrl ?? '',
       );
 
-      CommunMethods().displaySnackBar('Profil mis à jour avec succès'.tr(), context);
+      CommunMethods().displaySnackBar(
+        'Profil mis à jour avec succès'.tr(),
+        context,
+      );
       _toggleEditMode();
     } catch (e) {
       CommunMethods().displaySnackBar(
@@ -221,9 +309,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _selectDate() async {
     if (!_isEditing) return;
     DateTime initialDate =
-    _dateNaissanceController.text.isNotEmpty
-        ? DateFormat('dd/MM/yyyy').parse(_dateNaissanceController.text)
-        : DateTime.now().subtract(const Duration(days: 365 * 25));
+        _dateNaissanceController.text.isNotEmpty
+            ? DateFormat('dd/MM/yyyy').parse(_dateNaissanceController.text)
+            : DateTime.now().subtract(const Duration(days: 365 * 25));
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -232,13 +320,13 @@ class _ProfileScreenState extends State<ProfileScreen>
       lastDate: DateTime.now(),
       builder:
           (context, child) => Theme(
-        data: ThemeData.light().copyWith(
-          colorScheme: ColorScheme.light(
-            primary: Theme.of(context).colorScheme.primary,
+            data: ThemeData.light().copyWith(
+              colorScheme: ColorScheme.light(
+                primary: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            child: child!,
           ),
-        ),
-        child: child!,
-      ),
     );
 
     if (picked != null) {
@@ -262,9 +350,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   }) {
     final brightness = Theme.of(context).brightness;
     final fillColor =
-    brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[200];
+        brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[200];
     final borderColor =
-    brightness == Brightness.dark ? Colors.grey[600]! : Colors.grey[300]!;
+        brightness == Brightness.dark ? Colors.grey[600]! : Colors.grey[300]!;
 
     return TextFormField(
       controller: controller,
@@ -275,9 +363,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       validator: validator,
       style: TextStyle(
         color:
-        enabled
-            ? Theme.of(context).textTheme.bodyLarge?.color
-            : Colors.grey,
+            enabled
+                ? Theme.of(context).textTheme.bodyLarge?.color
+                : Colors.grey,
       ),
       decoration: InputDecoration(
         labelText: label.tr(),
@@ -312,9 +400,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildGenreDropdown() {
     final brightness = Theme.of(context).brightness;
     final fillColor =
-    brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[200];
+        brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[200];
     final borderColor =
-    brightness == Brightness.dark ? Colors.grey[600]! : Colors.grey[300]!;
+        brightness == Brightness.dark ? Colors.grey[600]! : Colors.grey[300]!;
 
     return SlideTransition(
       position: _slideAnimation,
@@ -329,21 +417,26 @@ class _ProfileScreenState extends State<ProfileScreen>
             labelText: 'Genre'.tr(),
             floatingLabelBehavior: FloatingLabelBehavior.always,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 4,
+            ),
             prefixIcon: const Icon(Icons.people),
           ),
           value: _selectedGenre,
-          items: _genres
-              .map(
-                (item) => DropdownMenuItem(
-              value: item,
-              // Appliquer la traduction au moment de l'affichage
-              child: Text(item.tr()),
-            ),
-          )
-              .toList(),
+          items:
+              _genres
+                  .map(
+                    (item) => DropdownMenuItem(
+                      value: item,
+                      // Appliquer la traduction au moment de l'affichage
+                      child: Text(item.tr()),
+                    ),
+                  )
+                  .toList(),
           onChanged: (value) => setState(() => _selectedGenre = value),
-          validator: (value) => value == null ? 'Ce champ est requis'.tr() : null,
+          validator:
+              (value) => value == null ? 'Ce champ est requis'.tr() : null,
         ),
       ),
     );
@@ -359,15 +452,15 @@ class _ProfileScreenState extends State<ProfileScreen>
             radius: 50,
             backgroundColor: Colors.grey[300],
             backgroundImage:
-            _newProfileImage != null
-                ? FileImage(_newProfileImage!)
-                : (_profileImageUrl != null && _profileImageUrl!.isNotEmpty
-                ? NetworkImage(_profileImageUrl!)
-                : null),
+                _newProfileImage != null
+                    ? FileImage(_newProfileImage!)
+                    : (_profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                        ? NetworkImage(_profileImageUrl!)
+                        : null),
             child:
-            _profileImageUrl == null || _profileImageUrl!.isEmpty
-                ? const Icon(Icons.person, size: 50, color: Colors.grey)
-                : null,
+                _profileImageUrl == null || _profileImageUrl!.isEmpty
+                    ? const Icon(Icons.person, size: 50, color: Colors.grey)
+                    : null,
           ),
           if (_isEditing)
             Positioned(
@@ -394,160 +487,327 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// Widget pour afficher les étoiles d'évaluation
+  Widget _buildRatingStars(double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        return Icon(
+          index < rating ? Icons.star : Icons.star_border,
+          color: Colors.amber,
+          size: 18,
+        );
+      }),
+    );
+  }
+
+  /// Widget pour afficher un avis
+  Widget _buildReviewItem(Map<String, dynamic> review) {
+    final reviewerId = review['reviewerId'] as String;
+    final reviewerData = _reviewersData[reviewerId] ?? {};
+    final nom = reviewerData['nom'] ?? '';
+    final prenom = reviewerData['prenom'] ?? '';
+    final profileImageUrl = reviewerData['profileImageUrl'] ?? '';
+
+    final DateTime timestamp;
+    if (review['timestamp'] is Timestamp) {
+      timestamp = (review['timestamp'] as Timestamp).toDate();
+    } else {
+      // Si le timestamp n'est pas au format Timestamp, utiliser la date actuelle
+      timestamp = DateTime.now();
+    }
+
+    final String formattedDate = DateFormat(
+      'dd/MM/yyyy à HH:mm',
+    ).format(timestamp);
+    final comment = review['comment'] as String? ?? '';
+    final rating =
+        (review['rating'] is int)
+            ? (review['rating'] as int).toDouble()
+            : (review['rating'] as num?)?.toDouble() ?? 0.0;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Photo de profil du reviewer
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.grey[300],
+                  backgroundImage:
+                      profileImageUrl.isNotEmpty
+                          ? NetworkImage(profileImageUrl)
+                          : null,
+                  child:
+                      profileImageUrl.isEmpty
+                          ? const Icon(Icons.person, color: Colors.grey)
+                          : null,
+                ),
+                const SizedBox(width: 12),
+                // Informations du reviewer
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$prenom $nom',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        formattedDate,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                // Note en étoiles
+                _buildRatingStars(rating),
+              ],
+            ),
+            if (comment.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              // Commentaire
+              Text(comment, style: const TextStyle(fontSize: 14)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Widget pour afficher la section des avis
+  Widget _buildReviewsSection() {
+    return _isLoadingReviews
+        ? Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        )
+        : _reviewsList.isEmpty
+        ? Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.rate_review_outlined,
+                  size: 48,
+                  color: Colors.grey,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Aucun avis pour le moment'.tr(),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        )
+        : RefreshIndicator(
+          onRefresh: _loadUserReviews,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: _reviewsList.length,
+            itemBuilder: (context, index) {
+              return _buildReviewItem(_reviewsList[index]);
+            },
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child:
-        _isLoading
-            ? Center(
-          child: CircularProgressIndicator(
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        )
-            : SingleChildScrollView(
-
-          child: Column(
-            children: [
-              SettingsHeader(title: 'settings.my_profile'.tr()),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: _buildProfilePhoto(),
-              ),
-              Form(
-                key: _formKey,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 20,
+            _isLoading
+                ? Center(
+                  child: CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                  child: Column(
-                    children: [
-                      SettingsCard(
-                        title: 'Informations personnelles'.tr(),
-                        icon: Icons.person,
+                )
+                : Column(
+                  children: [
+                    SettingsHeader(title: 'settings.my_profile'.tr()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: _buildProfilePhoto(),
+                    ),
+                    // TabBar pour navigation entre profil et avis
+                    TabBar(
+                      controller: _tabController,
+                      indicatorColor: Theme.of(context).colorScheme.primary,
+                      labelColor: Theme.of(context).colorScheme.primary,
+                      unselectedLabelColor: Colors.grey,
+                      tabs: [
+                        Tab(text: 'Profil'.tr()),
+                        Tab(text: 'Mes avis'.tr()),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
                         children: [
-                          _buildProfileInput(
-                            controller: _nomController,
-                            label: 'Nom',
-                            icon: Icons.person,
-                            enabled: _isEditing,
-                            validator:
-                                (value) =>
-                            value!.isEmpty
-                                ? 'Ce champ est requis'.tr()
-                                : null,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildProfileInput(
-                            controller: _prenomController,
-                            label: 'Prénom',
-                            icon: Icons.person_outline,
-                            enabled: _isEditing,
-                            validator:
-                                (value) =>
-                            value!.isEmpty
-                                ? 'Ce champ est requis'.tr()
-                                : null,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildProfileInput(
-                            controller: _emailController,
-                            label: 'Email',
-                            icon: Icons.email,
-                            keyboardType: TextInputType.emailAddress,
-                            enabled: _isEditing,
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Ce champ est requis'.tr();
-                              }
-                              final emailRegex = RegExp(
-                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                              );
-                              return emailRegex.hasMatch(value)
-                                  ? null
-                                  : 'Email invalide'.tr();
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          _buildProfileInput(
-                            controller: _phoneController,
-                            label: 'Téléphone',
-                            icon: Icons.phone,
-                            enabled: false,
-                            suffixIcon: Tooltip(
-                              message:
-                              'Le numéro de téléphone ne peut pas être modifié'.tr(),
-                              child: const Icon(
-                                Icons.info_outline,
-                                color: Colors.grey,
+                          // Onglet Profil
+                          SingleChildScrollView(
+                            child: Form(
+                              key: _formKey,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 20,
+                                ),
+                                child: Column(
+                                  children: [
+                                    SettingsCard(
+                                      title: 'Informations personnelles'.tr(),
+                                      icon: Icons.person,
+                                      children: [
+                                        _buildProfileInput(
+                                          controller: _nomController,
+                                          label: 'Nom',
+                                          icon: Icons.person,
+                                          enabled: _isEditing,
+                                          validator:
+                                              (value) =>
+                                                  value!.isEmpty
+                                                      ? 'Ce champ est requis'
+                                                          .tr()
+                                                      : null,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildProfileInput(
+                                          controller: _prenomController,
+                                          label: 'Prénom',
+                                          icon: Icons.person_outline,
+                                          enabled: _isEditing,
+                                          validator:
+                                              (value) =>
+                                                  value!.isEmpty
+                                                      ? 'Ce champ est requis'
+                                                          .tr()
+                                                      : null,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildProfileInput(
+                                          controller: _emailController,
+                                          label: 'Email',
+                                          icon: Icons.email,
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          enabled: _isEditing,
+                                          validator: (value) {
+                                            if (value!.isEmpty) {
+                                              return 'Ce champ est requis'.tr();
+                                            }
+                                            final emailRegex = RegExp(
+                                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                            );
+                                            return emailRegex.hasMatch(value)
+                                                ? null
+                                                : 'Email invalide'.tr();
+                                          },
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildProfileInput(
+                                          controller: _phoneController,
+                                          label: 'Téléphone',
+                                          icon: Icons.phone,
+                                          enabled: false,
+                                          suffixIcon: Tooltip(
+                                            message:
+                                                'Le numéro de téléphone ne peut pas être modifié'
+                                                    .tr(),
+                                            child: const Icon(
+                                              Icons.info_outline,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    SettingsCard(
+                                      title: 'Détails personnels'.tr(),
+                                      icon: Icons.info,
+                                      children: [
+                                        _buildProfileInput(
+                                          controller: _dateNaissanceController,
+                                          label: 'Date de naissance',
+                                          icon: Icons.calendar_today,
+                                          readOnly: true,
+                                          enabled: _isEditing,
+                                          onTap:
+                                              _isEditing ? _selectDate : null,
+                                          suffixIcon:
+                                              _isEditing
+                                                  ? IconButton(
+                                                    icon: Icon(
+                                                      Icons.calendar_month,
+                                                      color:
+                                                          Theme.of(
+                                                            context,
+                                                          ).colorScheme.primary,
+                                                    ),
+                                                    onPressed: _selectDate,
+                                                  )
+                                                  : null,
+                                          validator:
+                                              (value) =>
+                                                  value!.isEmpty
+                                                      ? 'Ce champ est requis'
+                                                          .tr()
+                                                      : null,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _isEditing
+                                            ? _buildGenreDropdown()
+                                            : _buildProfileInput(
+                                              controller: TextEditingController(
+                                                text: _selectedGenre ?? '',
+                                              ),
+                                              label: 'Genre',
+                                              icon: Icons.people,
+                                              enabled: false,
+                                            ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
+                          // Onglet Avis
+                          _buildReviewsSection(),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      SettingsCard(
-                        title: 'Détails personnels'.tr(),
-                        icon: Icons.info,
-                        children: [
-                          _buildProfileInput(
-                            controller: _dateNaissanceController,
-                            label: 'Date de naissance',
-                            icon: Icons.calendar_today,
-                            readOnly: true,
-                            enabled: _isEditing,
-                            onTap: _isEditing ? _selectDate : null,
-                            suffixIcon:
-                            _isEditing
-                                ? IconButton(
-                              icon: Icon(
-                                Icons.calendar_month,
-                                color:
-                                Theme.of(
-                                  context,
-                                ).colorScheme.primary,
-                              ),
-                              onPressed: _selectDate,
-                            )
-                                : null,
-                            validator:
-                                (value) =>
-                            value!.isEmpty
-                                ? 'Ce champ est requis'.tr()
-                                : null,
-                          ),
-                          const SizedBox(height: 16),
-                          _isEditing
-                              ? _buildGenreDropdown()
-                              : _buildProfileInput(
-                            controller: TextEditingController(
-                              text: _selectedGenre ?? '',
-                            ),
-                            label: 'Genre',
-                            icon: Icons.people,
-                            enabled: false,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed:
-        _isSaving ? null : (_isEditing ? _saveUserData : _toggleEditMode),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        tooltip: _isEditing ? 'Sauvegarder'.tr() : 'Modifier'.tr(),
-        child:
-        _isSaving
-            ? const CircularProgressIndicator(color: Colors.white)
-            : Icon(_isEditing ? Icons.save : Icons.edit),
-      ),
+      floatingActionButton:
+          _tabController?.index == 0
+              ? FloatingActionButton(
+                onPressed:
+                    _isSaving
+                        ? null
+                        : (_isEditing ? _saveUserData : _toggleEditMode),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                tooltip: _isEditing ? 'Sauvegarder'.tr() : 'Modifier'.tr(),
+                child:
+                    _isSaving
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Icon(_isEditing ? Icons.save : Icons.edit),
+              )
+              : null,
     );
   }
 }
