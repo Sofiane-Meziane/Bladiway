@@ -1060,9 +1060,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     String? reservationId,
   }) {
     if (isContactButton && driverId != null && reservationId != null) {
-      // Afficher le badge uniquement pour les messages non lus de ce conducteur ET cette réservation
       final NotificationService notificationService = NotificationService();
-
       return Expanded(
         child: StreamBuilder<int>(
           stream: notificationService
@@ -1072,26 +1070,23 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               ),
           builder: (context, snapshot) {
             final unreadCount = snapshot.data ?? 0;
-
-            return Stack(
-              children: [
-                TextButton.icon(
-                  icon: Icon(icon, color: color, size: 18),
-                  label: Text(label, style: TextStyle(color: color)),
-                  onPressed: onPressed,
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      side: BorderSide(color: color.withOpacity(0.3)),
-                    ),
-                  ),
+            return TextButton(
+              onPressed: onPressed,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  side: BorderSide(color: color.withOpacity(0.3)),
                 ),
-                if (unreadCount > 0)
-                  Positioned(
-                    right: 10,
-                    top: 5,
-                    child: Container(
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: color, size: 18),
+                  if (unreadCount > 0) ...[
+                    const SizedBox(width: 4),
+                    Container(
                       padding: const EdgeInsets.all(2),
                       decoration: const BoxDecoration(
                         color: Colors.red,
@@ -1111,8 +1106,11 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
-              ],
+                  ],
+                  const SizedBox(width: 6),
+                  Text(label, style: TextStyle(color: color)),
+                ],
+              ),
             );
           },
         ),
