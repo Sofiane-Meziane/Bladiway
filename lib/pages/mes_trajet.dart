@@ -114,16 +114,19 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
 
       int unreadCount = 0;
 
-      // Pour chaque réservation, vérifier s'il y a des messages non lus
+      // Pour chaque réservation, compter les messages non lus spécifiques à ce trajet
       for (var reservationDoc in reservationSnapshot.docs) {
         final passengerId = reservationDoc.data()['userId'] as String?;
 
         if (passengerId != null) {
           final unreadStream = _notificationService
-              .getUnreadMessagesCountFromPassenger(passengerId);
+              .getUnreadMessagesCountFromPassenger(
+                passengerId,
+                tripId, // Passer le tripId ici
+              );
           await for (final count in unreadStream) {
             unreadCount += count;
-            break; // On ne prend que la première valeur du stream
+            break; // Prendre la première valeur du stream
           }
         }
       }

@@ -142,54 +142,76 @@ class _ChatPageState extends State<ChatPage> {
       String currentUserId = _auth.currentUser!.uid;
       String messageText = _messageController.text.trim();
       try {
-        // Envoi du message
-        await _firestore.collection('messages').add({
-          'reservationId': widget.reservationId,
-          'senderId': currentUserId,
-          'receiverId': widget.otherUserId,
-          'text': messageText,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-        _messageController.clear();
+        // Étape 1 : Récupérer la réservation pour obtenir le tripId
+        DocumentSnapshot reservationDoc =
+            await _firestore
+                .collection('reservations')
+                .doc(widget.reservationId)
+                .get();
 
-        // Récupérer les informations sur l'expéditeur pour la notification
-        DocumentSnapshot senderDoc =
-            await _firestore.collection('users').doc(currentUserId).get();
-        String senderName = "Utilisateur";
-        if (senderDoc.exists) {
-          final senderData = senderDoc.data() as Map<String, dynamic>;
-          senderName =
-              "${senderData['prenom'] ?? ''} ${senderData['nom'] ?? 'Utilisateur'}"
-                  .trim();
-          if (senderName.isEmpty) senderName = "Utilisateur";
-        }
+        if (reservationDoc.exists) {
+          final reservationData = reservationDoc.data() as Map<String, dynamic>;
+          final String tripId = reservationData['tripId'] as String;
 
-        // Si l'utilisateur actuel est un conducteur, envoyer une notification spéciale
-        if (_isDriver) {
-          await NotificationService.sendDriverMessageNotification(
-            passengerId: widget.otherUserId,
-            driverId: currentUserId,
-            driverName: senderName,
-            body: messageText,
-            reservationId: widget.reservationId,
-          );
+          // Envoi du message dans la collection 'messages'
+          await _firestore.collection('messages').add({
+            'reservationId': widget.reservationId,
+            'senderId': currentUserId,
+            'receiverId': widget.otherUserId,
+            'text': messageText,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+          _messageController.clear();
+
+          // Récupérer les informations sur l'expéditeur pour la notification
+          DocumentSnapshot senderDoc =
+              await _firestore.collection('users').doc(currentUserId).get();
+          String senderName = "Utilisateur";
+          if (senderDoc.exists) {
+            final senderData = senderDoc.data() as Map<String, dynamic>;
+            senderName =
+                "${senderData['prenom'] ?? ''} ${senderData['nom'] ?? 'Utilisateur'}"
+                    .trim();
+            if (senderName.isEmpty) senderName = "Utilisateur";
+          }
+
+          // Étape 2 : Envoyer la notification avec tripId inclus
+          if (_isDriver) {
+            // Si l'utilisateur est un conducteur
+            await NotificationService.sendDriverMessageNotification(
+              passengerId: widget.otherUserId,
+              driverId: currentUserId,
+              driverName: senderName,
+              body: messageText,
+              reservationId: widget.reservationId,
+              tripId: tripId, // Ajout de tripId
+            );
+          } else {
+            // Si l'utilisateur est un passager
+            await NotificationService.sendMessageNotification(
+              receiverId: widget.otherUserId,
+              title: "Message de $senderName",
+              body: messageText,
+              type: "message",
+              tripId: tripId, // Ajout de tripId
+              data: {
+                'senderId': currentUserId,
+                'reservationId': widget.reservationId,
+                'otherUserId': currentUserId,
+                'tripId': tripId, // Ajout de tripId dans les données
+              },
+            );
+          }
         } else {
-          // Si c'est un passager, utiliser la notification standard
-          await NotificationService.sendMessageNotification(
-            receiverId: widget.otherUserId,
-            title: "Message de $senderName",
-            body: messageText,
-            type: "message",
-            data: {
-              'senderId': currentUserId,
-              'reservationId': widget.reservationId,
-              'otherUserId': currentUserId,
-            },
-          );
+          print("La réservation n'existe pas.");
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Erreur : la réservation n'existe pas.")),
+            );
+          }
         }
       } catch (e) {
         print("Error sending message: $e");
-        // Optionally show a SnackBar to the user
         if (mounted) {
           ScaffoldMessenger.of(
             context,

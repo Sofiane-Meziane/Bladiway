@@ -587,7 +587,10 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                 if (passengerId != null)
                   StreamBuilder<int>(
                     stream: notificationService
-                        .getUnreadMessagesCountFromPassenger(passengerId),
+                        .getUnreadMessagesCountFromPassenger(
+                          passengerId,
+                          widget.tripId, // Ajout de tripId
+                        ),
                     builder: (context, snapshot) {
                       final unreadCount = snapshot.data ?? 0;
 
@@ -711,7 +714,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
   void _navigateToMessaging(String receiverId) async {
     String? reservationId = await _getReservationIdForPassenger(receiverId);
     if (reservationId != null) {
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(
           builder:
               (context) => ChatPage(
@@ -720,6 +723,8 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
               ),
         ),
       );
+      // Rafraîchir l'état pour mettre à jour le badge de messages non lus
+      if (mounted) setState(() {});
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

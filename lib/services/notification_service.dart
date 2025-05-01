@@ -67,6 +67,22 @@ class NotificationService {
         .map((snapshot) => snapshot.docs.length);
   }
 
+  // Récupérer le nombre de messages non lus pour une réservation spécifique
+  Stream<int> getUnreadMessagesCountForReservation(String reservationId) {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value(0);
+    }
+
+    return _notificationsCollection
+        .where('userId', isEqualTo: user.uid)
+        .where('isRead', isEqualTo: false)
+        .where('type', isEqualTo: 'driver_message')
+        .where('data.reservationId', isEqualTo: reservationId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
   // Récupérer le nombre de messages non lus pour les passagers (messages du conducteur)
   Stream<int> getPassengerUnreadMessagesCount() {
     final user = _auth.currentUser;
@@ -83,7 +99,10 @@ class NotificationService {
   }
 
   // Récupérer le nombre de messages non lus envoyés par un passager spécifique
-  Stream<int> getUnreadMessagesCountFromPassenger(String passengerId) {
+  Stream<int> getUnreadMessagesCountFromPassenger(
+    String passengerId,
+    String tripId,
+  ) {
     final user = _auth.currentUser;
     if (user == null) {
       return Stream.value(0);
@@ -94,6 +113,10 @@ class NotificationService {
         .where('isRead', isEqualTo: false)
         .where('type', isEqualTo: 'message')
         .where('data.senderId', isEqualTo: passengerId)
+        .where(
+          'data.tripId',
+          isEqualTo: tripId,
+        ) // Filtre ajouté pour le trajet spécifique
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
@@ -387,6 +410,7 @@ class NotificationService {
     required String receiverId,
     required String title,
     required String body,
+    required String tripId, // Ajout de tripId comme paramètre requis
     String type = 'message',
     Map<String, dynamic>? data,
   }) async {
@@ -400,7 +424,11 @@ class NotificationService {
           type: type,
           createdAt: DateTime.now(),
           isRead: false,
-          data: data,
+          data: {
+            ...?data, // Inclut les données existantes, si présentes
+            'tripId': tripId, // Ajout de tripId dans les données
+            'senderId': _auth.currentUser?.uid ?? '', // Inclure l’expéditeur
+          },
         ).toMap(),
       );
     } catch (e) {
@@ -414,7 +442,7 @@ class NotificationService {
     required String driverId,
     required String driverName,
     required String body,
-    required String reservationId,
+    required String reservationId, required String tripId,
   }) async {
     try {
       await _notificationsCollection.add(
