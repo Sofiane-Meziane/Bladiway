@@ -7,11 +7,17 @@ import 'package:geocoding/geocoding.dart';
 class MapsScreen extends StatefulWidget {
   final bool isForDeparture;
   final Function(String) onLocationSelected;
+  final LatLng? initialDeparture;
+  final LatLng? initialArrival;
+  final bool showRoute;
 
   const MapsScreen({
     super.key,
     required this.isForDeparture,
     required this.onLocationSelected,
+    this.initialDeparture,
+    this.initialArrival,
+    this.showRoute = false,
   });
 
   @override
@@ -40,7 +46,74 @@ class _MapsScreenState extends State<MapsScreen> {
   @override
   void initState() {
     super.initState();
-    _requestLocationPermission();
+
+    // Initialize with provided locations if available
+    if (widget.initialDeparture != null) {
+      _departureLocation = widget.initialDeparture;
+    }
+
+    if (widget.initialArrival != null) {
+      _arrivalLocation = widget.initialArrival;
+    }
+
+    // If both locations are provided and we should show the route, prepare to draw it
+    if (widget.showRoute &&
+        widget.initialDeparture != null &&
+        widget.initialArrival != null) {
+      Future.delayed(Duration.zero, () {
+        _setupInitialMarkersAndRoute();
+      });
+    } else {
+      _requestLocationPermission();
+    }
+  }
+
+  void _setupInitialMarkersAndRoute() {
+    if (_departureLocation != null) {
+      _addMarker(
+        _departureLocation!,
+        'Point de Départ',
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      );
+    }
+
+    if (_arrivalLocation != null) {
+      _addMarker(
+        _arrivalLocation!,
+        'Point d\'Arrivée',
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      );
+    }
+
+    if (_departureLocation != null && _arrivalLocation != null) {
+      _getPolylinePoints();
+
+      // Fit the map to show both markers
+      if (_mapController != null) {
+        LatLngBounds bounds = LatLngBounds(
+          southwest: LatLng(
+            _departureLocation!.latitude < _arrivalLocation!.latitude
+                ? _departureLocation!.latitude
+                : _arrivalLocation!.latitude,
+            _departureLocation!.longitude < _arrivalLocation!.longitude
+                ? _departureLocation!.longitude
+                : _arrivalLocation!.longitude,
+          ),
+          northeast: LatLng(
+            _departureLocation!.latitude > _arrivalLocation!.latitude
+                ? _departureLocation!.latitude
+                : _arrivalLocation!.latitude,
+            _departureLocation!.longitude > _arrivalLocation!.longitude
+                ? _departureLocation!.longitude
+                : _arrivalLocation!.longitude,
+          ),
+        );
+
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 100),
+        );
+      }
+    }
   }
 
   Future<void> _requestLocationPermission() async {
@@ -109,17 +182,19 @@ class _MapsScreenState extends State<MapsScreen> {
   }
 
   void _addMarker(LatLng position, String markerId, BitmapDescriptor icon) {
-    _markers.add(
-      Marker(
-        markerId: MarkerId(markerId),
-        position: position,
-        icon: icon,
-        infoWindow: InfoWindow(
-          title: markerId,
-          snippet: 'Lat: ${position.latitude}, Lng: ${position.longitude}',
+    setState(() {
+      _markers.add(
+        Marker(
+          markerId: MarkerId(markerId),
+          position: position,
+          icon: icon,
+          infoWindow: InfoWindow(
+            title: markerId,
+            snippet: 'Lat: ${position.latitude}, Lng: ${position.longitude}',
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Future<void> _searchLocation() async {
@@ -149,13 +224,15 @@ class _MapsScreenState extends State<MapsScreen> {
         }
 
         // Clear markers based on which location we're selecting
-        _markers.removeWhere(
-          (marker) =>
-              (widget.isForDeparture &&
-                  marker.markerId.value.contains('Départ')) ||
-              (!widget.isForDeparture &&
-                  marker.markerId.value.contains('Arrivée')),
-        );
+        setState(() {
+          _markers.removeWhere(
+            (marker) =>
+                (widget.isForDeparture &&
+                    marker.markerId.value.contains('Départ')) ||
+                (!widget.isForDeparture &&
+                    marker.markerId.value.contains('Arrivée')),
+          );
+        });
 
         // Add new marker
         if (widget.isForDeparture) {
@@ -195,11 +272,15 @@ class _MapsScreenState extends State<MapsScreen> {
 
   void _onMapTap(LatLng position) async {
     // Clear markers based on which location we're selecting
-    _markers.removeWhere(
-      (marker) =>
-          (widget.isForDeparture && marker.markerId.value.contains('Départ')) ||
-          (!widget.isForDeparture && marker.markerId.value.contains('Arrivée')),
-    );
+    setState(() {
+      _markers.removeWhere(
+        (marker) =>
+            (widget.isForDeparture &&
+                marker.markerId.value.contains('Départ')) ||
+            (!widget.isForDeparture &&
+                marker.markerId.value.contains('Arrivée')),
+      );
+    });
 
     // Add new marker
     if (widget.isForDeparture) {
@@ -224,8 +305,6 @@ class _MapsScreenState extends State<MapsScreen> {
     if (_departureLocation != null && _arrivalLocation != null) {
       _getPolylinePoints();
     }
-
-    setState(() {});
   }
 
   Future<void> _getPolylinePoints() async {
@@ -234,9 +313,32 @@ class _MapsScreenState extends State<MapsScreen> {
     try {
       List<LatLng> polylineCoordinates = [];
 
-      // Draw a direct line instead of using the API
-      polylineCoordinates.add(_departureLocation!);
-      polylineCoordinates.add(_arrivalLocation!);
+      // Amélioration: Ajouter des points intermédiaires pour créer un chemin plus réaliste
+      // Calculer la distance entre les points
+      double latDiff =
+          _arrivalLocation!.latitude - _departureLocation!.latitude;
+      double lngDiff =
+          _arrivalLocation!.longitude - _departureLocation!.longitude;
+
+      // Créer 8 points intermédiaires pour une courbe plus lisse
+      for (int i = 0; i <= 8; i++) {
+        double fraction = i / 8;
+        double lat = _departureLocation!.latitude + (latDiff * fraction);
+        double lng = _departureLocation!.longitude + (lngDiff * fraction);
+
+        // Ajouter un léger décalage aléatoire pour les points intermédiaires (pas le premier ni le dernier)
+        if (i > 0 && i < 8) {
+          // Calculer un décalage proportionnel à la distance totale
+          double maxOffset = 0.005; // Ajuster selon vos besoins
+          double randomOffset = (maxOffset * (0.5 - (i % 2 == 0 ? 0.3 : -0.3)));
+
+          // Appliquer le décalage perpendiculairement à la direction du trajet
+          lat += randomOffset * (lngDiff / (latDiff.abs() + lngDiff.abs()));
+          lng += randomOffset * (latDiff / (latDiff.abs() + lngDiff.abs()));
+        }
+
+        polylineCoordinates.add(LatLng(lat, lng));
+      }
 
       setState(() {
         _polylines.clear();
@@ -246,11 +348,17 @@ class _MapsScreenState extends State<MapsScreen> {
             color: Theme.of(context).colorScheme.primary,
             points: polylineCoordinates,
             width: 5,
+            patterns: [
+              PatternItem.dash(20),
+              PatternItem.gap(10),
+            ], // Ligne pointillée pour un effet de chemin
           ),
         );
       });
 
-      print("Created a direct polyline between points");
+      print(
+        "Created a polyline with intermediate points between departure and arrival",
+      );
     } catch (e) {
       print("Error creating polyline: $e");
     }
@@ -278,14 +386,21 @@ class _MapsScreenState extends State<MapsScreen> {
             ),
             onMapCreated: (controller) {
               _mapController = controller;
-              if (!widget.isForDeparture && _arrivalLocation == null) {
+              if (widget.showRoute &&
+                  widget.initialDeparture != null &&
+                  widget.initialArrival != null) {
+                _setupInitialMarkersAndRoute();
+              } else if (!widget.isForDeparture && _arrivalLocation == null) {
                 // If selecting arrival and we don't have any markers yet
                 _getCurrentLocation();
               }
             },
             markers: _markers,
             polylines: _polylines,
-            onTap: _onMapTap,
+            onTap:
+                widget.showRoute
+                    ? null
+                    : _onMapTap, // Disable tap if just viewing
             mapType: MapType.normal,
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
@@ -293,138 +408,140 @@ class _MapsScreenState extends State<MapsScreen> {
             compassEnabled: true,
           ),
           // Search bar at the top
-          Positioned(
-            top: 10,
-            left: 10,
-            right: 10,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context).shadowColor.withOpacity(0.5),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher un lieu en Algérie',
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Theme.of(context).iconTheme.color,
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      Icons.clear,
+          if (!widget.showRoute) // Hide search if just viewing
+            Positioned(
+              top: 10,
+              left: 10,
+              right: 10,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).shadowColor.withOpacity(0.5),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Rechercher un lieu en Algérie',
+                    prefixIcon: Icon(
+                      Icons.search,
                       color: Theme.of(context).iconTheme.color,
                     ),
-                    onPressed: () => _searchController.clear(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        Icons.clear,
+                        color: Theme.of(context).iconTheme.color,
+                      ),
+                      onPressed: () => _searchController.clear(),
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 12,
+                    ),
                   ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 15,
-                    vertical: 12,
-                  ),
+                  onSubmitted: (_) => _searchLocation(),
                 ),
-                onSubmitted: (_) => _searchLocation(),
               ),
             ),
-          ),
           // Address display and confirm button at the bottom
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
+          if (!widget.showRoute) // Hide confirmation if just viewing
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).shadowColor.withOpacity(0.5),
+                      spreadRadius: 5,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context).shadowColor.withOpacity(0.5),
-                    spreadRadius: 5,
-                    blurRadius: 7,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Adresse sélectionnée:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _selectedAddress.isNotEmpty
-                        ? _selectedAddress
-                        : 'Aucune adresse sélectionnée',
-                    style: TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 15),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _getCurrentLocation,
-                        icon: Icon(
-                          Icons.my_location,
-                          color: Theme.of(context).colorScheme.onSecondary,
-                        ),
-                        label: Text(
-                          'Ma position',
-                          style: TextStyle(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Adresse sélectionnée:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _selectedAddress.isNotEmpty
+                          ? _selectedAddress
+                          : 'Aucune adresse sélectionnée',
+                      style: TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _getCurrentLocation,
+                          icon: Icon(
+                            Icons.my_location,
                             color: Theme.of(context).colorScheme.onSecondary,
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.secondary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
+                          label: Text(
+                            'Ma position',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSecondary,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.secondary,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                           ),
                         ),
-                      ),
-                      ElevatedButton(
-                        onPressed:
-                            _selectedAddress.isNotEmpty
-                                ? () {
-                                  widget.onLocationSelected(_selectedAddress);
-                                  Navigator.pop(context);
-                                }
-                                : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          foregroundColor:
-                              Theme.of(context).colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 30,
-                            vertical: 12,
+                        ElevatedButton(
+                          onPressed:
+                              _selectedAddress.isNotEmpty
+                                  ? () {
+                                    widget.onLocationSelected(_selectedAddress);
+                                    Navigator.pop(context);
+                                  }
+                                  : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 30,
+                              vertical: 12,
+                            ),
+                          ),
+                          child: const Text(
+                            'Confirmer',
+                            style: TextStyle(fontSize: 16),
                           ),
                         ),
-                        child: const Text(
-                          'Confirmer',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           // Loading indicator
           if (_isLoading)
             Container(
@@ -471,7 +588,10 @@ class _MapsScreenState extends State<MapsScreen> {
             onPressed: _getCurrentLocation,
             child: const Icon(Icons.my_location),
           ),
-          const SizedBox(height: 100), // Space for the bottom panel
+
+          SizedBox(
+            height: widget.showRoute ? 20 : 100,
+          ), // Adjust space for bottom panel
         ],
       ),
     );

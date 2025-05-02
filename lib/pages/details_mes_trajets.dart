@@ -3,8 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async'; // Import pour StreamSubscription
 import 'package:url_launcher/url_launcher.dart'; // Import pour launchUrl
+import 'package:geocoding/geocoding.dart'; // Pour convertir les adresses en coordonnées
+import 'package:google_maps_flutter/google_maps_flutter.dart'; // Pour les coordonnées LatLng
 import 'chat_screen.dart'; // Import de la page de chat
 import '../services/notification_service.dart'; // Import du service de notification
+import 'maps.dart'; // Import de la page de carte
 
 // Constantes pour les noms de champs Firestore
 const String FIELD_USER_ID = 'userId';
@@ -46,6 +49,11 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   bool _isProcessing = false;
+
+  // Variables ajoutées pour la carte
+  LatLng? _departureCoordinates;
+  LatLng? _arrivalCoordinates;
+  bool _isLoadingCoordinates = false;
 
   StreamSubscription<DocumentSnapshot>? _tripSubscription;
   StreamSubscription<QuerySnapshot>? _passengersSubscription;
@@ -141,6 +149,9 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
       _setupRealtimeListeners();
       await _loadPassengersFromReservations(tripData);
 
+      // Ajout : Charger les coordonnées pour la carte
+      await _loadCoordinatesForMap(tripData);
+
       setState(() {
         _tripData = tripData;
         _isLoading = false;
@@ -153,6 +164,233 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
       });
       print("Erreur lors du chargement des détails du trajet: $e");
     }
+  }
+
+  // Nouvelle méthode pour charger les coordonnées
+  Future<void> _loadCoordinatesForMap(Map<String, dynamic> tripData) async {
+    if (!tripData.containsKey(FIELD_DEPART) ||
+        !tripData.containsKey(FIELD_ARRIVEE)) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingCoordinates = true;
+    });
+
+    try {
+      // Convertir l'adresse de départ en coordonnées
+      String departureAddress = tripData[FIELD_DEPART];
+      List<Location> departureLocations = await locationFromAddress(
+        "$departureAddress, Algeria",
+      );
+
+      if (departureLocations.isNotEmpty) {
+        _departureCoordinates = LatLng(
+          departureLocations.first.latitude,
+          departureLocations.first.longitude,
+        );
+      }
+
+      // Convertir l'adresse d'arrivée en coordonnées
+      String arrivalAddress = tripData[FIELD_ARRIVEE];
+      List<Location> arrivalLocations = await locationFromAddress(
+        "$arrivalAddress, Algeria",
+      );
+
+      if (arrivalLocations.isNotEmpty) {
+        _arrivalCoordinates = LatLng(
+          arrivalLocations.first.latitude,
+          arrivalLocations.first.longitude,
+        );
+      }
+    } catch (e) {
+      print("Erreur lors de la conversion des adresses en coordonnées: $e");
+    } finally {
+      setState(() {
+        _isLoadingCoordinates = false;
+      });
+    }
+  }
+
+  // Nouvelle méthode pour afficher la carte en plein écran
+  void _showFullScreenMap() {
+    if (_departureCoordinates == null || _arrivalCoordinates == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Impossible d'afficher la carte. Coordonnées non disponibles.",
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => MapsScreen(
+              isForDeparture:
+                  true, // Peu importe ici car on est en mode visualisation
+              onLocationSelected:
+                  (_) {}, // Fonction vide car on ne sélectionne pas de lieu
+              initialDeparture: _departureCoordinates,
+              initialArrival: _arrivalCoordinates,
+              showRoute: true, // Mode visualisation uniquement
+            ),
+      ),
+    );
+  }
+
+  // Nouveau widget pour afficher l'aperçu de la carte
+  Widget _buildMapPreview() {
+    if (_departureCoordinates == null || _arrivalCoordinates == null) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child:
+              _isLoadingCoordinates
+                  ? const CircularProgressIndicator()
+                  : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.map_outlined, size: 40, color: Colors.grey),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Carte non disponible",
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _showFullScreenMap,
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: _departureCoordinates!,
+                  zoom: 12,
+                ),
+                markers: {
+                  Marker(
+                    markerId: const MarkerId('departure'),
+                    position: _departureCoordinates!,
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueGreen,
+                    ),
+                  ),
+                  Marker(
+                    markerId: const MarkerId('arrival'),
+                    position: _arrivalCoordinates!,
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueRed,
+                    ),
+                  ),
+                },
+                polylines: {
+                  Polyline(
+                    polylineId: const PolylineId('route'),
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 5,
+                    points: [_departureCoordinates!, _arrivalCoordinates!],
+                    patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+                  ),
+                },
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                myLocationButtonEnabled: false,
+                compassEnabled: false,
+                onMapCreated: (controller) {
+                  // Ajuster la vue pour montrer les deux marqueurs
+                  LatLngBounds bounds = LatLngBounds(
+                    southwest: LatLng(
+                      _departureCoordinates!.latitude <
+                              _arrivalCoordinates!.latitude
+                          ? _departureCoordinates!.latitude
+                          : _arrivalCoordinates!.latitude,
+                      _departureCoordinates!.longitude <
+                              _arrivalCoordinates!.longitude
+                          ? _departureCoordinates!.longitude
+                          : _arrivalCoordinates!.longitude,
+                    ),
+                    northeast: LatLng(
+                      _departureCoordinates!.latitude >
+                              _arrivalCoordinates!.latitude
+                          ? _departureCoordinates!.latitude
+                          : _arrivalCoordinates!.latitude,
+                      _departureCoordinates!.longitude >
+                              _arrivalCoordinates!.longitude
+                          ? _departureCoordinates!.longitude
+                          : _arrivalCoordinates!.longitude,
+                    ),
+                  );
+
+                  controller.animateCamera(
+                    CameraUpdate.newLatLngBounds(bounds, 50),
+                  );
+                },
+              ),
+              Positioned(
+                bottom: 10,
+                right: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.fullscreen,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Agrandir',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _loadVehicleData(String vehicleId) async {
@@ -1327,6 +1565,9 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                   _buildStatusBadge(status),
                 ],
               ),
+              const SizedBox(height: 24),
+              // Ajout : Aperçu de la carte
+              _buildMapPreview(),
               const SizedBox(height: 24),
               _infoRow(Icons.location_on, 'Départ', depart),
               const SizedBox(height: 16),

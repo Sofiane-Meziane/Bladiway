@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'details_mes_trajets.dart';
-import '../services/notification_service.dart'; // Ajout de l'import pour le service de notification
+import '../services/notification_service.dart';
 
 // Constantes pour les noms de champs Firestore
 const String FIELD_USER_ID = 'userId';
@@ -12,15 +12,15 @@ const String FIELD_ARRIVEE = 'arrivée';
 const String FIELD_DATE = 'date';
 const String FIELD_HEURE = 'heure';
 const String FIELD_PRIX = 'prix';
+const String FIELD_CREATED_AT = 'createdAt'; // Champ pour la date de création
 
 // Constantes pour les valeurs de statut
-const String STATUS_EN_ATTENTE = 'en attente'; // Nouveau statut par défaut
-const String STATUS_EN_ROUTE =
-    'en route'; // Nouveau statut pour trajet commencé
+const String STATUS_EN_ATTENTE = 'en attente';
+const String STATUS_EN_ROUTE = 'en route';
 const String STATUS_TERMINE = 'terminé';
 const String STATUS_COMPLETE = 'completé';
 const String STATUS_ANNULE = 'annulé';
-const String STATUS_BLOQUE = 'bloqué'; // Nouveau statut
+const String STATUS_BLOQUE = 'bloqué';
 
 class MesTrajetScreen extends StatefulWidget {
   const MesTrajetScreen({super.key});
@@ -32,14 +32,13 @@ class MesTrajetScreen extends StatefulWidget {
 class _MesTrajetScreenState extends State<MesTrajetScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final NotificationService _notificationService =
-      NotificationService(); // Initialisation du service de notification
+  final NotificationService _notificationService = NotificationService();
   Stream<QuerySnapshot>? _tripStream;
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Ajout pour la barre de navigation
-  int _selectedIndex = 2; // 2 pour "Mes trajets"
+  int _selectedIndex = 2;
+
   void _onItemTapped(int index) {
     if (_selectedIndex != index) {
       String route = '';
@@ -75,18 +74,19 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
       if (user != null) {
         print("Initialisation du stream pour l'utilisateur: ${user.uid}");
 
-        // Récupérer tous les trajets de l'utilisateur sans filtrer par status
         _tripStream =
             _firestore
                 .collection('trips')
                 .where(FIELD_USER_ID, isEqualTo: user.uid)
+                .orderBy(
+                  FIELD_CREATED_AT,
+                  descending: true,
+                ) // Tri par date de création
                 .snapshots();
 
-        // Ajouter un listener pour le débogage
         _tripStream?.listen(
           (snapshot) {
             print("Nombre de documents récupérés: ${snapshot.docs.length}");
-
             for (var doc in snapshot.docs) {
               print("Document ID: ${doc.id}");
               final data = doc.data() as Map<String, dynamic>;
@@ -116,7 +116,6 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
     }
   }
 
-  // Méthode pour vérifier s'il y a des messages non lus pour un trajet
   Stream<int> _getUnreadMessagesCountForTrip(String tripId) async* {
     final user = _auth.currentUser;
     if (user == null) {
@@ -125,7 +124,6 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
     }
 
     try {
-      // Récupérer toutes les réservations pour ce trajet
       final reservationSnapshot =
           await _firestore
               .collection('reservations')
@@ -139,19 +137,15 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
 
       int unreadCount = 0;
 
-      // Pour chaque réservation, compter les messages non lus spécifiques à ce trajet
       for (var reservationDoc in reservationSnapshot.docs) {
         final passengerId = reservationDoc.data()['userId'] as String?;
 
         if (passengerId != null) {
           final unreadStream = _notificationService
-              .getUnreadMessagesCountFromPassenger(
-                passengerId,
-                tripId, // Passer le tripId ici
-              );
+              .getUnreadMessagesCountFromPassenger(passengerId, tripId);
           await for (final count in unreadStream) {
             unreadCount += count;
-            break; // Prendre la première valeur du stream
+            break;
           }
         }
       }
@@ -168,7 +162,7 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'BladiWay',
+          'Mes trajets',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -181,34 +175,7 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
       ),
       body: Column(
         children: [
-          // Section titre avec fond dégradé
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue, Colors.blue.withOpacity(0.7)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
-            child: const Text(
-              'Mes trajets',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
           const SizedBox(height: 10),
-
-          // Section liste des trajets
           Expanded(
             child:
                 _isLoading
@@ -255,7 +222,6 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
                             );
                             print("Aucun trajet trouvé pour cet utilisateur");
                           }
-
                           return const Center(
                             child: Text('Aucun trajet disponible'),
                           );
@@ -265,22 +231,7 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
                           "Nombre de documents: ${snapshot.data!.docs.length}",
                         );
 
-                        // On n'exclut plus les trajets annulés - on affiche tous les trajets
                         final allDocs = snapshot.data!.docs;
-
-                        // Trier les trajets par date (décroissant)
-                        allDocs.sort((a, b) {
-                          try {
-                            final aData = a.data() as Map<String, dynamic>;
-                            final bData = b.data() as Map<String, dynamic>;
-                            final aDate = aData[FIELD_DATE] ?? '';
-                            final bDate = bData[FIELD_DATE] ?? '';
-                            return bDate.toString().compareTo(aDate.toString());
-                          } catch (e) {
-                            print("Erreur lors du tri: $e");
-                            return 0; // Pas de changement en cas d'erreur
-                          }
-                        });
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -297,7 +248,6 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
           ),
         ],
       ),
-      // Ajout de la BottomNavigationBar
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -334,17 +284,14 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
       print("Construction de la carte pour le trajet: ${document.id}");
       print("Données du trajet: $tripData");
 
-      // Informations du trajet avec valeurs par défaut
       final String departure = tripData[FIELD_DEPART] ?? 'Inconnu';
       final String arrival = tripData[FIELD_ARRIVEE] ?? 'Inconnu';
       final String date = tripData[FIELD_DATE] ?? 'Date inconnue';
       final String time = tripData[FIELD_HEURE] ?? '';
       final dynamic price = tripData[FIELD_PRIX] ?? 0;
-      final String status =
-          tripData[FIELD_STATUS] ?? STATUS_EN_ATTENTE; // Par défaut en attente
+      final String status = tripData[FIELD_STATUS] ?? STATUS_EN_ATTENTE;
       final Color statusColor = _getStatusColor(status);
 
-      // Initiales des villes
       final String departureInitial =
           departure.isNotEmpty
               ? departure.split(',')[0].trim()[0].toUpperCase()
@@ -368,7 +315,7 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
                       (context) => TrajetDetailsScreen(tripId: document.id),
                 ),
               ).then((_) {
-                setState(() {}); // Refresh on return
+                setState(() {});
               });
             },
             child: Card(
@@ -388,7 +335,6 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Points de départ et arrivée avec ligne de connexion
                         Column(
                           children: [
                             CircleAvatar(
@@ -417,8 +363,6 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
                           ],
                         ),
                         const SizedBox(width: 12),
-
-                        // Informations principales
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,8 +441,6 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
                             ],
                           ),
                         ),
-
-                        // Status badge
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -521,8 +463,6 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
                       ],
                     ),
                   ),
-
-                  // Badge de notification pour nouveaux messages
                   if (unreadMessagesCount > 0)
                     Positioned(
                       top: 8,
@@ -551,7 +491,6 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
       );
     } catch (e) {
       print('Erreur d\'affichage du trajet ${document.id}: $e');
-      // Renvoyer une carte d'erreur au lieu d'un widget vide
       return Card(
         margin: const EdgeInsets.only(bottom: 15),
         color: Colors.red.shade100,

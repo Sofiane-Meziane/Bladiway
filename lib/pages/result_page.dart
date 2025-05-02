@@ -2,12 +2,265 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geocoding/geocoding.dart'; // Nouvel import
+import 'package:google_maps_flutter/google_maps_flutter.dart'; // Nouvel import
 import 'confirmationPage.dart';
 import 'info_conducteur.dart';
+import 'maps.dart'; // Nouvel import pour utiliser MapsScreen
 import '../widgets/trip_widgets.dart';
 import '../services/notification_service.dart';
 
 final user = FirebaseAuth.instance.currentUser;
+
+// Nouvelle classe TripMapPreview ajoutée
+class TripMapPreview extends StatefulWidget {
+  final String departure;
+  final String arrival;
+
+  const TripMapPreview({
+    Key? key,
+    required this.departure,
+    required this.arrival,
+  }) : super(key: key);
+
+  @override
+  _TripMapPreviewState createState() => _TripMapPreviewState();
+}
+
+class _TripMapPreviewState extends State<TripMapPreview> {
+  LatLng? _departureCoordinates;
+  LatLng? _arrivalCoordinates;
+  bool _isLoading = true;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCoordinates();
+  }
+
+  Future<void> _loadCoordinates() async {
+    try {
+      // Convertir l'adresse de départ en coordonnées
+      List<Location> departureLocations = await locationFromAddress(
+        "${widget.departure}, Algeria",
+      );
+
+      if (departureLocations.isNotEmpty) {
+        _departureCoordinates = LatLng(
+          departureLocations.first.latitude,
+          departureLocations.first.longitude,
+        );
+      }
+
+      // Convertir l'adresse d'arrivée en coordonnées
+      List<Location> arrivalLocations = await locationFromAddress(
+        "${widget.arrival}, Algeria",
+      );
+
+      if (arrivalLocations.isNotEmpty) {
+        _arrivalCoordinates = LatLng(
+          arrivalLocations.first.latitude,
+          arrivalLocations.first.longitude,
+        );
+      }
+
+      if (_departureCoordinates != null && _arrivalCoordinates != null) {
+        setState(() {
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+        });
+      }
+    } catch (e) {
+      print("Erreur lors de la conversion des adresses en coordonnées: $e");
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+      });
+    }
+  }
+
+  void _showFullScreenMap() {
+    if (_departureCoordinates == null || _arrivalCoordinates == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Impossible d'afficher la carte. Coordonnées non disponibles.",
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => MapsScreen(
+              isForDeparture: true,
+              onLocationSelected: (_) {},
+              initialDeparture: _departureCoordinates,
+              initialArrival: _arrivalCoordinates,
+              showRoute: true,
+            ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_hasError ||
+        _departureCoordinates == null ||
+        _arrivalCoordinates == null) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.map_outlined, size: 40, color: Colors.grey),
+              SizedBox(height: 8),
+              Text(
+                "Carte non disponible",
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _showFullScreenMap,
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: _departureCoordinates!,
+                  zoom: 12,
+                ),
+                markers: {
+                  Marker(
+                    markerId: MarkerId('departure'),
+                    position: _departureCoordinates!,
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueGreen,
+                    ),
+                  ),
+                  Marker(
+                    markerId: MarkerId('arrival'),
+                    position: _arrivalCoordinates!,
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueRed,
+                    ),
+                  ),
+                },
+                polylines: {
+                  Polyline(
+                    polylineId: PolylineId('route'),
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 5,
+                    points: [_departureCoordinates!, _arrivalCoordinates!],
+                    patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+                  ),
+                },
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                myLocationButtonEnabled: false,
+                compassEnabled: false,
+                onMapCreated: (controller) {
+                  // Ajuster la vue pour montrer les deux marqueurs
+                  LatLngBounds bounds = LatLngBounds(
+                    southwest: LatLng(
+                      _departureCoordinates!.latitude <
+                              _arrivalCoordinates!.latitude
+                          ? _departureCoordinates!.latitude
+                          : _arrivalCoordinates!.latitude,
+                      _departureCoordinates!.longitude <
+                              _arrivalCoordinates!.longitude
+                          ? _departureCoordinates!.longitude
+                          : _arrivalCoordinates!.longitude,
+                    ),
+                    northeast: LatLng(
+                      _departureCoordinates!.latitude >
+                              _arrivalCoordinates!.latitude
+                          ? _departureCoordinates!.latitude
+                          : _arrivalCoordinates!.latitude,
+                      _departureCoordinates!.longitude >
+                              _arrivalCoordinates!.longitude
+                          ? _departureCoordinates!.longitude
+                          : _arrivalCoordinates!.longitude,
+                    ),
+                  );
+                  controller.animateCamera(
+                    CameraUpdate.newLatLngBounds(bounds, 50),
+                  );
+                },
+              ),
+              Positioned(
+                bottom: 10,
+                right: 10,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.fullscreen, color: Colors.white, size: 18),
+                      SizedBox(width: 4),
+                      Text(
+                        'Agrandir',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class TripResultsPage extends StatelessWidget {
   final List<QueryDocumentSnapshot> trips;
@@ -890,6 +1143,21 @@ class TripDetailPage extends StatelessWidget {
                             arrivee: trip['arrivée'],
                             date: trip['date'],
                             heure: trip['heure'],
+                          ),
+                          const SizedBox(height: 20),
+                          // Ajout de la carte ici
+                          Text(
+                            'Itinéraire',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TripMapPreview(
+                            departure: trip['départ'],
+                            arrival: trip['arrivée'],
                           ),
                           const SizedBox(height: 20),
                           TripDetailsCard(tripData: trip),

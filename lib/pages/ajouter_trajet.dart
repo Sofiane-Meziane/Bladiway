@@ -41,7 +41,6 @@ class InfoTrajet extends StatefulWidget {
 
 class _InfoTrajetState extends State<InfoTrajet>
     with AutomaticKeepAliveClientMixin {
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   // Contrôleurs pour les champs de texte
@@ -93,6 +92,9 @@ class _InfoTrajetState extends State<InfoTrajet>
     final accentColor = colorScheme.secondary;
     final backgroundColor = colorScheme.surface;
     final surfaceColor = colorScheme.surface;
+
+    // Couleur bleue pour les éléments mis en évidence
+    final Color highlightBlue = Colors.blue;
 
     // Méthode pour construire la section de sélection de véhicule
     Widget buildVehicleSelection(Color primaryColor, Color surfaceColor) {
@@ -175,7 +177,7 @@ class _InfoTrajetState extends State<InfoTrajet>
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'BladiWay',
+          'Bladiway',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -252,7 +254,7 @@ class _InfoTrajetState extends State<InfoTrajet>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildSeatSelector(primaryColor)),
+                  Expanded(child: _buildSeatSelector(highlightBlue)),
                 ],
               ),
               const SizedBox(height: 24),
@@ -359,6 +361,83 @@ class _InfoTrajetState extends State<InfoTrajet>
               ),
               const SizedBox(height: 24),
 
+              // Section des passagers (mise en évidence)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: highlightBlue.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: highlightBlue.withOpacity(0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: highlightBlue.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.people, color: highlightBlue, size: 24),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Type de passagers',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: highlightBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: highlightBlue.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildPassengerTypeOption(
+                            'Mixte',
+                            'Tous types de passagers',
+                            Icons.group,
+                            highlightBlue,
+                          ),
+                          Divider(
+                            height: 1,
+                            color: highlightBlue.withOpacity(0.2),
+                          ),
+                          _buildPassengerTypeOption(
+                            'Femmes',
+                            'Uniquement des passagères',
+                            Icons.female,
+                            highlightBlue,
+                          ),
+                          Divider(
+                            height: 1,
+                            color: highlightBlue.withOpacity(0.2),
+                          ),
+                          _buildPassengerTypeOption(
+                            'Hommes',
+                            'Uniquement des passagers',
+                            Icons.male,
+                            highlightBlue,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // Options du trajet
               _buildExpandableSection(
                 title: 'Options du trajet',
@@ -403,15 +482,6 @@ class _InfoTrajetState extends State<InfoTrajet>
                           setState(() => _selectedAirConditioning = newValue!),
                       primaryColor: primaryColor,
                     ),
-                    const Divider(height: 1),
-                    _buildOptionRow(
-                      'Type de passagers',
-                      _selectedPassengersType,
-                      (newValue) =>
-                          setState(() => _selectedPassengersType = newValue!),
-                      primaryColor: primaryColor,
-                      options: ['Mixte', 'Femmes', 'Hommes'],
-                    ),
                   ],
                 ),
               ),
@@ -421,7 +491,7 @@ class _InfoTrajetState extends State<InfoTrajet>
               ElevatedButton(
                 onPressed: _saveTrip,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
+                  backgroundColor: highlightBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -457,71 +527,182 @@ class _InfoTrajetState extends State<InfoTrajet>
     );
   }
 
-  // Widget pour sélectionner le nombre de places
-  Widget _buildSeatSelector(Color primaryColor) {
+  // Widget pour sélectionner le type de passagers
+  Widget _buildPassengerTypeOption(
+    String type,
+    String description,
+    IconData icon,
+    Color highlightBlue,
+  ) {
+    bool isSelected = _selectedPassengersType == type;
+
+    // Définir les couleurs spécifiques pour chaque type de passager
+    Color typeColor;
+    switch (type) {
+      case 'Femmes':
+        typeColor = Colors.pink; // Rose pour les femmes
+        break;
+      case 'Mixte':
+        typeColor = Colors.purple; // Mauve pour mixte
+        break;
+      case 'Hommes':
+        typeColor = Colors.blue; // Bleu pour les hommes
+        break;
+      default:
+        typeColor = highlightBlue;
+    }
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedPassengersType = type;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        color: isSelected ? typeColor.withOpacity(0.1) : Colors.transparent,
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected ? typeColor : typeColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? Colors.white : typeColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    type,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isSelected ? typeColor : Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    description,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle, color: typeColor, size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Widget pour sélectionner le nombre de places
+  Widget _buildSeatSelector(Color highlightBlue) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      padding: const EdgeInsets.symmetric(
+        vertical: 8,
+        horizontal: 8,
+      ), // Padding réduit
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Places',
-            style: TextStyle(fontSize: 16, color: colorScheme.onSurface),
+        border: Border.all(color: highlightBlue.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: highlightBlue.withOpacity(0.1),
+            blurRadius: 4,
+            offset: Offset(0, 2),
           ),
-          Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InkWell(
-                  onTap:
-                      () => setState(() {
-                        _seatCount =
-                            _seatCount > 1 ? _seatCount - 1 : _seatCount;
-                      }),
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    child: Icon(
-                      Icons.remove_circle,
-                      color: colorScheme.primary,
-                      size: 20,
-                    ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Titre "Places" plus compact
+          Row(
+            children: [
+              Icon(
+                Icons.airline_seat_recline_normal,
+                color: highlightBlue,
+                size: 16,
+              ), // Icône plus petite
+              SizedBox(width: 4), // Espacement réduit
+              Text(
+                'Places',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: highlightBlue,
+                  fontWeight: FontWeight.bold,
+                ), // Texte plus petit
+              ),
+            ],
+          ),
+          // Contrôles pour ajuster le nombre de places
+          SizedBox(height: 4), // Espacement réduit
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Bouton pour diminuer
+              GestureDetector(
+                // Utiliser GestureDetector au lieu de IconButton pour économiser de l'espace
+                onTap:
+                    () => setState(() {
+                      _seatCount = _seatCount > 1 ? _seatCount - 1 : _seatCount;
+                    }),
+                child: Container(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(
+                    Icons.remove_circle,
+                    color: highlightBlue,
+                    size: 24,
                   ),
                 ),
-                Container(
-                  width: 30,
-                  alignment: Alignment.center,
-                  child: Text(
-                    '$_seatCount',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.primary,
-                    ),
+              ),
+              // Affichage du nombre avec une largeur fixe pour éviter l'overflow
+              Container(
+                width: 32, // Largeur encore plus réduite
+                margin: EdgeInsets.symmetric(horizontal: 4), // Marges minimales
+                padding: EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 4,
+                ), // Padding minimal
+                alignment: Alignment.center, // Centre le texte
+                decoration: BoxDecoration(
+                  color: highlightBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$_seatCount',
+                  style: TextStyle(
+                    fontSize: 16, // Taille de police réduite
+                    fontWeight: FontWeight.bold,
+                    color: highlightBlue,
                   ),
                 ),
-                InkWell(
-                  onTap:
-                      () => setState(() {
-                        _seatCount =
-                            _seatCount < 7 ? _seatCount + 1 : _seatCount;
-                      }),
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    child: Icon(
-                      Icons.add_circle,
-                      color: colorScheme.primary,
-                      size: 20,
-                    ),
-                  ),
+              ),
+              // Bouton pour augmenter
+              GestureDetector(
+                // Utiliser GestureDetector au lieu de IconButton pour économiser de l'espace
+                onTap:
+                    () => setState(() {
+                      _seatCount = _seatCount < 7 ? _seatCount + 1 : _seatCount;
+                    }),
+                child: Container(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(Icons.add_circle, color: highlightBlue, size: 24),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1017,113 +1198,116 @@ class _InfoTrajetState extends State<InfoTrajet>
     );
   }
 
- // Méthode pour sauvegarder le trajet
-Future<void> _saveTrip() async {
-  // Vérifie d'abord si l'utilisateur a les permissions nécessaires
-  bool hasPermission = await _checkAddTripPermission();
-  if (!hasPermission) {
-    return; // Le message d'erreur est déjà affiché dans _checkAddTripPermission()
+  // Méthode pour sauvegarder le trajet
+  Future<void> _saveTrip() async {
+    // Vérifie d'abord si l'utilisateur a les permissions nécessaires
+    bool hasPermission = await _checkAddTripPermission();
+    if (!hasPermission) {
+      return; // Le message d'erreur est déjà affiché dans _checkAddTripPermission()
+    }
+
+    // Ensuite, on vérifie que tous les champs requis sont remplis
+    if (!_areRequiredFieldsFilled()) {
+      _showValidationErrors();
+      return;
+    }
+
+    // Si tout est bon, on montre la boîte de confirmation
+    showConfirmationDialog();
   }
 
-  // Ensuite, on vérifie que tous les champs requis sont remplis
-  if (!_areRequiredFieldsFilled()) {
-    _showValidationErrors();
-    return;
-  }
+  // fonction pour la verification de conducteur
+  Future<bool> _checkAddTripPermission() async {
+    User? user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vous devez être connecté pour continuer'),
+        ),
+      );
+      return false;
+    }
 
-  // Si tout est bon, on montre la boîte de confirmation
-  showConfirmationDialog();
-}
+    try {
+      // Récupérer le permis depuis la table piece_identite
+      QuerySnapshot permisSnapshot =
+          await _firestore
+              .collection('piece_identite')
+              .where('id_proprietaire', isEqualTo: user.uid)
+              .where('type_piece', isEqualTo: 'permis')
+              .limit(1)
+              .get();
 
+      bool hasVerifiedLicense = false;
+      bool hasPendingOrNoLicense = true;
 
+      if (permisSnapshot.docs.isNotEmpty) {
+        var permisData =
+            permisSnapshot.docs.first.data() as Map<String, dynamic>;
+        String statut = permisData['statut'] ?? '';
+        String? dateExpirationStr = permisData['date_expiration'];
 
-  // fonction pour la verification de conducteur 
-Future<bool> _checkAddTripPermission() async {
-  User? user = _auth.currentUser;
-  if (user == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Vous devez être connecté pour continuer')),
-    );
-    return false;
-  }
-
-  try {
-    // Récupérer le permis depuis la table piece_identite
-    QuerySnapshot permisSnapshot = await _firestore
-        .collection('piece_identite')
-        .where('id_proprietaire', isEqualTo: user.uid)
-        .where('type_piece', isEqualTo: 'permis')
-        .limit(1)
-        .get();
-
-    bool hasVerifiedLicense = false;
-    bool hasPendingOrNoLicense = true;
-
-    if (permisSnapshot.docs.isNotEmpty) {
-      var permisData = permisSnapshot.docs.first.data() as Map<String, dynamic>;
-      String statut = permisData['statut'] ?? '';
-      String? dateExpirationStr = permisData['date_expiration'];
-
-      DateTime? dateExpiration;
-      if (dateExpirationStr != null) {
-        try {
-          dateExpiration = DateTime.parse(dateExpirationStr);
-        } catch (e) {
-          print('Erreur de parsing de la date d\'expiration: $e');
+        DateTime? dateExpiration;
+        if (dateExpirationStr != null) {
+          try {
+            dateExpiration = DateTime.parse(dateExpirationStr);
+          } catch (e) {
+            print('Erreur de parsing de la date d\'expiration: $e');
+          }
         }
+
+        bool isLicenseExpired =
+            dateExpiration == null || dateExpiration.isBefore(DateTime.now());
+
+        hasVerifiedLicense = statut == 'verifie' && !isLicenseExpired;
+        hasPendingOrNoLicense =
+            statut == 'en cours' || statut == 'refuse' || isLicenseExpired;
       }
 
-      bool isLicenseExpired = dateExpiration == null || dateExpiration.isBefore(DateTime.now());
+      // Si l'utilisateur n'a pas de permis vérifié ou si son permis a expiré
+      if (!hasVerifiedLicense || hasPendingOrNoLicense) {
+        // Afficher un message approprié
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Vous devez avoir un permis de conduire valide pour partager un trajet',
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
 
-      hasVerifiedLicense = statut == 'verifie' && !isLicenseExpired;
-      hasPendingOrNoLicense = statut == 'en cours' || statut == 'refuse' || isLicenseExpired;
-    }
+        // Rediriger vers la page de vérification du conducteur
+        Navigator.pushNamed(context, '/verifier_Conducteur');
+        return false;
+      }
 
-    // Si l'utilisateur n'a pas de permis vérifié ou si son permis a expiré
-    if (!hasVerifiedLicense || hasPendingOrNoLicense) {
-      // Afficher un message approprié
+      // Vérifier si l'utilisateur a déjà chargé ses voitures
+      if (_userCars.isEmpty && !_isLoadingCars) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Vous devez ajouter au moins une voiture pour partager un trajet',
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+
+        // Rediriger vers la page de vérification du conducteur
+        Navigator.pushNamed(context, '/verifier_Conducteur');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      print('Erreur lors de la vérification des conditions : $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vous devez avoir un permis de conduire valide pour partager un trajet'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 4),
-        ),
+        const SnackBar(content: Text('Erreur lors de la vérification')),
       );
-      
-      // Rediriger vers la page de vérification du conducteur
-      Navigator.pushNamed(context, '/verifier_Conducteur');
       return false;
     }
-
-    // Vérifier si l'utilisateur a déjà chargé ses voitures
-    if (_userCars.isEmpty && !_isLoadingCars) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vous devez ajouter au moins une voiture pour partager un trajet'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 4),
-        ),
-      );
-      
-      // Rediriger vers la page de vérification du conducteur
-      Navigator.pushNamed(context, '/verifier_Conducteur');
-      return false;
-    }
-
-    return true;
-
-  } catch (e) {
-    print('Erreur lors de la vérification des conditions : $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Erreur lors de la vérification')),
-    );
-    return false;
   }
-}
-
-
-
-
 
   // Dialogue de confirmation
   void showConfirmationDialog() {
@@ -1321,7 +1505,7 @@ Future<bool> _checkAddTripPermission() async {
         SnackBar(
           content: Row(
             children: const [
-              Icon(Icons.check_circle, color: Colors.white),
+              Icon(Icons.check_circle, color: Colors.green),
               SizedBox(width: 12),
               Text(
                 'Trajet ajouté avec succès',
