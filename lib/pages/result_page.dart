@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:geocoding/geocoding.dart'; // Nouvel import
-import 'package:google_maps_flutter/google_maps_flutter.dart'; // Nouvel import
+import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'confirmationPage.dart';
 import 'info_conducteur.dart';
-import 'maps.dart'; // Nouvel import pour utiliser MapsScreen
+import 'maps.dart';
 import '../widgets/trip_widgets.dart';
 import '../services/notification_service.dart';
 
@@ -18,10 +18,10 @@ class TripMapPreview extends StatefulWidget {
   final String arrival;
 
   const TripMapPreview({
-    Key? key,
+    super.key,
     required this.departure,
     required this.arrival,
-  }) : super(key: key);
+  });
 
   @override
   _TripMapPreviewState createState() => _TripMapPreviewState();
@@ -278,31 +278,17 @@ class TripResultsPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'BladiWay',
+        title: Text(
+          'Les trajets disponibles',
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.blue,
+            color: Colors.white,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(40),
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Text(
-              'Les trajets disponibles',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
       ),
       body:
           trips.isEmpty
@@ -323,21 +309,50 @@ class TripResultsPage extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 itemCount: trips.length,
                 itemBuilder: (context, index) {
-                  final trip = trips[index].data() as Map<String, dynamic>;
+                  // Safely extract trip data with null checks
+                  final Map<String, dynamic> trip;
+                  try {
+                    trip = trips[index].data() as Map<String, dynamic>;
+                  } catch (e) {
+                    print("Error converting trip data: $e");
+                    return SizedBox.shrink(); // Skip this item if data is invalid
+                  }
 
-                  // Récupérer le nombre de places disponibles
-                  final placesDisponibles =
-                      trip['placesDisponibles'] is int
-                          ? trip['placesDisponibles']
-                          : int.tryParse(
-                                trip['placesDisponibles']?.toString() ?? '',
-                              ) ??
-                              (trip['nbrPlaces'] is int
-                                  ? trip['nbrPlaces']
-                                  : int.tryParse(
-                                        trip['nbrPlaces']?.toString() ?? '',
-                                      ) ??
-                                      0);
+                  // Check if trip is in the past
+                  final String date = trip['date'] as String? ?? '';
+                  final String heure = trip['heure'] as String? ?? '';
+                  bool isPast = _isTripPast(date, heure);
+
+                  // Skip past trips if we're not showing a specific date search
+                  if (isPast && !_isSpecificDateSearch()) {
+                    return SizedBox.shrink(); // Don't show past trips
+                  }
+
+                  // Safely extract placesDisponibles with proper null handling
+                  int placesDisponibles = 0;
+                  try {
+                    if (trip['placesDisponibles'] != null) {
+                      if (trip['placesDisponibles'] is int) {
+                        placesDisponibles = trip['placesDisponibles'];
+                      } else {
+                        placesDisponibles =
+                            int.tryParse(
+                              trip['placesDisponibles'].toString(),
+                            ) ??
+                            0;
+                      }
+                    } else if (trip['nbrPlaces'] != null) {
+                      if (trip['nbrPlaces'] is int) {
+                        placesDisponibles = trip['nbrPlaces'];
+                      } else {
+                        placesDisponibles =
+                            int.tryParse(trip['nbrPlaces'].toString()) ?? 0;
+                      }
+                    }
+                  } catch (e) {
+                    print("Error parsing placesDisponibles: $e");
+                    // Default to 0 if there's an error
+                  }
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
@@ -354,7 +369,7 @@ class TripResultsPage extends StatelessWidget {
                       onDriverTap:
                           () => _navigateToInfoConducteur(
                             context,
-                            trip['userId'],
+                            trip['userId'] as String? ?? '',
                             trips[index].id,
                           ),
                     ),
@@ -389,6 +404,13 @@ class TripResultsPage extends StatelessWidget {
     String driverId,
     String reservationId,
   ) async {
+    if (driverId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("ID du conducteur non disponible")),
+      );
+      return;
+    }
+
     // Afficher un loader pendant la récupération de l'ID de réservation
     showDialog(
       context: context,
@@ -431,6 +453,40 @@ class TripResultsPage extends StatelessWidget {
       ).showSnackBar(SnackBar(content: Text("Erreur: $e")));
     }
   }
+
+  bool _isTripPast(String tripDate, String tripTime) {
+    try {
+      final now = DateTime.now();
+      final dateParts = tripDate.split('/');
+      if (dateParts.length != 3) return false;
+
+      final day = int.tryParse(dateParts[0]) ?? 1;
+      final month = int.tryParse(dateParts[1]) ?? 1;
+      final year = int.tryParse(dateParts[2]) ?? 2025;
+
+      final timeParts = tripTime.split(':');
+      if (timeParts.length != 2) return false;
+
+      final hour = int.tryParse(timeParts[0]) ?? 0;
+      final minute = int.tryParse(timeParts[1]) ?? 0;
+
+      final tripDateTime = DateTime(year, month, day, hour, minute);
+      return tripDateTime.isBefore(now);
+    } catch (e) {
+      print("Erreur lors de la vérification de la date: $e");
+      return false;
+    }
+  }
+
+  bool _isSpecificDateSearch() {
+    // Cette méthode détermine si l'utilisateur a spécifié une date dans sa recherche
+    // Vous devrez adapter cette logique en fonction de la façon dont vous gérez les recherches
+    // Par exemple, vous pourriez passer un paramètre supplémentaire au constructeur TripResultsPage
+
+    // Pour l'instant, nous supposons qu'aucune date spécifique n'est recherchée
+    // Modifiez cette logique selon votre implémentation de recherche
+    return false;
+  }
 }
 
 // Nouveau widget pour afficher les trajets avec le nombre de places disponibles
@@ -460,7 +516,36 @@ class ModifiedTripCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    bool isPast = _isTripPast(trip['date'], trip['heure']);
+
+    // Safely extract trip data with null checks
+    final String depart = trip['départ'] as String? ?? 'Lieu inconnu';
+    final String arrivee = trip['arrivée'] as String? ?? 'Lieu inconnu';
+    final String date = trip['date'] as String? ?? 'Date inconnue';
+    final String heure = trip['heure'] as String? ?? '00:00';
+    final String userId = trip['userId'] as String? ?? '';
+    final String typePassagers = trip['typePassagers'] as String? ?? 'Mixte';
+    final String climatisation =
+        trip['climatisation'] as String? ?? 'Non autorisé';
+    final String bagage = trip['bagage'] as String? ?? 'Non autorisé';
+
+    // Safely handle price
+    dynamic prix = trip['prix'];
+    String displayPrice = '0';
+    if (prix != null) {
+      if (prix is double) {
+        displayPrice = prix.toStringAsFixed(0);
+      } else if (prix is int) {
+        displayPrice = prix.toString();
+      } else {
+        try {
+          displayPrice = prix.toString();
+        } catch (e) {
+          print("Error converting price: $e");
+        }
+      }
+    }
+
+    bool isPast = _isTripPast(date, heure);
 
     return GestureDetector(
       onTap: isPast ? null : onTap,
@@ -484,22 +569,16 @@ class ModifiedTripCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     GestureDetector(
-                      onTap: onDriverTap,
-                      child: StreamBuilder(
+                      onTap: userId.isNotEmpty ? onDriverTap : null,
+                      child: StreamBuilder<DocumentSnapshot>(
                         stream:
-                            FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(trip['userId'])
-                                .snapshots(),
+                            userId.isNotEmpty
+                                ? FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(userId)
+                                    .snapshots()
+                                : null,
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return CircleAvatar(
-                              radius: 28,
-                              backgroundColor: Colors.grey[200],
-                              child: const CircularProgressIndicator(),
-                            );
-                          }
                           if (!snapshot.hasData || snapshot.data == null) {
                             return CircleAvatar(
                               radius: 28,
@@ -511,13 +590,27 @@ class ModifiedTripCard extends StatelessWidget {
                               ),
                             );
                           }
-                          final userData =
-                              snapshot.data!.data() as Map<String, dynamic>;
-                          final profileImageUrl = userData['profileImageUrl'];
 
-                          // Vérifier si le conducteur est validé
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.grey[200],
+                              child: const CircularProgressIndicator(),
+                            );
+                          }
+
+                          Map<String, dynamic>? userData;
+                          try {
+                            userData =
+                                snapshot.data!.data() as Map<String, dynamic>?;
+                          } catch (e) {
+                            print("Error converting user data: $e");
+                          }
+
+                          final profileImageUrl = userData?['profileImageUrl'];
                           final isValidated =
-                              userData['isValidated'] as bool? ?? false;
+                              userData?['isValidated'] as bool? ?? false;
 
                           return Stack(
                             children: [
@@ -570,7 +663,7 @@ class ModifiedTripCard extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  _extractCity(trip['départ']),
+                                  _extractCity(depart),
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -588,7 +681,7 @@ class ModifiedTripCard extends StatelessWidget {
                               ),
                               Expanded(
                                 child: Text(
-                                  _extractCity(trip['arrivée']),
+                                  _extractCity(arrivee),
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -611,7 +704,7 @@ class ModifiedTripCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '${trip['date']} à ${trip['heure']}',
+                                '$date à $heure',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[700],
@@ -626,7 +719,7 @@ class ModifiedTripCard extends StatelessWidget {
                           Row(
                             children: [
                               // Climatisation
-                              if (trip['climatisation'] == 'Autorisé')
+                              if (climatisation == 'Autorisé')
                                 Padding(
                                   padding: const EdgeInsets.only(right: 8),
                                   child: Icon(
@@ -637,7 +730,7 @@ class ModifiedTripCard extends StatelessWidget {
                                 ),
 
                               // Bagages
-                              if (trip['bagage'] == 'Autorisé')
+                              if (bagage == 'Autorisé')
                                 Padding(
                                   padding: const EdgeInsets.only(right: 8),
                                   child: Icon(
@@ -648,24 +741,23 @@ class ModifiedTripCard extends StatelessWidget {
                                 ),
 
                               // Type de passagers
-                              if (trip['typePassagers'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: Icon(
-                                    trip['typePassagers'] == 'Femmes'
-                                        ? Icons.female
-                                        : trip['typePassagers'] == 'Hommes'
-                                        ? Icons.male
-                                        : Icons.people,
-                                    size: 16,
-                                    color:
-                                        trip['typePassagers'] == 'Femmes'
-                                            ? Colors.pink
-                                            : trip['typePassagers'] == 'Hommes'
-                                            ? Colors.blue
-                                            : Colors.purple,
-                                  ),
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Icon(
+                                  typePassagers == 'Femmes'
+                                      ? Icons.female
+                                      : typePassagers == 'Hommes'
+                                      ? Icons.male
+                                      : Icons.people,
+                                  size: 16,
+                                  color:
+                                      typePassagers == 'Femmes'
+                                          ? Colors.pink
+                                          : typePassagers == 'Hommes'
+                                          ? Colors.blue
+                                          : Colors.purple,
                                 ),
+                              ),
                             ],
                           ),
                         ],
@@ -693,7 +785,7 @@ class ModifiedTripCard extends StatelessWidget {
                   children: [
                     // Prix
                     Text(
-                      '${(trip['prix'] is double) ? trip['prix'].toStringAsFixed(0) : trip['prix']} DA',
+                      '$displayPrice DA',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -802,6 +894,13 @@ class TripDetailPage extends StatelessWidget {
 
   // Méthode pour naviguer vers la page InfoConducteurPage
   void _showDriverInfo(BuildContext context, String driverId) async {
+    if (driverId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("ID du conducteur non disponible")),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -844,7 +943,29 @@ class TripDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isPast = _isTripPast(trip['date'], trip['heure']);
+    // Safely extract trip data with null checks
+    final String depart = trip['départ'] as String? ?? 'Lieu inconnu';
+    final String arrivee = trip['arrivée'] as String? ?? 'Lieu inconnu';
+    final String date = trip['date'] as String? ?? 'Date inconnue';
+    final String heure = trip['heure'] as String? ?? '00:00';
+    final String userId = trip['userId'] as String? ?? '';
+
+    // Safely handle price
+    dynamic prix = trip['prix'];
+    num priceValue = 0;
+    if (prix != null) {
+      if (prix is num) {
+        priceValue = prix;
+      } else {
+        try {
+          priceValue = num.tryParse(prix.toString()) ?? 0;
+        } catch (e) {
+          print("Error converting price: $e");
+        }
+      }
+    }
+
+    bool isPast = _isTripPast(date, heure);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -899,22 +1020,57 @@ class TripDetailPage extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.phone, color: Colors.white),
                             onPressed: () async {
-                              final userDoc =
-                                  await FirebaseFirestore.instance
-                                      .collection('users')
-                                      .doc(trip['userId'])
-                                      .get();
-                              if (userDoc.exists) {
-                                final userData =
-                                    userDoc.data() as Map<String, dynamic>;
-                                final phoneNumber =
-                                    userData['phone'] as String?;
-                                if (phoneNumber != null) {
-                                  final url = 'tel:$phoneNumber';
-                                  if (await canLaunch(url)) {
-                                    await launch(url);
+                              if (userId.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "ID du conducteur non disponible",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              try {
+                                final userDoc =
+                                    await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(userId)
+                                        .get();
+
+                                if (userDoc.exists) {
+                                  final userData = userDoc.data();
+                                  final phoneNumber =
+                                      userData?['phone'] as String?;
+
+                                  if (phoneNumber != null &&
+                                      phoneNumber.isNotEmpty) {
+                                    final url = 'tel:$phoneNumber';
+                                    if (await canLaunch(url)) {
+                                      await launch(url);
+                                    } else {
+                                      throw 'Could not launch $url';
+                                    }
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Numéro de téléphone non disponible",
+                                        ),
+                                      ),
+                                    );
                                   }
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Utilisateur non trouvé"),
+                                    ),
+                                  );
                                 }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Erreur: $e")),
+                                );
                               }
                             },
                           ),
@@ -923,8 +1079,7 @@ class TripDetailPage extends StatelessWidget {
                               Icons.info_outline,
                               color: Colors.white,
                             ),
-                            onPressed:
-                                () => _showDriverInfo(context, trip['userId']),
+                            onPressed: () => _showDriverInfo(context, userId),
                           ),
                         ],
                       ),
@@ -935,11 +1090,29 @@ class TripDetailPage extends StatelessWidget {
                 // Carte du profil du conducteur
                 FutureBuilder<DocumentSnapshot>(
                   future:
-                      FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(trip['userId'])
-                          .get(),
+                      userId.isNotEmpty
+                          ? FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(userId)
+                              .get()
+                          : null,
                   builder: (context, snapshot) {
+                    if (userId.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: Card(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(
+                              child: Text(
+                                "Informations du conducteur non disponibles",
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
@@ -952,15 +1125,36 @@ class TripDetailPage extends StatelessWidget {
                       );
                     }
 
-                    final conductorData =
-                        snapshot.data!.data() as Map<String, dynamic>;
+                    Map<String, dynamic>? conductorData;
+                    try {
+                      conductorData =
+                          snapshot.data!.data() as Map<String, dynamic>?;
+                    } catch (e) {
+                      print("Error converting conductor data: $e");
+                      return const Center(
+                        child: Text(
+                          "Erreur lors de la récupération des données",
+                        ),
+                      );
+                    }
+
+                    if (conductorData == null) {
+                      return const Center(
+                        child: Text("Données du conducteur non disponibles"),
+                      );
+                    }
+
                     final isValidated =
                         conductorData['isValidated'] as bool? ?? false;
+                    final prenom = conductorData['prenom'] as String? ?? '';
+                    final nom = conductorData['nom'] as String? ?? '';
+                    final profileImageUrl =
+                        conductorData['profileImageUrl'] as String?;
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: GestureDetector(
-                        onTap: () => _showDriverInfo(context, trip['userId']),
+                        onTap: () => _showDriverInfo(context, userId),
                         child: Card(
                           elevation: 8,
                           shape: RoundedRectangleBorder(
@@ -975,13 +1169,11 @@ class TripDetailPage extends StatelessWidget {
                                   backgroundColor: theme.colorScheme.primary
                                       .withOpacity(0.1),
                                   backgroundImage:
-                                      conductorData['profileImageUrl'] != null
-                                          ? NetworkImage(
-                                            conductorData['profileImageUrl'],
-                                          )
+                                      profileImageUrl != null
+                                          ? NetworkImage(profileImageUrl)
                                           : null,
                                   child:
-                                      conductorData['profileImageUrl'] == null
+                                      profileImageUrl == null
                                           ? const Icon(Icons.person, size: 40)
                                           : null,
                                 ),
@@ -992,7 +1184,7 @@ class TripDetailPage extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '${conductorData['prenom']} ${conductorData['nom']}',
+                                        '$prenom $nom',
                                         style: const TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
@@ -1005,7 +1197,7 @@ class TripDetailPage extends StatelessWidget {
                                                 .collection('reviews')
                                                 .where(
                                                   'ratedUserId',
-                                                  isEqualTo: trip['userId'],
+                                                  isEqualTo: userId,
                                                 )
                                                 .get(),
                                         builder: (context, reviewsSnapshot) {
@@ -1043,16 +1235,30 @@ class TripDetailPage extends StatelessWidget {
                                             double totalRating = 0;
                                             for (var doc
                                                 in reviewsSnapshot.data!.docs) {
-                                              final reviewData =
-                                                  doc.data()
-                                                      as Map<String, dynamic>;
-                                              totalRating +=
-                                                  (reviewData['rating']
-                                                              as num? ??
-                                                          0)
-                                                      .toDouble();
+                                              try {
+                                                final reviewData =
+                                                    doc.data()
+                                                        as Map<
+                                                          String,
+                                                          dynamic
+                                                        >?;
+                                                if (reviewData != null) {
+                                                  totalRating +=
+                                                      (reviewData['rating']
+                                                                  as num? ??
+                                                              0)
+                                                          .toDouble();
+                                                }
+                                              } catch (e) {
+                                                print(
+                                                  "Error processing review: $e",
+                                                );
+                                              }
                                             }
-                                            rating = totalRating / reviewCount;
+                                            rating =
+                                                reviewCount > 0
+                                                    ? totalRating / reviewCount
+                                                    : 0;
                                           }
                                           return Row(
                                             children: [
@@ -1139,10 +1345,10 @@ class TripDetailPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           TripInfoCard(
-                            depart: trip['départ'],
-                            arrivee: trip['arrivée'],
-                            date: trip['date'],
-                            heure: trip['heure'],
+                            depart: depart,
+                            arrivee: arrivee,
+                            date: date,
+                            heure: heure,
                           ),
                           const SizedBox(height: 20),
                           // Ajout de la carte ici
@@ -1155,10 +1361,7 @@ class TripDetailPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          TripMapPreview(
-                            departure: trip['départ'],
-                            arrival: trip['arrivée'],
-                          ),
+                          TripMapPreview(departure: depart, arrival: arrivee),
                           const SizedBox(height: 20),
                           TripDetailsCard(tripData: trip),
                           const SizedBox(height: 20),
@@ -1166,9 +1369,8 @@ class TripDetailPage extends StatelessWidget {
                           const SizedBox(height: 20),
                           PriceBreakdownCard(
                             seatsReserved: requiredSeats,
-                            pricePerSeat: trip['prix'] as num? ?? 0,
-                            totalPrice:
-                                (trip['prix'] as num? ?? 0) * requiredSeats,
+                            pricePerSeat: priceValue,
+                            totalPrice: priceValue * requiredSeats,
                           ),
                           const SizedBox(height: 24),
                           if (isPast)
@@ -1295,7 +1497,15 @@ class TripDetailPage extends StatelessWidget {
 
       final pieces =
           piecesSnapshot.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
+              .map((doc) {
+                try {
+                  return doc.data() as Map<String, dynamic>;
+                } catch (e) {
+                  print("Error converting piece data: $e");
+                  return <String, dynamic>{};
+                }
+              })
+              .where((piece) => piece.isNotEmpty)
               .toList();
 
       bool hasVerifiedID = pieces.any((piece) => piece['statut'] == 'verifie');
@@ -1320,20 +1530,32 @@ class TripDetailPage extends StatelessWidget {
     } catch (e) {
       print('Erreur lors de la vérification des conditions : $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur lors de la vérification')),
+        SnackBar(content: Text('Erreur lors de la vérification: $e')),
       );
     }
   }
 
   void _showReservationDialog(BuildContext context) async {
-    // Récupérer les places disponibles
-    final int availableSeats =
-        trip['placesDisponibles'] is int
-            ? trip['placesDisponibles']
-            : int.tryParse(trip['placesDisponibles']?.toString() ?? '') ??
-                (trip['nbrPlaces'] is int
-                    ? trip['nbrPlaces']
-                    : int.tryParse(trip['nbrPlaces']?.toString() ?? '') ?? 0);
+    // Récupérer les places disponibles de manière sécurisée
+    int availableSeats = 0;
+    try {
+      if (trip['placesDisponibles'] != null) {
+        if (trip['placesDisponibles'] is int) {
+          availableSeats = trip['placesDisponibles'];
+        } else {
+          availableSeats =
+              int.tryParse(trip['placesDisponibles'].toString()) ?? 0;
+        }
+      } else if (trip['nbrPlaces'] != null) {
+        if (trip['nbrPlaces'] is int) {
+          availableSeats = trip['nbrPlaces'];
+        } else {
+          availableSeats = int.tryParse(trip['nbrPlaces'].toString()) ?? 0;
+        }
+      }
+    } catch (e) {
+      print("Error parsing available seats: $e");
+    }
 
     if (availableSeats < requiredSeats) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1371,27 +1593,109 @@ class TripDetailPage extends StatelessWidget {
                   );
 
                   // Vérifier la disponibilité et le statut du trajet en temps réel
-                  final updatedTripSnapshot =
-                      await FirebaseFirestore.instance
-                          .collection('trips')
-                          .doc(tripId)
-                          .get();
+                  try {
+                    final updatedTripSnapshot =
+                        await FirebaseFirestore.instance
+                            .collection('trips')
+                            .doc(tripId)
+                            .get();
 
-                  Navigator.pop(context); // Fermer le loader
-                  Navigator.pop(context);
+                    Navigator.pop(context); // Fermer le loader
+                    Navigator.pop(
+                      context,
+                    ); // Fermer le dialogue de confirmation
 
-                  final updatedTrip = updatedTripSnapshot.data();
+                    if (!updatedTripSnapshot.exists) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Ce trajet n\'existe plus.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                      return;
+                    }
 
-                  if (updatedTrip != null &&
-                      updatedTrip['status'] == 'en attente' &&
-                      updatedTrip['placesDisponibles'] >= requiredSeats) {
-                    _reserveTrip(context, updatedTrip);
-                  } else {
+                    Map<String, dynamic>? updatedTrip;
+                    try {
+                      updatedTrip = updatedTripSnapshot.data();
+                    } catch (e) {
+                      print("Error converting updated trip data: $e");
+                    }
+
+                    if (updatedTrip == null) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Erreur lors de la récupération des données du trajet.',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+
+                    // Vérifier le statut et les places disponibles
+                    final String status =
+                        updatedTrip['status'] as String? ?? '';
+                    int updatedAvailableSeats = 0;
+
+                    try {
+                      if (updatedTrip['placesDisponibles'] != null) {
+                        if (updatedTrip['placesDisponibles'] is int) {
+                          updatedAvailableSeats =
+                              updatedTrip['placesDisponibles'];
+                        } else {
+                          updatedAvailableSeats =
+                              int.tryParse(
+                                updatedTrip['placesDisponibles'].toString(),
+                              ) ??
+                              0;
+                        }
+                      } else if (updatedTrip['nbrPlaces'] != null) {
+                        if (updatedTrip['nbrPlaces'] is int) {
+                          updatedAvailableSeats = updatedTrip['nbrPlaces'];
+                        } else {
+                          updatedAvailableSeats =
+                              int.tryParse(
+                                updatedTrip['nbrPlaces'].toString(),
+                              ) ??
+                              0;
+                        }
+                      }
+                    } catch (e) {
+                      print("Error parsing updated available seats: $e");
+                    }
+
+                    if (status == 'en attente' &&
+                        updatedAvailableSeats >= requiredSeats) {
+                      _reserveTrip(context, updatedTrip);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Votre réservation a été refusée. Ce trajet n\'est plus disponible ou n\'a pas assez de places.',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    Navigator.pop(context); // Fermer le loader en cas d'erreur
+                    Navigator.pop(
+                      context,
+                    ); // Fermer le dialogue de confirmation
+
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
+                        SnackBar(
                           content: Text(
-                            'Votre réservation a été refusée. Ce trajet n\'est plus disponible ou n\'a pas assez de places.',
+                            'Erreur lors de la vérification du trajet: $e',
                           ),
                           backgroundColor: Colors.red,
                         ),
@@ -1411,7 +1715,10 @@ class TripDetailPage extends StatelessWidget {
     Map<String, dynamic> updatedTrip,
   ) async {
     // Vérifier une dernière fois si le trajet est passé
-    if (_isTripPast(updatedTrip['date'], updatedTrip['heure'])) {
+    final String date = updatedTrip['date'] as String? ?? '';
+    final String heure = updatedTrip['heure'] as String? ?? '';
+
+    if (_isTripPast(date, heure)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -1428,18 +1735,26 @@ class TripDetailPage extends StatelessWidget {
 
     try {
       // Récupérer les places disponibles
-      int availableSeats =
-          updatedTrip['placesDisponibles'] is int
-              ? updatedTrip['placesDisponibles']
-              : int.tryParse(
-                    updatedTrip['placesDisponibles']?.toString() ?? '',
-                  ) ??
-                  (updatedTrip['nbrPlaces'] is int
-                      ? updatedTrip['nbrPlaces']
-                      : int.tryParse(
-                            updatedTrip['nbrPlaces']?.toString() ?? '',
-                          ) ??
-                          0);
+      int availableSeats = 0;
+      try {
+        if (updatedTrip['placesDisponibles'] != null) {
+          if (updatedTrip['placesDisponibles'] is int) {
+            availableSeats = updatedTrip['placesDisponibles'];
+          } else {
+            availableSeats =
+                int.tryParse(updatedTrip['placesDisponibles'].toString()) ?? 0;
+          }
+        } else if (updatedTrip['nbrPlaces'] != null) {
+          if (updatedTrip['nbrPlaces'] is int) {
+            availableSeats = updatedTrip['nbrPlaces'];
+          } else {
+            availableSeats =
+                int.tryParse(updatedTrip['nbrPlaces'].toString()) ?? 0;
+          }
+        }
+      } catch (e) {
+        print("Error parsing available seats: $e");
+      }
 
       if (availableSeats >= requiredSeats) {
         // Vérifier que l'utilisateur est connecté
@@ -1460,11 +1775,21 @@ class TripDetailPage extends StatelessWidget {
                 .doc(currentUser.uid)
                 .get();
 
-        final passengerData = passengerDoc.data();
-        final passengerName =
-            passengerData != null
-                ? '${passengerData['prenom']} ${passengerData['nom']}'
-                : 'Un passager';
+        String passengerName = 'Un passager';
+        if (passengerDoc.exists) {
+          try {
+            final passengerData = passengerDoc.data();
+            if (passengerData != null) {
+              final prenom = passengerData['prenom'] as String? ?? '';
+              final nom = passengerData['nom'] as String? ?? '';
+              if (prenom.isNotEmpty || nom.isNotEmpty) {
+                passengerName = '$prenom $nom'.trim();
+              }
+            }
+          } catch (e) {
+            print("Error extracting passenger data: $e");
+          }
+        }
 
         // Mettre à jour le document trip avec les places restantes
         await FirebaseFirestore.instance.collection('trips').doc(tripId).update(
@@ -1488,22 +1813,18 @@ class TripDetailPage extends StatelessWidget {
         });
 
         // Envoyer une notification au conducteur avec des détails supplémentaires
-        final driverId = updatedTrip['userId'];
-        await NotificationService.createReservationNotification(
-          driverId: driverId,
-          passengerId: currentUser.uid,
-          passengerName: passengerName,
-          tripId: tripId,
-          tripDestination:
-              updatedTrip['arrivée'] is String
-                  ? updatedTrip['arrivée']
-                  : 'destination',
-          tripDate:
-              updatedTrip['date'] is String
-                  ? updatedTrip['date']
-                  : 'date prévue',
-          seatsReserved: requiredSeats,
-        );
+        final driverId = updatedTrip['userId'] as String? ?? '';
+        if (driverId.isNotEmpty) {
+          await NotificationService.createReservationNotification(
+            driverId: driverId,
+            passengerId: currentUser.uid,
+            passengerName: passengerName,
+            tripId: tripId,
+            tripDestination: updatedTrip['arrivée'] as String? ?? 'destination',
+            tripDate: updatedTrip['date'] as String? ?? 'date prévue',
+            seatsReserved: requiredSeats,
+          );
+        }
 
         // Marquer la réservation comme réussie
         reservationSuccess = true;
@@ -1524,7 +1845,6 @@ class TripDetailPage extends StatelessWidget {
 
     // Naviguer vers la page de confirmation uniquement si la réservation a réussi
     if (reservationSuccess) {
-      navigator.pop(context); // Fermer la boîte de dialogue
       navigator.push(
         MaterialPageRoute(builder: (context) => ConfirmationPage()),
       );

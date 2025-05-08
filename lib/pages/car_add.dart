@@ -520,15 +520,7 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen>
                                           ),
                                         ),
                                         const SizedBox(height: 16),
-                                        Text(
-                                          tr('form.add_car_photo'),
-                                          style: TextStyle(
-                                            color: primaryColor,
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 16,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
+                                        
                                       ],
                                     ),
                           ),
@@ -543,7 +535,7 @@ class CarRegistrationScreenState extends State<CarRegistrationScreen>
                           Expanded(
                             child: ElevatedButton.icon(
                               icon: const Icon(Icons.photo_library, size: 20),
-                              label: Text(tr('button.gallery')),
+                              label: Text(tr('gallery')),
                               style: ElevatedButton.styleFrom(
                                 foregroundColor: Colors.white,
                                 backgroundColor: primaryColor,

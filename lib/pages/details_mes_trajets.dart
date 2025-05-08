@@ -1237,7 +1237,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                   ),
                   if (!isReasonValid && reasonController.text.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
+                      padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
                         'La raison doit contenir au moins 10 caractères',
                         style: TextStyle(color: Colors.red, fontSize: 12),
@@ -1266,7 +1266,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.red.withOpacity(0.5),
+                    disabledBackgroundColor: Colors.red.withAlpha(128),
                   ),
                   child: const Text('Confirmer'),
                 ),
@@ -1413,44 +1413,6 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
-    Color statusColor;
-    switch (status.toLowerCase()) {
-      case STATUS_TERMINE:
-        statusColor = Colors.green;
-        break;
-      case STATUS_COMPLETE:
-        statusColor = const Color.fromARGB(255, 15, 236, 225);
-        break;
-      case STATUS_EN_ROUTE:
-        statusColor = Colors.blue;
-        break;
-      case STATUS_ANNULE:
-        statusColor = Colors.red;
-        break;
-      case STATUS_BLOQUE:
-        statusColor = const Color.fromARGB(255, 12, 12, 12);
-        break;
-      case STATUS_EN_ATTENTE:
-      default:
-        statusColor = Colors.orange;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: statusColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        status,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 
   Widget _buildPlacesInfo() {
     if (_tripData == null) return Container();
@@ -1538,7 +1500,11 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Détails du trajet'),
+        iconTheme: const IconThemeData(color: Colors.blue),
+        title: const Text(
+          'Détails du trajet',
+          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -1557,13 +1523,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Informations du trajet',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  _buildStatusBadge(status),
-                ],
+                
               ),
               const SizedBox(height: 24),
               // Ajout : Aperçu de la carte

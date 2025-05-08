@@ -348,37 +348,31 @@ class _ChatPageState extends State<ChatPage> {
                     // Message Bubble Widget
                     Widget messageBubble = Container(
                       constraints: BoxConstraints(
-                        maxWidth:
-                            MediaQuery.of(context).size.width *
-                            0.75, // Max width constraint
+                        maxWidth: MediaQuery.of(context).size.width * 0.75,
                       ),
                       padding: const EdgeInsets.symmetric(
                         vertical: 10,
                         horizontal: 14,
-                      ), // Adjusted padding
-                      margin: const EdgeInsets.symmetric(
-                        vertical: 2,
-                      ), // Reduced vertical margin
+                      ),
+                      margin: const EdgeInsets.symmetric(vertical: 2),
                       decoration: BoxDecoration(
                         color:
                             isMe
-                                ? colorScheme.primary
-                                : colorScheme
-                                    .secondaryContainer, // Use secondaryContainer for others
+                                ? const Color(
+                                  0xFF007AFF,
+                                ) // Bleu vif pour mes messages
+                                : const Color(
+                                  0xFFE8E8E8,
+                                ), // Gris clair pour les messages reçus
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(18),
                           topRight: Radius.circular(18),
                           bottomLeft:
-                              isMe
-                                  ? Radius.circular(18)
-                                  : Radius.circular(4), // Chat tail effect
+                              isMe ? Radius.circular(18) : Radius.circular(4),
                           bottomRight:
-                              isMe
-                                  ? Radius.circular(4)
-                                  : Radius.circular(18), // Chat tail effect
+                              isMe ? Radius.circular(4) : Radius.circular(18),
                         ),
                         boxShadow: [
-                          // Subtle shadow for depth
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
                             spreadRadius: 1,
@@ -391,32 +385,30 @@ class _ChatPageState extends State<ChatPage> {
                         crossAxisAlignment:
                             isMe
                                 ? CrossAxisAlignment.end
-                                : CrossAxisAlignment
-                                    .start, // Align time correctly
-                        mainAxisSize: MainAxisSize.min, // Fit content
+                                : CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             message,
                             style: TextStyle(
                               color:
                                   isMe
-                                      ? colorScheme.onPrimary
-                                      : colorScheme
-                                          .onSecondaryContainer, // Corresponding on-colors
-                              fontSize: 15, // Slightly larger text
+                                      ? Colors.white
+                                      : Colors
+                                          .black87, // Texte blanc pour mes messages, noir pour les reçus
+                              fontSize: 15,
                             ),
                           ),
-                          const SizedBox(
-                            height: 5,
-                          ), // Space between text and time
+                          const SizedBox(height: 5),
                           Text(
                             messageTime,
                             style: TextStyle(
                               fontSize: 10,
-                              color: (isMe
-                                      ? colorScheme.onPrimary
-                                      : colorScheme.onSecondaryContainer)
-                                  .withOpacity(0.7), // Adjusted time color
+                              color:
+                                  isMe
+                                      ? Colors.white.withOpacity(0.7)
+                                      : Colors
+                                          .black54, // Heure plus discrète selon le type de message
                             ),
                           ),
                         ],

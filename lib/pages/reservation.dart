@@ -36,11 +36,11 @@ class _ReservationPageState extends State<ReservationPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'BladiWay',
+          'Réserver un trajet',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.blue,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
         centerTitle: true,
@@ -54,20 +54,15 @@ class _ReservationPageState extends State<ReservationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Réserver pour un voyage',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
             const SizedBox(height: 60),
 
             // Conteneur des champs de départ et d'arrivée
             Container(
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.blue, width: 2),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
@@ -79,7 +74,11 @@ class _ReservationPageState extends State<ReservationPage> {
                     isForDeparture: true,
                   ),
 
-                  const Divider(height: 1, thickness: 1, color: Colors.blue),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
 
                   _buildLocationField(
                     controller: _arrivalController,
@@ -98,7 +97,7 @@ class _ReservationPageState extends State<ReservationPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'La Date(facultatif)',
+                  'La Date(facultative)',
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 5),
@@ -128,7 +127,7 @@ class _ReservationPageState extends State<ReservationPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -147,8 +146,8 @@ class _ReservationPageState extends State<ReservationPage> {
                         },
                         icon: Container(
                           padding: const EdgeInsets.all(0),
-                          decoration: const BoxDecoration(
-                            color: Colors.blue,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -182,8 +181,8 @@ class _ReservationPageState extends State<ReservationPage> {
                         },
                         icon: Container(
                           padding: const EdgeInsets.all(0),
-                          decoration: const BoxDecoration(
-                            color: Colors.blue,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -210,14 +209,19 @@ class _ReservationPageState extends State<ReservationPage> {
                 height: 50,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.blue[300]!, Colors.blue],
+                    colors: [
+                      Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      Theme.of(context).colorScheme.primary,
+                    ],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.3),
                       spreadRadius: 1,
                       blurRadius: 6,
                       offset: Offset(0, 3),
@@ -235,7 +239,7 @@ class _ReservationPageState extends State<ReservationPage> {
                   ),
                   child: Text(
                     'Chercher un trajet',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
                       color: Colors.white,
@@ -285,7 +289,10 @@ class _ReservationPageState extends State<ReservationPage> {
           children: [
             Icon(
               icon,
-              color: isForDeparture ? Colors.blue : Colors.red,
+              color:
+                  isForDeparture
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.secondary,
               size: 22,
             ),
             const SizedBox(width: 14),
@@ -294,7 +301,10 @@ class _ReservationPageState extends State<ReservationPage> {
                 controller.text.isEmpty ? hint : controller.text,
                 style: TextStyle(
                   fontSize: 16,
-                  color: controller.text.isEmpty ? Colors.grey : Colors.black87,
+                  color:
+                      controller.text.isEmpty
+                          ? Theme.of(context).hintColor
+                          : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -317,18 +327,18 @@ class _ReservationPageState extends State<ReservationPage> {
       onTap: onTap,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey),
+        hintStyle: TextStyle(color: Theme.of(context).hintColor),
         suffixIcon: suffixIcon,
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
           borderRadius: BorderRadius.circular(10),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blue),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
           borderRadius: BorderRadius.circular(10),
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Theme.of(context).colorScheme.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -346,9 +356,9 @@ class _ReservationPageState extends State<ReservationPage> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(
-              context,
-            ).colorScheme.copyWith(primary: Colors.blue),
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Theme.of(context).colorScheme.primary,
+            ),
           ),
           child: child!,
         );
@@ -363,7 +373,6 @@ class _ReservationPageState extends State<ReservationPage> {
     }
   }
 
-
   void _showValidationErrors() {
     List<String> emptyFields = [];
     if (_departureController.text.isEmpty) emptyFields.add('Point de départ');
@@ -377,9 +386,12 @@ class _ReservationPageState extends State<ReservationPage> {
       SnackBar(
         content: Text(
           errorMessage,
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -627,7 +639,7 @@ class _ReservationPageState extends State<ReservationPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erreur lors de la recherche: $error'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }

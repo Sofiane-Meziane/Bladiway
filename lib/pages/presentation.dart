@@ -197,7 +197,7 @@ class _PresentationPageState extends State<PresentationPage> {
         color:
             isActive
                 ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.surfaceContainerHighest,
+                : Theme.of(context).colorScheme.outlineVariant,
         shape: BoxShape.circle,
         boxShadow:
             isActive
@@ -236,7 +236,8 @@ class _ActionButton extends StatelessWidget {
                 : Theme.of(context).colorScheme.primary,
         foregroundColor:
             isSecondary
-                ? Theme.of(context).colorScheme.onSecondaryContainer
+                ? Colors
+                    .black // Couleur foncée explicite pour le texte
                 : Theme.of(context).colorScheme.onPrimary,
         minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),

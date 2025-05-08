@@ -8,7 +8,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:bladiway/methods/commun_methods.dart';
 import 'package:bladiway/widgets/settings_widgets.dart';
 import 'package:bladiway/methods/user_data_notifier.dart';
-import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

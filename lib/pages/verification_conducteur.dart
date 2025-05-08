@@ -351,15 +351,6 @@ class _PermissionAddCarPageState extends State<PermissionAddCarPage> {
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  // Titre de la page
-                  Text(
-                    "Bladiway",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
                   const SizedBox(height: 20),
                   // Vue paginée (mais ici il y a une seule page)
                   Expanded(
@@ -482,7 +473,8 @@ class _ActionButton extends StatelessWidget {
                 : Theme.of(context).colorScheme.primary,
         foregroundColor:
             isSecondary
-                ? Theme.of(context).colorScheme.onSecondaryContainer
+                ? Colors
+                    .black // Couleur foncée explicite pour le texte
                 : Theme.of(context).colorScheme.onPrimary,
         minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),

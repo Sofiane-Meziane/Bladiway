@@ -33,10 +33,8 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
 
   Future<void> _checkExistingReview() async {
     try {
-
       if (mounted) {
-        setState(() {
-        });
+        setState(() {});
       }
     } catch (e) {
       print("Erreur lors de la vérification des avis existants: $e");
@@ -55,7 +53,6 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
             .where('ratedUserId', isEqualTo: widget.conductorId)
             .get();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -96,63 +93,19 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
                     vertical: 8,
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
                       ),
+                      const SizedBox(width: 16),
                       const Text(
-                        'Bladiway',
+                        'Infos Conducteur',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.phone, color: Colors.white),
-                            onPressed: () async {
-                              final userDoc =
-                                  await FirebaseFirestore.instance
-                                      .collection('users')
-                                      .doc(widget.conductorId)
-                                      .get();
-                              if (userDoc.exists) {
-                                final userData =
-                                    userDoc.data() as Map<String, dynamic>;
-                                final phoneNumber =
-                                    userData['phone'] as String?;
-                                if (phoneNumber != null) {
-                                  final url = 'tel:$phoneNumber';
-                                  if (await canLaunch(url)) {
-                                    await launch(url);
-                                  }
-                                }
-                              }
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.message,
-                              color: Colors.white,
-                            ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => ChatPage(
-                                        reservationId: widget.reservationId,
-                                        otherUserId: widget.conductorId,
-                                      ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
                       ),
                     ],
                   ),
@@ -438,6 +391,10 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(15),
                                 ),
+                                color:
+                                    Theme.of(context)
+                                        .colorScheme
+                                        .surface, // Utilise la couleur de surface du thème
                                 child: Padding(
                                   padding: const EdgeInsets.all(20),
                                   child: Column(
@@ -566,12 +523,10 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
                                               ),
                                             );
                                           }
-                                          return ListView.builder(
-                                            shrinkWrap: true,
-                                            physics:
-                                                const NeverScrollableScrollPhysics(),
-                                            itemCount: limitedDocs.length,
-                                            itemBuilder: (context, index) {
+                                          return Column(
+                                            children: List.generate(limitedDocs.length, (
+                                              index,
+                                            ) {
                                               final reviewData =
                                                   limitedDocs[index].data()
                                                       as Map<String, dynamic>;
@@ -601,14 +556,14 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
                                                     16,
                                                   ),
                                                   decoration: BoxDecoration(
-                                                    color: Colors.grey[50],
+                                                    color:
+                                                        Theme.of(
+                                                          context,
+                                                        ).colorScheme.surface,
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                           12,
                                                         ),
-                                                    border: Border.all(
-                                                      color: Colors.grey[200]!,
-                                                    ),
                                                     boxShadow: [
                                                       BoxShadow(
                                                         color: Colors.black
@@ -763,15 +718,14 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
                                                           16,
                                                         ),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.grey[50],
+                                                      color:
+                                                          Theme.of(
+                                                            context,
+                                                          ).colorScheme.surface,
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                             12,
                                                           ),
-                                                      border: Border.all(
-                                                        color:
-                                                            Colors.grey[200]!,
-                                                      ),
                                                       boxShadow: [
                                                         BoxShadow(
                                                           color: Colors.black
@@ -822,63 +776,67 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
                                                             const SizedBox(
                                                               width: 12,
                                                             ),
-                                                            Column(
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .start,
-                                                              children: [
-                                                                Text(
-                                                                  reviewerName,
-                                                                  style: const TextStyle(
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold,
-                                                                    fontSize:
-                                                                        14,
+                                                            Expanded(
+                                                              child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  Text(
+                                                                    reviewerName,
+                                                                    style: const TextStyle(
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      fontSize:
+                                                                          14,
+                                                                    ),
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
                                                                   ),
-                                                                ),
-                                                                const SizedBox(
-                                                                  height: 2,
-                                                                ),
-                                                                Text(
-                                                                  DateFormat(
-                                                                    'dd/MM/yyyy',
-                                                                  ).format(
-                                                                    reviewDate
-                                                                        .toDate(),
+                                                                  const SizedBox(
+                                                                    height: 2,
                                                                   ),
-                                                                  style: TextStyle(
-                                                                    fontSize:
-                                                                        12,
-                                                                    color:
-                                                                        Colors
-                                                                            .grey[600],
+                                                                  Text(
+                                                                    DateFormat(
+                                                                      'dd/MM/yyyy',
+                                                                    ).format(
+                                                                      reviewDate
+                                                                          .toDate(),
+                                                                    ),
+                                                                    style: TextStyle(
+                                                                      fontSize:
+                                                                          12,
+                                                                      color:
+                                                                          Colors
+                                                                              .grey[600],
+                                                                    ),
                                                                   ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                            const Spacer(),
-                                                            Row(
-                                                              children: List.generate(
-                                                                5,
-                                                                (
-                                                                  starIndex,
-                                                                ) => Icon(
-                                                                  starIndex <
-                                                                          rating
-                                                                      ? Icons
-                                                                          .star
-                                                                      : Icons
-                                                                          .star_border,
-                                                                  color:
-                                                                      starIndex <
-                                                                              rating
-                                                                          ? Colors
-                                                                              .amber
-                                                                          : Colors
-                                                                              .grey,
-                                                                  size: 16,
-                                                                ),
+                                                                  const SizedBox(
+                                                                    height: 8,
+                                                                  ),
+                                                                  Row(
+                                                                    children: List.generate(
+                                                                      5,
+                                                                      (
+                                                                        starIndex,
+                                                                      ) => Icon(
+                                                                        starIndex <
+                                                                                rating
+                                                                            ? Icons.star
+                                                                            : Icons.star_border,
+                                                                        color:
+                                                                            starIndex <
+                                                                                    rating
+                                                                                ? Colors.amber
+                                                                                : Colors.grey,
+                                                                        size:
+                                                                            16,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
                                                               ),
                                                             ),
                                                           ],
@@ -901,7 +859,7 @@ class _InfoConducteurPageState extends State<InfoConducteurPage> {
                                                   );
                                                 },
                                               );
-                                            },
+                                            }),
                                           );
                                         },
                                       ),

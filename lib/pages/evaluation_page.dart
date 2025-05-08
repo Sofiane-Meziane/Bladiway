@@ -136,7 +136,7 @@ class _EvaluationPageState extends State<EvaluationPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Erreur: " + e.toString())));
+        ).showSnackBar(SnackBar(content: Text("Erreur: $e")));
       }
     }
   }
@@ -176,8 +176,15 @@ class _EvaluationPageState extends State<EvaluationPage> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text("Évaluer l'utilisateur"),
-        backgroundColor: Color(0xFF2196F3),
+        iconTheme: const IconThemeData(color: Colors.blue),
+        title: Text(
+          "Évaluer l'utilisateur",
+          style: TextStyle(
+            color: Color(0xFF2196F3),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Color.fromARGB(255, 255, 255, 255),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),

@@ -368,11 +368,18 @@ class _MapsScreenState extends State<MapsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           widget.isForDeparture
               ? 'Sélectionner le départ'
               : 'Sélectionner l\'arrivée',
-          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.primary,

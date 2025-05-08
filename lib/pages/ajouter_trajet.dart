@@ -94,7 +94,7 @@ class _InfoTrajetState extends State<InfoTrajet>
     final surfaceColor = colorScheme.surface;
 
     // Couleur bleue pour les éléments mis en évidence
-    final Color highlightBlue = Colors.blue;
+    final Color highlightBlue = Theme.of(context).colorScheme.primary;
 
     // Méthode pour construire la section de sélection de véhicule
     Widget buildVehicleSelection(Color primaryColor, Color surfaceColor) {
@@ -177,7 +177,7 @@ class _InfoTrajetState extends State<InfoTrajet>
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Bladiway',
+          'Ajouter un trajet',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -200,17 +200,7 @@ class _InfoTrajetState extends State<InfoTrajet>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // En-tête
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20.0),
-                child: Text(
-                  'Détails du trajet',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
-                ),
-              ),
+              // Le titre est maintenant dans l'AppBar, donc on retire ce widget
 
               // Champs de départ et d'arrivée
               _buildTextField(
@@ -396,7 +386,7 @@ class _InfoTrajetState extends State<InfoTrajet>
                     const SizedBox(height: 16),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: surfaceColor,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: highlightBlue.withOpacity(0.3),
@@ -508,11 +498,13 @@ class _InfoTrajetState extends State<InfoTrajet>
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
+                  foregroundColor: Theme.of(context).colorScheme.error,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.red),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
                 child: const Text(
@@ -540,13 +532,13 @@ class _InfoTrajetState extends State<InfoTrajet>
     Color typeColor;
     switch (type) {
       case 'Femmes':
-        typeColor = Colors.pink; // Rose pour les femmes
+        typeColor = Theme.of(context).colorScheme.error;
         break;
       case 'Mixte':
-        typeColor = Colors.purple; // Mauve pour mixte
+        typeColor = Colors.purple;
         break;
       case 'Hommes':
-        typeColor = Colors.blue; // Bleu pour les hommes
+        typeColor = Theme.of(context).colorScheme.primary;
         break;
       default:
         typeColor = highlightBlue;
@@ -572,7 +564,10 @@ class _InfoTrajetState extends State<InfoTrajet>
               ),
               child: Icon(
                 icon,
-                color: isSelected ? Colors.white : typeColor,
+                color:
+                    isSelected
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : typeColor,
                 size: 20,
               ),
             ),
@@ -586,12 +581,18 @@ class _InfoTrajetState extends State<InfoTrajet>
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: isSelected ? typeColor : Colors.black87,
+                      color:
+                          isSelected
+                              ? typeColor
+                              : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     description,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).hintColor,
+                    ),
                   ),
                 ],
               ),
@@ -832,7 +833,8 @@ class _InfoTrajetState extends State<InfoTrajet>
                     Expanded(
                       child: Text(
                         '${car.marque} ${car.modele}',
-                        style: const TextStyle(
+                        style: TextStyle(
+                          color: primaryColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -925,7 +927,7 @@ class _InfoTrajetState extends State<InfoTrajet>
             Container(
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: surfaceColor, // Utilise la couleur de surface du thème
                 borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(12),
                 ),
@@ -1089,7 +1091,7 @@ class _InfoTrajetState extends State<InfoTrajet>
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             content: Text(
               'Vous ne pouvez pas sélectionner une heure passée aujourd\'hui',
               style: const TextStyle(
@@ -1192,7 +1194,7 @@ class _InfoTrajetState extends State<InfoTrajet>
             color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -1268,11 +1270,11 @@ class _InfoTrajetState extends State<InfoTrajet>
       if (!hasVerifiedLicense || hasPendingOrNoLicense) {
         // Afficher un message approprié
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
               'Vous devez avoir un permis de conduire valide pour partager un trajet',
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             duration: Duration(seconds: 4),
           ),
         );
@@ -1285,11 +1287,11 @@ class _InfoTrajetState extends State<InfoTrajet>
       // Vérifier si l'utilisateur a déjà chargé ses voitures
       if (_userCars.isEmpty && !_isLoadingCars) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
               'Vous devez ajouter au moins une voiture pour partager un trajet',
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             duration: Duration(seconds: 4),
           ),
         );
@@ -1439,9 +1441,9 @@ class _InfoTrajetState extends State<InfoTrajet>
       // Vérifier que l'utilisateur est connecté
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Vous devez être connecté pour ajouter un trajet'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         return;
@@ -1535,7 +1537,7 @@ class _InfoTrajetState extends State<InfoTrajet>
             'Erreur lors de la publication: $e',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
           duration: const Duration(seconds: 3),
         ),
       );

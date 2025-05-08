@@ -4,6 +4,7 @@ import 'package:bladiway/pages/ajouter_trajet.dart';
 import 'package:bladiway/pages/mes_trajet.dart';
 import 'package:bladiway/pages/otp_screen.dart';
 import 'package:bladiway/pages/presentation.dart';
+import 'package:bladiway/pages/profile_screen.dart';
 import 'package:bladiway/pages/reservation.dart';
 import 'package:bladiway/pages/reservations_screen.dart';
 import 'package:bladiway/pages/scanner_permis.dart';
@@ -15,13 +16,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_app_check/firebase_app_check.dart'; // Décommenté ici
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import 'pages/home_page.dart';
 import 'pages/settings_screen.dart';
-import 'pages/profile_screen.dart';
 import 'authentication/login_screen.dart';
 import 'authentication/signup_screen.dart';
 import 'providers/theme_provider.dart';
@@ -108,6 +108,9 @@ class MyApp extends StatelessWidget {
           primary: Color(0xFF2196F3),
           secondary: Color.fromARGB(255, 197, 209, 212),
           surface: Colors.white,
+          error: Color(0xFFE53935),
+          // Ajout de la couleur verte personnalisée
+          onSecondary: Color(0xFF43A047),
         ),
       ),
       darkTheme: ThemeData(
@@ -115,7 +118,10 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.dark(
           primary: const Color(0xFF2196F3),
           secondary: Colors.white,
-          surface: Colors.grey,
+          surface: Color(0xFF202020),
+          error: Color(0xFFE53935),
+          // Ajout de la couleur verte personnalisée
+          onSecondary: Color(0xFF43A047),
         ),
       ),
       themeMode: themeProvider.themeMode,
@@ -157,8 +163,9 @@ class MyApp extends StatelessWidget {
             (context) =>
                 EvaluationCheckWrapper(child: const PermissionAddCarPage()),
         '/verification_encours':
-            (context) =>
-                EvaluationCheckWrapper(child: const VerificationPendingScreen()),
+            (context) => EvaluationCheckWrapper(
+              child: const VerificationPendingScreen(),
+            ),
         '/scan_permission':
             (context) => EvaluationCheckWrapper(
               child: const IdentityVerificationScreen(),

@@ -154,14 +154,6 @@ class _IdentityRequestPassengerPageState
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  Text(
-                    "Bladiway",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
                   const SizedBox(height: 20),
                   Expanded(
                     child: Column(

@@ -63,54 +63,19 @@ class InfoConducteur extends StatelessWidget {
                     vertical: 8,
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
                       ),
-                      const Text(
-                        'Bladiway',
+                      const SizedBox(width: 16),
+                      Text(
+                        'Infos sur le trajet',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.phone, color: Colors.white),
-                            onPressed: () async {
-                              final phoneNumber =
-                                  conductorData['phone'] as String?;
-                              if (phoneNumber != null) {
-                                final url = 'tel:$phoneNumber';
-                                if (await canLaunch(url)) {
-                                  await launch(url);
-                                }
-                              }
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.message,
-                              color: Colors.white,
-                            ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => ChatPage(
-                                        reservationId: reservation.id,
-                                        otherUserId: conductor.id,
-                                      ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
                       ),
                     ],
                   ),

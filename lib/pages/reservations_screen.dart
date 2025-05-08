@@ -266,32 +266,35 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                 top: 50,
                 left: 16,
                 right: 16,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.arrow_back,
-                        color: theme.colorScheme.onPrimary,
-                        size: 28,
+                child: SizedBox(
+                  height: 48,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.arrow_back,
+                            color: theme.colorScheme.onPrimary,
+                            size: 28,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                       ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    Text(
-                      'Mes Réservations',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onPrimary,
-                        letterSpacing: 1.2,
+                      Center(
+                        child: Text(
+                          'Mes Réservations',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onPrimary,
+                            letterSpacing: 0,
+                          ),
+                        ),
                       ),
-                    ),
-                    Icon(
-                      Icons.notifications_none,
-                      color: theme.colorScheme.onPrimary,
-                      size: 28,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -363,277 +366,211 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
 
                 final reservations = snapshot.data!.docs;
 
-                return Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: ListView.builder(
-                    itemCount: reservations.length,
-                    itemBuilder: (context, index) {
-                      final reservationDoc = reservations[index];
-                      final reservation =
-                          reservationDoc.data() as Map<String, dynamic>;
-                      final seatsReserved = reservation['seatsReserved'];
-                      final tripId = reservation['tripId'] as String?;
-                      final reservationId = reservationDoc.id;
+                return ListView.builder(
+                  itemCount: reservations.length,
+                  itemBuilder: (context, index) {
+                    final reservationDoc = reservations[index];
+                    final reservation =
+                        reservationDoc.data() as Map<String, dynamic>;
+                    final seatsReserved = reservation['seatsReserved'];
+                    final tripId = reservation['tripId'] as String?;
+                    final reservationId = reservationDoc.id;
 
-                      if (tripId == null) {
-                        return _buildErrorCard(
-                          context,
-                          'ID de trajet manquant',
-                          theme,
-                        );
-                      }
+                    if (tripId == null) {
+                      return _buildErrorCard(
+                        context,
+                        'ID de trajet manquant',
+                        theme,
+                      );
+                    }
 
-                      return FutureBuilder<DocumentSnapshot>(
-                        future:
-                            FirebaseFirestore.instance
-                                .collection('trips')
-                                .doc(tripId)
-                                .get(),
-                        builder: (context, tripSnapshot) {
-                          if (tripSnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return _buildLoadingCard(context, theme);
-                          }
-                          if (tripSnapshot.hasError) {
-                            return _buildErrorCard(
-                              context,
-                              'Erreur: ${tripSnapshot.error}',
-                              theme,
-                            );
-                          }
-                          if (!tripSnapshot.hasData ||
-                              !tripSnapshot.data!.exists) {
-                            return _buildErrorCard(
-                              context,
-                              'Trajet non trouvé',
-                              theme,
-                            );
-                          }
+                    return FutureBuilder<DocumentSnapshot>(
+                      future:
+                          FirebaseFirestore.instance
+                              .collection('trips')
+                              .doc(tripId)
+                              .get(),
+                      builder: (context, tripSnapshot) {
+                        if (tripSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return _buildLoadingCard(context, theme);
+                        }
+                        if (tripSnapshot.hasError) {
+                          return _buildErrorCard(
+                            context,
+                            'Erreur: ${tripSnapshot.error}',
+                            theme,
+                          );
+                        }
+                        if (!tripSnapshot.hasData ||
+                            !tripSnapshot.data!.exists) {
+                          return _buildErrorCard(
+                            context,
+                            'Trajet non trouvé',
+                            theme,
+                          );
+                        }
 
-                          final tripData =
-                              tripSnapshot.data!.data() as Map<String, dynamic>;
-                          final date =
-                              tripData['date'] as String? ?? 'Non spécifié';
-                          final time =
-                              tripData['heure'] as String? ?? 'Non spécifié';
-                          final price = tripData['prix'] as num? ?? 0;
-                          final depart =
-                              tripData['départ'] as String? ?? 'Non spécifié';
-                          final arrivee =
-                              tripData['arrivée'] as String? ?? 'Non spécifié';
-                          final status =
-                              tripData['status'] as String? ?? 'En attente';
-                          final addedBy = tripData['userId'] as String?;
-                          final nbrPlaces = tripData['nbrPlaces'] as int? ?? 0;
-                          final placesDisponibles =
-                              tripData['placesDisponibles'] as int? ??
-                              nbrPlaces;
+                        final tripData =
+                            tripSnapshot.data!.data() as Map<String, dynamic>;
+                        final date =
+                            tripData['date'] as String? ?? 'Non spécifié';
+                        final time =
+                            tripData['heure'] as String? ?? 'Non spécifié';
+                        final price = tripData['prix'] as num? ?? 0;
+                        final depart =
+                            tripData['départ'] as String? ?? 'Non spécifié';
+                        final arrivee =
+                            tripData['arrivée'] as String? ?? 'Non spécifié';
+                        final status =
+                            tripData['status'] as String? ?? 'En attente';
+                        final addedBy = tripData['userId'] as String?;
+                        final nbrPlaces = tripData['nbrPlaces'] as int? ?? 0;
+                        final placesDisponibles =
+                            tripData['placesDisponibles'] as int? ?? nbrPlaces;
 
-                          if (addedBy == null) {
-                            return _buildErrorCard(
-                              context,
-                              'Informations utilisateur manquantes',
-                              theme,
-                            );
-                          }
+                        if (addedBy == null) {
+                          return _buildErrorCard(
+                            context,
+                            'Informations utilisateur manquantes',
+                            theme,
+                          );
+                        }
 
-                          return FutureBuilder<DocumentSnapshot>(
-                            future:
-                                FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(addedBy)
-                                    .get(),
-                            builder: (context, userSnapshot) {
-                              if (userSnapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return _buildLoadingCard(context, theme);
-                              }
-                              if (userSnapshot.hasError) {
-                                return _buildErrorCard(
-                                  context,
-                                  'Erreur: ${userSnapshot.error}',
-                                  theme,
-                                );
-                              }
-                              if (!userSnapshot.hasData ||
-                                  !userSnapshot.data!.exists) {
-                                return _buildErrorCard(
-                                  context,
-                                  'Utilisateur non trouvé',
-                                  theme,
-                                );
-                              }
+                        return FutureBuilder<DocumentSnapshot>(
+                          future:
+                              FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(addedBy)
+                                  .get(),
+                          builder: (context, userSnapshot) {
+                            if (userSnapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return _buildLoadingCard(context, theme);
+                            }
+                            if (userSnapshot.hasError) {
+                              return _buildErrorCard(
+                                context,
+                                'Erreur: ${userSnapshot.error}',
+                                theme,
+                              );
+                            }
+                            if (!userSnapshot.hasData ||
+                                !userSnapshot.data!.exists) {
+                              return _buildErrorCard(
+                                context,
+                                'Utilisateur non trouvé',
+                                theme,
+                              );
+                            }
 
-                              final userData =
-                                  userSnapshot.data!.data()
-                                      as Map<String, dynamic>;
-                              final nom =
-                                  userData['nom'] as String? ?? 'Inconnu';
-                              final prenom =
-                                  userData['prenom'] as String? ?? 'Inconnu';
-                              final profileImageUrl =
-                                  userData['profileImageUrl'] as String?;
-                              final phoneNumber =
-                                  userData['phone'] as String? ??
-                                  'Non disponible';
+                            final userData =
+                                userSnapshot.data!.data()
+                                    as Map<String, dynamic>;
+                            final nom = userData['nom'] as String? ?? 'Inconnu';
+                            final prenom =
+                                userData['prenom'] as String? ?? 'Inconnu';
+                            final profileImageUrl =
+                                userData['profileImageUrl'] as String?;
+                            final phoneNumber =
+                                userData['phone'] as String? ??
+                                'Non disponible';
 
-                              return Card(
-                                margin: const EdgeInsets.symmetric(
-                                  vertical: 8.0,
-                                  horizontal: 16.0,
-                                ),
-                                elevation: 3,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => InfoConducteur(
-                                              reservation: reservationDoc,
-                                              trip: tripSnapshot.data!,
-                                              conductor: userSnapshot.data!,
-                                            ),
-                                      ),
-                                    );
-                                  },
-                                  child: Column(
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.all(12.0),
-                                        child: Row(
-                                          children: [
-                                            CircleAvatar(
-                                              radius: 24,
-                                              backgroundColor: theme
-                                                  .colorScheme
-                                                  .primary
-                                                  .withOpacity(0.1),
-                                              backgroundImage:
-                                                  profileImageUrl != null
-                                                      ? NetworkImage(
-                                                        profileImageUrl,
-                                                      )
-                                                      : null,
-                                              child:
-                                                  profileImageUrl == null
-                                                      ? Icon(
-                                                        Icons.person,
-                                                        color:
-                                                            theme
-                                                                .colorScheme
-                                                                .primary,
-                                                      )
-                                                      : null,
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    '$prenom $nom',
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                                horizontal: 16.0,
+                              ),
+                              elevation: 3,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => InfoConducteur(
+                                            reservation: reservationDoc,
+                                            trip: tripSnapshot.data!,
+                                            conductor: userSnapshot.data!,
+                                          ),
+                                    ),
+                                  );
+                                },
+                                child: Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 24,
+                                            backgroundColor: theme
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.1),
+                                            backgroundImage:
+                                                profileImageUrl != null
+                                                    ? NetworkImage(
+                                                      profileImageUrl,
+                                                    )
+                                                    : null,
+                                            child:
+                                                profileImageUrl == null
+                                                    ? Icon(
+                                                      Icons.person,
                                                       color:
                                                           theme
                                                               .colorScheme
-                                                              .onSurface,
-                                                    ),
+                                                              .primary,
+                                                    )
+                                                    : null,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '$prenom $nom',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        theme
+                                                            .colorScheme
+                                                            .onSurface,
                                                   ),
-                                                  FutureBuilder<QuerySnapshot>(
-                                                    future:
-                                                        FirebaseFirestore
-                                                            .instance
-                                                            .collection(
-                                                              'reviews',
-                                                            )
-                                                            .where(
-                                                              'ratedUserId',
-                                                              isEqualTo:
-                                                                  addedBy,
-                                                            )
-                                                            .get(),
-                                                    builder: (
-                                                      context,
-                                                      reviewsSnapshot,
-                                                    ) {
-                                                      if (reviewsSnapshot
-                                                              .connectionState ==
-                                                          ConnectionState
-                                                              .waiting) {
-                                                        return Row(
-                                                          children: [
-                                                            const Icon(
-                                                              Icons.star,
-                                                              color:
-                                                                  Colors.grey,
-                                                              size: 16,
-                                                            ),
-                                                            Text(
-                                                              ' Chargement...',
-                                                              style: TextStyle(
-                                                                fontSize: 14,
-                                                                color: theme
-                                                                    .colorScheme
-                                                                    .onSurface
-                                                                    .withOpacity(
-                                                                      0.7,
-                                                                    ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        );
-                                                      }
-                                                      double rating = 0;
-                                                      int reviewCount = 0;
-                                                      if (reviewsSnapshot
-                                                              .hasData &&
-                                                          reviewsSnapshot
-                                                              .data!
-                                                              .docs
-                                                              .isNotEmpty) {
-                                                        reviewCount =
-                                                            reviewsSnapshot
-                                                                .data!
-                                                                .docs
-                                                                .length;
-                                                        double totalRating = 0;
-                                                        for (var doc
-                                                            in reviewsSnapshot
-                                                                .data!
-                                                                .docs) {
-                                                          final reviewData =
-                                                              doc.data()
-                                                                  as Map<
-                                                                    String,
-                                                                    dynamic
-                                                                  >;
-                                                          totalRating +=
-                                                              (reviewData['rating']
-                                                                          as num? ??
-                                                                      0)
-                                                                  .toDouble();
-                                                        }
-                                                        rating =
-                                                            totalRating /
-                                                            reviewCount;
-                                                      }
+                                                ),
+                                                FutureBuilder<QuerySnapshot>(
+                                                  future:
+                                                      FirebaseFirestore.instance
+                                                          .collection('reviews')
+                                                          .where(
+                                                            'ratedUserId',
+                                                            isEqualTo: addedBy,
+                                                          )
+                                                          .get(),
+                                                  builder: (
+                                                    context,
+                                                    reviewsSnapshot,
+                                                  ) {
+                                                    if (reviewsSnapshot
+                                                            .connectionState ==
+                                                        ConnectionState
+                                                            .waiting) {
                                                       return Row(
                                                         children: [
                                                           const Icon(
                                                             Icons.star,
-                                                            color: Colors.amber,
+                                                            color: Colors.grey,
                                                             size: 16,
                                                           ),
                                                           Text(
-                                                            ' ${rating.toStringAsFixed(1)} ($reviewCount avis)',
+                                                            ' Chargement...',
                                                             style: TextStyle(
                                                               fontSize: 14,
                                                               color: theme
@@ -646,305 +583,354 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                           ),
                                                         ],
                                                       );
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 5,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: _getStatusColor(
-                                                  status,
-                                                  theme,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                status,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Divider(
-                                        height: 1,
-                                        thickness: 1,
-                                        color: theme.colorScheme.onSurface
-                                            .withOpacity(0.1),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Column(
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Column(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.trip_origin,
-                                                      color:
-                                                          theme
-                                                              .colorScheme
-                                                              .primary,
-                                                      size: 20,
-                                                    ),
-                                                    Container(
-                                                      width: 2,
-                                                      height: 25,
-                                                      color: theme
-                                                          .colorScheme
-                                                          .primary
-                                                          .withOpacity(0.5),
-                                                    ),
-                                                    Icon(
-                                                      Icons.location_on,
-                                                      color:
-                                                          theme
-                                                              .colorScheme
-                                                              .primary,
-                                                      size: 20,
-                                                    ),
-                                                  ],
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        depart,
-                                                        style: TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          color:
-                                                              theme
-                                                                  .colorScheme
-                                                                  .onSurface,
+                                                    }
+                                                    double rating = 0;
+                                                    int reviewCount = 0;
+                                                    if (reviewsSnapshot
+                                                            .hasData &&
+                                                        reviewsSnapshot
+                                                            .data!
+                                                            .docs
+                                                            .isNotEmpty) {
+                                                      reviewCount =
+                                                          reviewsSnapshot
+                                                              .data!
+                                                              .docs
+                                                              .length;
+                                                      double totalRating = 0;
+                                                      for (var doc
+                                                          in reviewsSnapshot
+                                                              .data!
+                                                              .docs) {
+                                                        final reviewData =
+                                                            doc.data()
+                                                                as Map<
+                                                                  String,
+                                                                  dynamic
+                                                                >;
+                                                        totalRating +=
+                                                            (reviewData['rating']
+                                                                        as num? ??
+                                                                    0)
+                                                                .toDouble();
+                                                      }
+                                                      rating =
+                                                          totalRating /
+                                                          reviewCount;
+                                                    }
+                                                    return Row(
+                                                      children: [
+                                                        const Icon(
+                                                          Icons.star,
+                                                          color: Colors.amber,
+                                                          size: 16,
                                                         ),
-                                                      ),
-                                                      const SizedBox(
-                                                        height: 20,
-                                                      ),
-                                                      Text(
-                                                        arrivee,
-                                                        style: TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          color:
-                                                              theme
-                                                                  .colorScheme
-                                                                  .onSurface,
+                                                        Text(
+                                                          ' ${rating.toStringAsFixed(1)} ($reviewCount avis)',
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            color: theme
+                                                                .colorScheme
+                                                                .onSurface
+                                                                .withOpacity(
+                                                                  0.7,
+                                                                ),
+                                                          ),
                                                         ),
-                                                      ),
-                                                    ],
-                                                  ),
+                                                      ],
+                                                    );
+                                                  },
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 20),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.spaceAround,
-                                              children: [
-                                                _buildInfoItem(
-                                                  context,
-                                                  Icons.calendar_today,
-                                                  date,
-                                                  'Date',
-                                                  theme,
-                                                ),
-                                                _buildInfoItem(
-                                                  context,
-                                                  Icons.access_time,
-                                                  time,
-                                                  'Heure',
-                                                  theme,
-                                                ),
-                                                _buildInfoItem(
-                                                  context,
-                                                  Icons.attach_money,
-                                                  '${price.toStringAsFixed(0)} DA',
-                                                  'Prix',
-                                                  theme,
-                                                ),
-                                                Row(
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _getStatusColor(
+                                                status,
+                                                theme,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              status,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Divider(
+                                      height: 1,
+                                      thickness: 1,
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.1),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Column(
+                                                children: [
+                                                  Icon(
+                                                    Icons.trip_origin,
+                                                    color:
+                                                        theme
+                                                            .colorScheme
+                                                            .primary,
+                                                    size: 20,
+                                                  ),
+                                                  Container(
+                                                    width: 2,
+                                                    height: 25,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary
+                                                        .withOpacity(0.5),
+                                                  ),
+                                                  Icon(
+                                                    Icons.location_on,
+                                                    color:
+                                                        theme
+                                                            .colorScheme
+                                                            .primary,
+                                                    size: 20,
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    _buildInfoItem(
-                                                      context,
-                                                      Icons.event_seat,
-                                                      seatsReserved.toString(),
-                                                      'Places',
-                                                      theme,
-                                                    ),
-                                                    IconButton(
-                                                      icon: Icon(
-                                                        Icons.edit,
+                                                    Text(
+                                                      depart,
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w500,
                                                         color:
-                                                            (status ==
-                                                                        'terminé' ||
-                                                                    status ==
-                                                                        'annulé')
-                                                                ? Colors.grey
-                                                                : theme
-                                                                    .colorScheme
-                                                                    .primary,
+                                                            theme
+                                                                .colorScheme
+                                                                .onSurface,
                                                       ),
-                                                      onPressed:
+                                                    ),
+                                                    const SizedBox(height: 20),
+                                                    Text(
+                                                      arrivee,
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color:
+                                                            theme
+                                                                .colorScheme
+                                                                .onSurface,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 20),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceAround,
+                                            children: [
+                                              _buildInfoItem(
+                                                context,
+                                                Icons.calendar_today,
+                                                date,
+                                                'Date',
+                                                theme,
+                                              ),
+                                              _buildInfoItem(
+                                                context,
+                                                Icons.access_time,
+                                                time,
+                                                'Heure',
+                                                theme,
+                                              ),
+                                              _buildInfoItem(
+                                                context,
+                                                Icons.attach_money,
+                                                '${price.toStringAsFixed(0)} DA',
+                                                'Prix',
+                                                theme,
+                                              ),
+                                              Row(
+                                                children: [
+                                                  _buildInfoItem(
+                                                    context,
+                                                    Icons.event_seat,
+                                                    seatsReserved.toString(),
+                                                    'Places',
+                                                    theme,
+                                                  ),
+                                                  IconButton(
+                                                    icon: Icon(
+                                                      Icons.edit,
+                                                      color:
                                                           (status ==
                                                                       'terminé' ||
                                                                   status ==
                                                                       'annulé')
-                                                              ? null
-                                                              : () {
-                                                                _showModifySeatsDialog(
-                                                                  context,
-                                                                  reservationId,
-                                                                  seatsReserved,
-                                                                  tripId,
-                                                                );
-                                                              },
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: 8.0,
-                                              ),
-                                              child:
-                                                  (status == 'terminé' ||
-                                                          status == 'annulé')
-                                                      ? Container() // Ne pas afficher les places disponibles si le trajet est terminé ou annulé
-                                                      : Text(
-                                                        'Places encore disponibles: $placesDisponibles',
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          color:
-                                                              theme
+                                                              ? Colors.grey
+                                                              : theme
                                                                   .colorScheme
                                                                   .primary,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                        ),
-                                                      ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 8,
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceEvenly,
-                                          children: [
-                                            _buildActionButton(
-                                              context,
-                                              Icons.message,
-                                              'Contacter',
-                                              theme.colorScheme.primary,
-                                              () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder:
-                                                        (context) => ChatPage(
-                                                          reservationId:
-                                                              reservationId,
-                                                          otherUserId: addedBy,
-                                                        ),
+                                                    ),
+                                                    onPressed:
+                                                        (status == 'terminé' ||
+                                                                status ==
+                                                                    'annulé')
+                                                            ? null
+                                                            : () {
+                                                              _showModifySeatsDialog(
+                                                                context,
+                                                                reservationId,
+                                                                seatsReserved,
+                                                                tripId,
+                                                              );
+                                                            },
                                                   ),
-                                                );
-                                              },
-                                              isContactButton: true,
-                                              driverId: addedBy,
-                                              reservationId: reservationId,
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 8.0,
                                             ),
-                                            _buildActionButton(
-                                              context,
-                                              Icons.phone,
-                                              'Appeler',
-                                              Colors.green,
-                                              () async {
-                                                if (phoneNumber !=
-                                                    'Non disponible') {
-                                                  final url =
-                                                      'tel:$phoneNumber';
-                                                  if (await canLaunch(url)) {
-                                                    await launch(url);
-                                                  } else {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                          'Impossible d\'ouvrir l\'application téléphonique',
-                                                        ),
+                                            child:
+                                                (status == 'terminé' ||
+                                                        status == 'annulé')
+                                                    ? Container() // Ne pas afficher les places disponibles si le trajet est terminé ou annulé
+                                                    : Text(
+                                                      'Places encore disponibles: $placesDisponibles',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color:
+                                                            theme
+                                                                .colorScheme
+                                                                .primary,
+                                                        fontWeight:
+                                                            FontWeight.w500,
                                                       ),
-                                                    );
-                                                  }
+                                                    ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          _buildActionButton(
+                                            context,
+                                            Icons.message,
+                                            'Contacter',
+                                            theme.colorScheme.primary,
+                                            () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder:
+                                                      (context) => ChatPage(
+                                                        reservationId:
+                                                            reservationId,
+                                                        otherUserId: addedBy,
+                                                      ),
+                                                ),
+                                              );
+                                            },
+                                            isContactButton: true,
+                                            driverId: addedBy,
+                                            reservationId: reservationId,
+                                          ),
+                                          _buildActionButton(
+                                            context,
+                                            Icons.phone,
+                                            'Appeler',
+                                            Colors.green,
+                                            () async {
+                                              if (phoneNumber !=
+                                                  'Non disponible') {
+                                                final url = 'tel:$phoneNumber';
+                                                if (await canLaunch(url)) {
+                                                  await launch(url);
                                                 } else {
                                                   ScaffoldMessenger.of(
                                                     context,
                                                   ).showSnackBar(
                                                     const SnackBar(
                                                       content: Text(
-                                                        'Numéro de téléphone non disponible',
+                                                        'Impossible d\'ouvrir l\'application téléphonique',
                                                       ),
                                                     ),
                                                   );
                                                 }
-                                              },
-                                            ),
-                                            status == 'terminé'
-                                                ? Container() // Ne pas afficher le bouton d'annulation si le trajet est terminé
-                                                : status == 'annulé'
-                                                ? Container() // Ne pas afficher le bouton d'annulation si le trajet est annulé
-                                                : _buildActionButton(
+                                              } else {
+                                                ScaffoldMessenger.of(
                                                   context,
-                                                  Icons.cancel,
-                                                  'Annuler',
-                                                  Colors.red,
-                                                  () {
-                                                    _showCancelConfirmationDialog(
-                                                      context,
-                                                      reservationId,
-                                                      tripId,
-                                                      seatsReserved,
-                                                    );
-                                                  },
-                                                ),
-                                          ],
-                                        ),
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Numéro de téléphone non disponible',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                          ),
+                                          status == 'terminé'
+                                              ? Container() // Ne pas afficher le bouton d'annulation si le trajet est terminé
+                                              : status == 'annulé'
+                                              ? Container() // Ne pas afficher le bouton d'annulation si le trajet est annulé
+                                              : _buildActionButton(
+                                                context,
+                                                Icons.cancel,
+                                                'Annuler',
+                                                Colors.red,
+                                                () {
+                                                  _showCancelConfirmationDialog(
+                                                    context,
+                                                    reservationId,
+                                                    tripId,
+                                                    seatsReserved,
+                                                  );
+                                                },
+                                              ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              );
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
                 );
               },
             ),
@@ -961,17 +947,20 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         type: BottomNavigationBarType.fixed,
         elevation: 8,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: 'Accueil',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.check_circle),
             label: 'Réservations',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.directions_car),
+            icon: Icon(Icons.directions_car_outlined),
             label: 'Mes trajets',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.settings_outlined),
             label: 'Paramètres',
           ),
         ],
