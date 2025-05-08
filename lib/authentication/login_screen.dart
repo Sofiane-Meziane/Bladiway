@@ -69,11 +69,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<String?> _getEmailFromPhone(String phoneNumber) async {
     try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .where('phone', isEqualTo: phoneNumber)
-          .limit(1)
-          .get();
+      final querySnapshot =
+          await _firestore
+              .collection('users')
+              .where('phone', isEqualTo: phoneNumber)
+              .limit(1)
+              .get();
       if (querySnapshot.docs.isNotEmpty) {
         return querySnapshot.docs.first.data()['email'];
       }
@@ -87,6 +88,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _signInWithEmail(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
+      // Synchroniser l'email dans Firestore après connexion
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).update({
+          'email': user.email,
+        });
+      }
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }
@@ -105,11 +113,14 @@ class _LoginScreenState extends State<LoginScreen> {
         default:
           errorMessage = 'login.error'.tr(args: [e.message ?? '']);
       }
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(errorMessage)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('login.unexpected_error'.tr(args: [e.toString()]))),
+        SnackBar(
+          content: Text('login.unexpected_error'.tr(args: [e.toString()])),
+        ),
       );
     }
   }
@@ -183,7 +194,9 @@ class _LoginScreenState extends State<LoginScreen> {
               IconButton(
                 icon: Icon(
                   Icons.close,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -257,11 +270,19 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
                       fontSize: 14,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -278,7 +299,10 @@ class _LoginScreenState extends State<LoginScreen> {
   void _resetViaEmail() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ResetPasswordEmailScreen(onEmailSubmit: (email) {})),
+      MaterialPageRoute(
+        builder:
+            (context) => ResetPasswordEmailScreen(onEmailSubmit: (email) {}),
+      ),
     );
   }
 
@@ -306,10 +330,15 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
+          iconTheme: IconThemeData(
+            color: Theme.of(context).colorScheme.primary,
+          ),
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.primary),
+            icon: Icon(
+              Icons.arrow_back,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             onPressed: () => Navigator.pushNamed(context, '/presentation'),
           ),
         ),
@@ -340,7 +369,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'login.identifier_label'.tr(),
-                        prefixIcon: Icon(Icons.person, color: Theme.of(context).colorScheme.primary),
+                        prefixIcon: Icon(
+                          Icons.person,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                         border: const OutlineInputBorder(),
                         hintText: 'login.identifier_hint'.tr(),
                       ),
@@ -354,10 +386,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         labelText: 'login.password'.tr(),
-                        prefixIcon: Icon(Icons.lock, color: Theme.of(context).colorScheme.primary),
+                        prefixIcon: Icon(
+                          Icons.lock,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           onPressed: _togglePasswordVisibility,
@@ -372,7 +409,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _showPasswordResetOptions,
                         child: Text(
                           'login.forgot_password'.tr(),
-                          style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -400,7 +439,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextSpan(
                           text: 'login.no_account'.tr(),
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
                           ),
                           children: [
                             TextSpan(

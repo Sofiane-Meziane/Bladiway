@@ -8,6 +8,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:bladiway/methods/commun_methods.dart';
 import 'package:bladiway/widgets/settings_widgets.dart';
 import 'package:bladiway/methods/user_data_notifier.dart';
+import 'package:bladiway/pages/phone_update_otp_screen.dart';
+import 'package:bladiway/pages/email_update_verification_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,7 +19,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with TickerProviderStateMixin {
-  // Changement ici : TickerProviderStateMixin au lieu de SingleTickerProviderStateMixin
   final _formKey = GlobalKey<FormState>();
 
   // Contrôleurs de saisie
@@ -29,33 +30,31 @@ class _ProfileScreenState extends State<ProfileScreen>
       TextEditingController();
 
   String? _selectedGenre;
-  // Liste des genres avec seulement Homme et Femme
   final List<String> _genres = ['Homme', 'Femme'];
 
   bool _isLoading = true;
   bool _isEditing = false;
   bool _isSaving = false;
   String? _uid;
-  String? _profileImageUrl; // URL de la photo de profil actuelle
-  File? _newProfileImage; // Nouvelle image sélectionnée
+  String? _profileImageUrl;
+  File? _newProfileImage;
 
-  // Variables pour la section des avis
   bool _isLoadingReviews = false;
   List<Map<String, dynamic>> _reviewsList = [];
   Map<String, dynamic> _reviewersData = {};
 
   final ImagePicker _picker = ImagePicker();
 
-  // Animation pour le champ "Genre" lors de l'édition
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
 
-  // Animation pour la transition entre les onglets
   TabController? _tabController;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  String? _identityStatus;
 
   @override
   void initState() {
@@ -86,7 +85,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
-  /// Chargement des données depuis Firestore
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
     try {
@@ -96,6 +94,13 @@ class _ProfileScreenState extends State<ProfileScreen>
         final doc = await _firestore.collection('users').doc(_uid).get();
         if (doc.exists) {
           final data = doc.data() as Map<String, dynamic>;
+          // Synchronisation email Firestore <-> Auth
+          if (data['email'] != currentUser.email) {
+            await _firestore.collection('users').doc(_uid).update({
+              'email': currentUser.email,
+            });
+            data['email'] = currentUser.email;
+          }
           setState(() {
             _nomController.text = data['nom'] ?? '';
             _prenomController.text = data['prenom'] ?? '';
@@ -105,14 +110,30 @@ class _ProfileScreenState extends State<ProfileScreen>
             _selectedGenre = data['genre'];
             _profileImageUrl = data['profileImageUrl'];
           });
-          // Mettre à jour le ValueNotifier avec les données initiales
           userDataNotifier.updateUserData(
             _prenomController.text,
             _profileImageUrl ?? '',
           );
         }
+        // Vérifier le statut de la pièce d'identité la plus récente
+        final pieceSnapshot =
+            await _firestore
+                .collection('piece_identite')
+                .where('id_proprietaire', isEqualTo: _uid)
+                .orderBy('date_soumission', descending: true)
+                .limit(1)
+                .get();
+        if (pieceSnapshot.docs.isNotEmpty) {
+          final pieceData = pieceSnapshot.docs.first.data();
+          setState(() {
+            _identityStatus = pieceData['statut'] as String?;
+          });
+        } else {
+          setState(() {
+            _identityStatus = null;
+          });
+        }
       }
-      // Après avoir chargé les données de l'utilisateur, charger les avis
       await _loadUserReviews();
     } catch (e) {
       CommunMethods().displaySnackBar(
@@ -124,14 +145,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Charge les avis laissés par les passagers pour les trajets du conducteur
   Future<void> _loadUserReviews() async {
     if (_uid == null) return;
 
     setState(() => _isLoadingReviews = true);
 
     try {
-      // Récupérer les avis où le conducteur est l'utilisateur actuel
       final QuerySnapshot reviewsSnapshot =
           await _firestore
               .collection('reviews')
@@ -154,14 +173,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           'tripId': data['tripId'] ?? '',
         });
 
-        // Collecter les IDs des reviewers pour récupérer leurs infos
         if (data['reviewerId'] != null &&
             data['reviewerId'].toString().isNotEmpty) {
           reviewerIds.add(data['reviewerId'].toString());
         }
       }
 
-      // Récupérer les informations des reviewers
       for (String reviewerId in reviewerIds) {
         try {
           final userDoc =
@@ -195,7 +212,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Bascule entre mode lecture / édition
   void _toggleEditMode() {
     setState(() => _isEditing = !_isEditing);
     if (_isEditing) {
@@ -205,9 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Sélectionne une nouvelle image de profil
   Future<void> _pickImage() async {
-    if (!_isEditing) return;
     try {
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -219,6 +233,25 @@ class _ProfileScreenState extends State<ProfileScreen>
         setState(() {
           _newProfileImage = File(pickedFile.path);
         });
+        // Sauvegarde automatique
+        final newProfileImageUrl = await _uploadProfileImage();
+        if (newProfileImageUrl != null) {
+          await _firestore.collection('users').doc(_uid).update({
+            'profileImageUrl': newProfileImageUrl,
+          });
+          setState(() {
+            _profileImageUrl = newProfileImageUrl;
+            _newProfileImage = null;
+          });
+          userDataNotifier.updateUserData(
+            _prenomController.text.trim(),
+            newProfileImageUrl,
+          );
+          CommunMethods().displaySnackBar(
+            'Photo de profil mise à jour avec succès',
+            context,
+          );
+        }
       }
     } catch (e) {
       CommunMethods().displaySnackBar(
@@ -228,7 +261,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Télécharge l'image sur Firebase Storage et retourne l'URL
   Future<String?> _uploadProfileImage() async {
     if (_newProfileImage == null) return null;
     try {
@@ -245,13 +277,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Sauvegarde les modifications sur Firestore et FirebaseAuth (email)
   Future<void> _saveUserData() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
     try {
-      // Télécharger la nouvelle image si sélectionnée
       String? newProfileImageUrl;
       if (_newProfileImage != null) {
         newProfileImageUrl = await _uploadProfileImage();
@@ -267,7 +297,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       };
       await _firestore.collection('users').doc(_uid).update(updatedData);
 
-      // Mise à jour de l'email si modifié
       final User? currentUser = _auth.currentUser;
       if (currentUser != null &&
           currentUser.email != _emailController.text.trim()) {
@@ -277,7 +306,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         });
       }
 
-      // Mettre à jour l'URL de l'image dans l'état local et dans le ValueNotifier
       if (newProfileImageUrl != null) {
         setState(() {
           _profileImageUrl = newProfileImageUrl;
@@ -304,7 +332,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Sélecteur de date pour la date de naissance
   Future<void> _selectDate() async {
     if (!_isEditing) return;
     DateTime initialDate =
@@ -335,7 +362,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Champ de texte personnalisé
   Widget _buildProfileInput({
     required TextEditingController controller,
     required String label,
@@ -395,7 +421,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Dropdown pour le genre, avec animation et traduction
   Widget _buildGenreDropdown() {
     final brightness = Theme.of(context).brightness;
     final fillColor =
@@ -426,11 +451,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           items:
               _genres
                   .map(
-                    (item) => DropdownMenuItem(
-                      value: item,
-                      // Appliquer la traduction au moment de l'affichage
-                      child: Text(item.tr()),
-                    ),
+                    (item) =>
+                        DropdownMenuItem(value: item, child: Text(item.tr())),
                   )
                   .toList(),
           onChanged: (value) => setState(() => _selectedGenre = value),
@@ -441,7 +463,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Widget pour afficher la photo de profil
   Widget _buildProfilePhoto() {
     return Center(
       child: Stack(
@@ -461,32 +482,31 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ? const Icon(Icons.person, size: 50, color: Colors.grey)
                     : null,
           ),
-          if (_isEditing)
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+          // Le bouton appareil photo est toujours visible et cliquable
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
   }
 
-  /// Widget pour afficher les étoiles d'évaluation
   Widget _buildRatingStars(double rating) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -500,7 +520,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Widget pour afficher un avis
   Widget _buildReviewItem(Map<String, dynamic> review) {
     final reviewerId = review['reviewerId'] as String;
     final reviewerData = _reviewersData[reviewerId] ?? {};
@@ -512,7 +531,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (review['timestamp'] is Timestamp) {
       timestamp = (review['timestamp'] as Timestamp).toDate();
     } else {
-      // Si le timestamp n'est pas au format Timestamp, utiliser la date actuelle
       timestamp = DateTime.now();
     }
 
@@ -536,7 +554,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           children: [
             Row(
               children: [
-                // Photo de profil du reviewer
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.grey[300],
@@ -550,7 +567,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           : null,
                 ),
                 const SizedBox(width: 12),
-                // Informations du reviewer
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,13 +582,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ],
                   ),
                 ),
-                // Note en étoiles
                 _buildRatingStars(rating),
               ],
             ),
             if (comment.isNotEmpty) ...[
               const SizedBox(height: 12),
-              // Commentaire
               Text(comment, style: const TextStyle(fontSize: 14)),
             ],
           ],
@@ -581,7 +595,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Widget pour afficher la section des avis
   Widget _buildReviewsSection() {
     return _isLoadingReviews
         ? Center(
@@ -622,6 +635,156 @@ class _ProfileScreenState extends State<ProfileScreen>
         );
   }
 
+  // Ajout : Méthodes pour modification du numéro
+  void _showPhoneEditDialog() {
+    final TextEditingController _newPhoneController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Modifier le numéro de téléphone'),
+          content: TextField(
+            controller: _newPhoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Nouveau numéro',
+              prefixIcon: Icon(Icons.phone),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newPhone = _newPhoneController.text.trim();
+                if (newPhone.isEmpty) {
+                  CommunMethods().displaySnackBar(
+                    'Veuillez entrer un numéro',
+                    context,
+                  );
+                  return;
+                }
+                Navigator.pop(context);
+                await _startPhoneVerification(newPhone);
+              },
+              child: const Text('Soumettre'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _startPhoneVerification(String newPhone) async {
+    try {
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: newPhone,
+        verificationCompleted: (PhoneAuthCredential credential) {},
+        verificationFailed: (FirebaseAuthException e) {
+          CommunMethods().displaySnackBar('Erreur: \\${e.message}', context);
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => PhoneUpdateOTPScreen(
+                    verificationId: verificationId,
+                    newPhone: newPhone,
+                    onPhoneUpdated: (String updatedPhone) async {
+                      setState(() {
+                        _phoneController.text = updatedPhone;
+                      });
+                      CommunMethods().displaySnackBar(
+                        'Numéro mis à jour avec succès',
+                        context,
+                      );
+                      await _loadUserData();
+                    },
+                  ),
+            ),
+          );
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {},
+      );
+    } catch (e) {
+      CommunMethods().displaySnackBar('Erreur: \\${e.toString()}', context);
+    }
+  }
+
+  // Ajout : Méthodes pour modification de l'email
+  void _showEmailEditDialog() {
+    final TextEditingController _newEmailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Modifier l\'adresse e-mail'),
+          content: TextField(
+            controller: _newEmailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Nouvel e-mail',
+              prefixIcon: Icon(Icons.email),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newEmail = _newEmailController.text.trim();
+                if (newEmail.isEmpty) {
+                  CommunMethods().displaySnackBar(
+                    'Veuillez entrer un e-mail',
+                    context,
+                  );
+                  return;
+                }
+                Navigator.pop(context);
+                await _startEmailUpdate(newEmail);
+              },
+              child: const Text('Soumettre'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _startEmailUpdate(String newEmail) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+      await user.verifyBeforeUpdateEmail(newEmail);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => EmailUpdateVerificationScreen(
+                newEmail: newEmail,
+                onEmailUpdated: (String updatedEmail) async {
+                  setState(() {
+                    _emailController.text = updatedEmail;
+                  });
+                  CommunMethods().displaySnackBar(
+                    'Adresse e-mail mise à jour avec succès',
+                    context,
+                  );
+                  await _loadUserData();
+                },
+              ),
+        ),
+      );
+    } catch (e) {
+      CommunMethods().displaySnackBar('Erreur: \\${e.toString()}', context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -640,7 +803,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       child: _buildProfilePhoto(),
                     ),
-                    // TabBar pour navigation entre profil et avis
                     TabBar(
                       controller: _tabController,
                       indicatorColor: Theme.of(context).colorScheme.primary,
@@ -655,7 +817,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: TabBarView(
                         controller: _tabController,
                         children: [
-                          // Onglet Profil
                           SingleChildScrollView(
                             child: Form(
                               key: _formKey,
@@ -674,7 +835,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           controller: _nomController,
                                           label: 'Nom',
                                           icon: Icons.person,
-                                          enabled: _isEditing,
+                                          enabled:
+                                              _isEditing &&
+                                              (_identityStatus == null ||
+                                                  _identityStatus != 'verifie'),
                                           validator:
                                               (value) =>
                                                   value!.isEmpty
@@ -687,7 +851,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           controller: _prenomController,
                                           label: 'Prénom',
                                           icon: Icons.person_outline,
-                                          enabled: _isEditing,
+                                          enabled:
+                                              _isEditing &&
+                                              (_identityStatus == null ||
+                                                  _identityStatus != 'verifie'),
                                           validator:
                                               (value) =>
                                                   value!.isEmpty
@@ -697,57 +864,28 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         ),
                                         const SizedBox(height: 16),
                                         _buildProfileInput(
-                                          controller: _emailController,
-                                          label: 'Email',
-                                          icon: Icons.email,
-                                          keyboardType:
-                                              TextInputType.emailAddress,
-                                          enabled: _isEditing,
-                                          validator: (value) {
-                                            if (value!.isEmpty) {
-                                              return 'Ce champ est requis'.tr();
-                                            }
-                                            final emailRegex = RegExp(
-                                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                            );
-                                            return emailRegex.hasMatch(value)
-                                                ? null
-                                                : 'Email invalide'.tr();
-                                          },
-                                        ),
-                                        const SizedBox(height: 16),
-                                        _buildProfileInput(
-                                          controller: _phoneController,
-                                          label: 'Téléphone',
-                                          icon: Icons.phone,
-                                          enabled: false,
-                                          suffixIcon: Tooltip(
-                                            message:
-                                                'Le numéro de téléphone ne peut pas être modifié'
-                                                    .tr(),
-                                            child: const Icon(
-                                              Icons.info_outline,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    SettingsCard(
-                                      title: 'Détails personnels'.tr(),
-                                      icon: Icons.info,
-                                      children: [
-                                        _buildProfileInput(
                                           controller: _dateNaissanceController,
                                           label: 'Date de naissance',
                                           icon: Icons.calendar_today,
                                           readOnly: true,
-                                          enabled: _isEditing,
+                                          enabled:
+                                              _isEditing &&
+                                              (_identityStatus == null ||
+                                                  _identityStatus != 'verifie'),
                                           onTap:
-                                              _isEditing ? _selectDate : null,
+                                              _isEditing &&
+                                                      (_identityStatus ==
+                                                              null ||
+                                                          _identityStatus !=
+                                                              'verifie')
+                                                  ? _selectDate
+                                                  : null,
                                           suffixIcon:
-                                              _isEditing
+                                              _isEditing &&
+                                                      (_identityStatus ==
+                                                              null ||
+                                                          _identityStatus !=
+                                                              'verifie')
                                                   ? IconButton(
                                                     icon: Icon(
                                                       Icons.calendar_month,
@@ -767,7 +905,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                       : null,
                                         ),
                                         const SizedBox(height: 16),
-                                        _isEditing
+                                        _isEditing &&
+                                                (_identityStatus == null ||
+                                                    _identityStatus !=
+                                                        'verifie')
                                             ? _buildGenreDropdown()
                                             : _buildProfileInput(
                                               controller: TextEditingController(
@@ -779,12 +920,83 @@ class _ProfileScreenState extends State<ProfileScreen>
                                             ),
                                       ],
                                     ),
+                                    const SizedBox(height: 16),
+                                    SettingsCard(
+                                      title: 'Détails personnels'.tr(),
+                                      icon: Icons.info,
+                                      children: [
+                                        // Affichage de l'email avec bouton crayon toujours cliquable
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 8.0,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  _emailController
+                                                          .text
+                                                          .isNotEmpty
+                                                      ? _emailController.text
+                                                      : '-',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color:
+                                                        Theme.of(context)
+                                                            .textTheme
+                                                            .bodyLarge
+                                                            ?.color,
+                                                  ),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.edit),
+                                                tooltip: 'Modifier l\'e-mail',
+                                                onPressed: _showEmailEditDialog,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        // Affichage du numéro de téléphone avec bouton crayon toujours cliquable
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 8.0,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  _phoneController
+                                                          .text
+                                                          .isNotEmpty
+                                                      ? _phoneController.text
+                                                      : '-',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color:
+                                                        Theme.of(context)
+                                                            .textTheme
+                                                            .bodyLarge
+                                                            ?.color,
+                                                  ),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.edit),
+                                                tooltip: 'Modifier le numéro',
+                                                onPressed: _showPhoneEditDialog,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
                             ),
                           ),
-                          // Onglet Avis
                           _buildReviewsSection(),
                         ],
                       ),
@@ -793,7 +1005,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
       ),
       floatingActionButton:
-          _tabController?.index == 0
+          (_tabController?.index == 0 &&
+                  (_identityStatus == null || _identityStatus != 'verifie'))
               ? FloatingActionButton(
                 onPressed:
                     _isSaving
