@@ -365,108 +365,149 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                 }
 
                 final reservations = snapshot.data!.docs;
+                // --- OPTIMISATION : Précharger tous les trajets et conducteurs en une fois ---
+                final tripIds =
+                    reservations
+                        .map((doc) => doc['tripId'] as String?)
+                        .where((id) => id != null)
+                        .cast<String>()
+                        .toSet()
+                        .toList();
 
-                return ListView.builder(
-                  itemCount: reservations.length,
-                  itemBuilder: (context, index) {
-                    final reservationDoc = reservations[index];
-                    final reservation =
-                        reservationDoc.data() as Map<String, dynamic>;
-                    final seatsReserved = reservation['seatsReserved'];
-                    final tripId = reservation['tripId'] as String?;
-                    final reservationId = reservationDoc.id;
-
-                    if (tripId == null) {
+                return FutureBuilder<List<DocumentSnapshot>>(
+                  future:
+                      tripIds.isEmpty
+                          ? Future.value([])
+                          : FirebaseFirestore.instance
+                              .collection('trips')
+                              .where(
+                                FieldPath.documentId,
+                                whereIn:
+                                    tripIds.length > 10
+                                        ? tripIds.sublist(0, 10)
+                                        : tripIds,
+                              )
+                              .get()
+                              .then((snap) => snap.docs),
+                  builder: (context, tripsSnapshot) {
+                    if (tripsSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (tripsSnapshot.hasError) {
                       return _buildErrorCard(
                         context,
-                        'ID de trajet manquant',
+                        'Erreur lors du chargement des trajets',
                         theme,
                       );
                     }
-
-                    return FutureBuilder<DocumentSnapshot>(
+                    final trips = {
+                      for (var doc in tripsSnapshot.data ?? []) doc.id: doc,
+                    };
+                    final userIds =
+                        trips.values
+                            .map(
+                              (doc) =>
+                                  (doc.data() as Map<String, dynamic>)['userId']
+                                      as String?,
+                            )
+                            .where((id) => id != null)
+                            .cast<String>()
+                            .toSet()
+                            .toList();
+                    return FutureBuilder<List<DocumentSnapshot>>(
                       future:
-                          FirebaseFirestore.instance
-                              .collection('trips')
-                              .doc(tripId)
-                              .get(),
-                      builder: (context, tripSnapshot) {
-                        if (tripSnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return _buildLoadingCard(context, theme);
-                        }
-                        if (tripSnapshot.hasError) {
-                          return _buildErrorCard(
-                            context,
-                            'Erreur: ${tripSnapshot.error}',
-                            theme,
-                          );
-                        }
-                        if (!tripSnapshot.hasData ||
-                            !tripSnapshot.data!.exists) {
-                          return _buildErrorCard(
-                            context,
-                            'Trajet non trouvé',
-                            theme,
-                          );
-                        }
-
-                        final tripData =
-                            tripSnapshot.data!.data() as Map<String, dynamic>;
-                        final date =
-                            tripData['date'] as String? ?? 'Non spécifié';
-                        final time =
-                            tripData['heure'] as String? ?? 'Non spécifié';
-                        final price = tripData['prix'] as num? ?? 0;
-                        final depart =
-                            tripData['départ'] as String? ?? 'Non spécifié';
-                        final arrivee =
-                            tripData['arrivée'] as String? ?? 'Non spécifié';
-                        final status =
-                            tripData['status'] as String? ?? 'En attente';
-                        final addedBy = tripData['userId'] as String?;
-                        final nbrPlaces = tripData['nbrPlaces'] as int? ?? 0;
-                        final placesDisponibles =
-                            tripData['placesDisponibles'] as int? ?? nbrPlaces;
-
-                        if (addedBy == null) {
-                          return _buildErrorCard(
-                            context,
-                            'Informations utilisateur manquantes',
-                            theme,
-                          );
-                        }
-
-                        return FutureBuilder<DocumentSnapshot>(
-                          future:
-                              FirebaseFirestore.instance
+                          userIds.isEmpty
+                              ? Future.value([])
+                              : FirebaseFirestore.instance
                                   .collection('users')
-                                  .doc(addedBy)
-                                  .get(),
-                          builder: (context, userSnapshot) {
-                            if (userSnapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return _buildLoadingCard(context, theme);
-                            }
-                            if (userSnapshot.hasError) {
+                                  .where(
+                                    FieldPath.documentId,
+                                    whereIn:
+                                        userIds.length > 10
+                                            ? userIds.sublist(0, 10)
+                                            : userIds,
+                                  )
+                                  .get()
+                                  .then((snap) => snap.docs),
+                      builder: (context, usersSnapshot) {
+                        if (usersSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        if (usersSnapshot.hasError) {
+                          return _buildErrorCard(
+                            context,
+                            'Erreur lors du chargement des conducteurs',
+                            theme,
+                          );
+                        }
+                        final users = {
+                          for (var doc in usersSnapshot.data ?? []) doc.id: doc,
+                        };
+                        return ListView.builder(
+                          itemCount: reservations.length,
+                          itemBuilder: (context, index) {
+                            final reservationDoc = reservations[index];
+                            final reservation =
+                                reservationDoc.data() as Map<String, dynamic>;
+                            final seatsReserved = reservation['seatsReserved'];
+                            final tripId = reservation['tripId'] as String?;
+                            final reservationId = reservationDoc.id;
+                            if (tripId == null) {
                               return _buildErrorCard(
                                 context,
-                                'Erreur: ${userSnapshot.error}',
+                                'ID de trajet manquant',
                                 theme,
                               );
                             }
-                            if (!userSnapshot.hasData ||
-                                !userSnapshot.data!.exists) {
+                            final tripDoc = trips[tripId];
+                            if (tripDoc == null || !tripDoc.exists) {
+                              return _buildErrorCard(
+                                context,
+                                'Trajet non trouvé',
+                                theme,
+                              );
+                            }
+                            final tripData =
+                                tripDoc.data() as Map<String, dynamic>;
+                            final date =
+                                tripData['date'] as String? ?? 'Non spécifié';
+                            final time =
+                                tripData['heure'] as String? ?? 'Non spécifié';
+                            final price = tripData['prix'] as num? ?? 0;
+                            final depart =
+                                tripData['départ'] as String? ?? 'Non spécifié';
+                            final arrivee =
+                                tripData['arrivée'] as String? ??
+                                'Non spécifié';
+                            final status =
+                                tripData['status'] as String? ?? 'En attente';
+                            final addedBy = tripData['userId'] as String?;
+                            final nbrPlaces =
+                                tripData['nbrPlaces'] as int? ?? 0;
+                            final placesDisponibles =
+                                tripData['placesDisponibles'] as int? ??
+                                nbrPlaces;
+                            if (addedBy == null) {
+                              return _buildErrorCard(
+                                context,
+                                'Informations utilisateur manquantes',
+                                theme,
+                              );
+                            }
+                            final userDoc = users[addedBy];
+                            if (userDoc == null || !userDoc.exists) {
                               return _buildErrorCard(
                                 context,
                                 'Utilisateur non trouvé',
                                 theme,
                               );
                             }
-
                             final userData =
-                                userSnapshot.data!.data()
-                                    as Map<String, dynamic>;
+                                userDoc.data() as Map<String, dynamic>;
                             final nom = userData['nom'] as String? ?? 'Inconnu';
                             final prenom =
                                 userData['prenom'] as String? ?? 'Inconnu';
@@ -475,7 +516,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                             final phoneNumber =
                                 userData['phone'] as String? ??
                                 'Non disponible';
-
+                            // ...existing code for building the Card (copied from l.487)...
                             return Card(
                               margin: const EdgeInsets.symmetric(
                                 vertical: 8.0,
@@ -493,8 +534,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                       builder:
                                           (context) => InfoConducteur(
                                             reservation: reservationDoc,
-                                            trip: tripSnapshot.data!,
-                                            conductor: userSnapshot.data!,
+                                            trip: tripDoc,
+                                            conductor: userDoc,
                                           ),
                                     ),
                                   );
@@ -997,16 +1038,6 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     );
   }
 
-  Widget _buildLoadingCard(BuildContext context, ThemeData theme) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: const Padding(
-        padding: EdgeInsets.all(24.0),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-    );
-  }
 
   Widget _buildInfoItem(
     BuildContext context,

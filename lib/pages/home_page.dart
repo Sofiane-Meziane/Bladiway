@@ -586,6 +586,50 @@ class _HomePageState extends State<HomePage>
                                               ? Image.network(
                                                 _userProfileImageUrl,
                                                 fit: BoxFit.cover,
+                                                width: 80,
+                                                height: 80,
+                                                loadingBuilder: (
+                                                  context,
+                                                  child,
+                                                  loadingProgress,
+                                                ) {
+                                                  if (loadingProgress == null)
+                                                    return child;
+                                                  return Center(
+                                                    child: SizedBox(
+                                                      width: 32,
+                                                      height: 32,
+                                                      child: CircularProgressIndicator(
+                                                        value:
+                                                            loadingProgress
+                                                                        .expectedTotalBytes !=
+                                                                    null
+                                                                ? loadingProgress
+                                                                        .cumulativeBytesLoaded /
+                                                                    loadingProgress
+                                                                        .expectedTotalBytes!
+                                                                : null,
+                                                        strokeWidth: 2,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) => Container(
+                                                      color: Colors.white,
+                                                      child: Icon(
+                                                        Icons.person,
+                                                        size: 50,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary
+                                                            .withOpacity(0.5),
+                                                      ),
+                                                    ),
                                               )
                                               : Container(
                                                 color: Colors.white,
@@ -1181,7 +1225,7 @@ class _HomePageState extends State<HomePage>
     return BottomNavigationBarItem(
       icon: Stack(
         children: [
-            const Icon(Icons.check_circle_outline),
+          const Icon(Icons.check_circle_outline),
           StreamBuilder<int>(
             stream: _notificationService.getPassengerUnreadMessagesCount(),
             builder: (context, snapshot) {
