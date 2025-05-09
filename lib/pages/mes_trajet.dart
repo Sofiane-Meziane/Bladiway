@@ -38,6 +38,7 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
   Stream<QuerySnapshot>? _tripStream;
   bool _isLoading = true;
   String? _errorMessage;
+  Timer? _statusUpdateTimer;
 
   final int _selectedIndex = 2; // Index pour "Mes trajets"
 
@@ -71,11 +72,117 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
   void initState() {
     super.initState();
     _initTripStream();
+
+    // Vérifier les trajets passés immédiatement au démarrage
+    _checkAndUpdatePastTrips();
+
+    // Configurer un timer pour vérifier périodiquement les trajets passés
+    // Vérification toutes les heures
+    _statusUpdateTimer = Timer.periodic(const Duration(hours: 1), (timer) {
+      _checkAndUpdatePastTrips();
+    });
   }
 
   @override
   void dispose() {
+    // Annuler le timer lors de la destruction du widget
+    _statusUpdateTimer?.cancel();
     super.dispose();
+  }
+
+  // Méthode pour vérifier et mettre à jour les trajets passés
+  Future<void> _checkAndUpdatePastTrips() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      // Récupérer tous les trajets qui ne sont pas terminés ou annulés
+      final tripsSnapshot =
+          await _firestore
+              .collection('trips')
+              .where(FIELD_USER_ID, isEqualTo: user.uid)
+              .where(
+                FIELD_STATUS,
+                whereIn: [STATUS_EN_ATTENTE, STATUS_EN_ROUTE],
+              )
+              .get();
+
+      if (tripsSnapshot.docs.isEmpty) return;
+
+      // Date actuelle
+      final now = DateTime.now();
+
+      // Parcourir tous les trajets et vérifier leur date
+      for (var tripDoc in tripsSnapshot.docs) {
+        final tripData = tripDoc.data();
+
+        // Récupérer et parser la date et l'heure du trajet
+        final String dateStr = tripData[FIELD_DATE] ?? '';
+        final String timeStr = tripData[FIELD_HEURE] ?? '';
+
+        if (dateStr.isEmpty) continue;
+
+        try {
+          // Convertir la date du format "dd/MM/yyyy" au format DateTime
+          final dateParts = dateStr.split('/');
+          if (dateParts.length != 3) continue;
+
+          final day = int.parse(dateParts[0]);
+          final month = int.parse(dateParts[1]);
+          final year = int.parse(dateParts[2]);
+
+          // Convertir l'heure (peut être au format "HH:mm" ou "HH:mm AM/PM")
+          int hour = 0;
+          int minute = 0;
+
+          if (timeStr.isNotEmpty) {
+            // Gérer différents formats d'heure possibles
+            if (timeStr.contains(':')) {
+              final timeParts = timeStr.split(':');
+              hour = int.parse(timeParts[0]);
+
+              // Extraire les minutes (peut contenir AM/PM)
+              String minuteStr = timeParts[1];
+              if (minuteStr.contains(' ')) {
+                final minuteParts = minuteStr.split(' ');
+                minuteStr = minuteParts[0];
+
+                // Ajuster l'heure pour AM/PM si nécessaire
+                if (minuteParts.length > 1) {
+                  final ampm = minuteParts[1].toLowerCase();
+                  if (ampm == 'pm' && hour < 12) hour += 12;
+                  if (ampm == 'am' && hour == 12) hour = 0;
+                }
+              }
+
+              minute = int.parse(minuteStr);
+            }
+          }
+
+          final tripDateTime = DateTime(year, month, day, hour, minute);
+
+          // Calculer la différence entre maintenant et la date du trajet
+          final difference = now.difference(tripDateTime);
+
+          // Si la date est passée de plus de 24h, mettre à jour le statut
+          if (difference.inHours >= 24) {
+            await _firestore.collection('trips').doc(tripDoc.id).update({
+              FIELD_STATUS: STATUS_TERMINE,
+            });
+            print(
+              'Trajet ${tripDoc.id} automatiquement marqué comme terminé après 24h',
+            );
+          }
+        } catch (e) {
+          print(
+            'Erreur lors du traitement de la date du trajet ${tripDoc.id}: $e',
+          );
+          continue;
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de la vérification des trajets passés: $e');
+    }
   }
 
   void _initTripStream() {
@@ -100,6 +207,8 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
                 setState(() {
                   _isLoading = false;
                 });
+                // Vérifier les trajets passés après le chargement initial
+                _checkAndUpdatePastTrips();
               }
             })
             .catchError((error) {
@@ -407,6 +516,8 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
         return RefreshIndicator(
           onRefresh: () async {
             _initTripStream();
+            // Vérifier les trajets passés lors du rafraîchissement manuel
+            await _checkAndUpdatePastTrips();
           },
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -712,7 +823,7 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
       case STATUS_ANNULE:
         return theme.colorScheme.error;
       case STATUS_BLOQUE:
-        return Colors.grey.shade700;
+        return Colors.purpleAccent;
       case STATUS_EN_ATTENTE:
       default:
         return Colors.orange.shade700;

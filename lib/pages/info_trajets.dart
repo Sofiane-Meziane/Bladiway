@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geocoding/geocoding.dart'; // Ajout pour la conversion d'adresses
+import 'package:google_maps_flutter/google_maps_flutter.dart'; // Ajout pour Google Maps
 import 'chat_screen.dart';
-import 'info_conducteur.dart'; // Import the new screen
+import 'info_conducteur.dart';
+import 'maps.dart'; // Ajout pour la page de carte en plein écran
 
-class InfoConducteur extends StatelessWidget {
+class InfoConducteur extends StatefulWidget {
   final DocumentSnapshot reservation;
   final DocumentSnapshot trip;
   final DocumentSnapshot conductor;
@@ -17,11 +20,265 @@ class InfoConducteur extends StatelessWidget {
   });
 
   @override
+  State<InfoConducteur> createState() => _InfoConducteurState();
+}
+
+class _InfoConducteurState extends State<InfoConducteur> {
+  // Ajout des variables pour la carte
+  LatLng? _departureCoordinates;
+  LatLng? _arrivalCoordinates;
+  bool _isLoadingCoordinates = true;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Charger les coordonnées au démarrage
+    _loadCoordinates();
+  }
+
+  // Méthode pour charger les coordonnées
+  Future<void> _loadCoordinates() async {
+    final tripData = widget.trip.data() as Map<String, dynamic>;
+    final String depart = tripData['départ'] as String? ?? '';
+    final String arrivee = tripData['arrivée'] as String? ?? '';
+
+    if (depart.isEmpty || arrivee.isEmpty) {
+      setState(() {
+        _isLoadingCoordinates = false;
+        _hasError = true;
+      });
+      return;
+    }
+
+    try {
+      // Convertir l'adresse de départ en coordonnées
+      List<Location> departureLocations = await locationFromAddress(
+        "$depart, Algeria",
+      );
+
+      if (departureLocations.isNotEmpty) {
+        _departureCoordinates = LatLng(
+          departureLocations.first.latitude,
+          departureLocations.first.longitude,
+        );
+      }
+
+      // Convertir l'adresse d'arrivée en coordonnées
+      List<Location> arrivalLocations = await locationFromAddress(
+        "$arrivee, Algeria",
+      );
+
+      if (arrivalLocations.isNotEmpty) {
+        _arrivalCoordinates = LatLng(
+          arrivalLocations.first.latitude,
+          arrivalLocations.first.longitude,
+        );
+      }
+
+      if (_departureCoordinates != null && _arrivalCoordinates != null) {
+        setState(() {
+          _isLoadingCoordinates = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingCoordinates = false;
+          _hasError = true;
+        });
+      }
+    } catch (e) {
+      print("Erreur lors de la conversion des adresses en coordonnées: $e");
+      setState(() {
+        _isLoadingCoordinates = false;
+        _hasError = true;
+      });
+    }
+  }
+
+  // Méthode pour afficher la carte en plein écran
+  void _showFullScreenMap() {
+    if (_departureCoordinates == null || _arrivalCoordinates == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Impossible d'afficher la carte. Coordonnées non disponibles.",
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => MapsScreen(
+              isForDeparture: true,
+              onLocationSelected: (_) {},
+              initialDeparture: _departureCoordinates,
+              initialArrival: _arrivalCoordinates,
+              showRoute: true,
+            ),
+      ),
+    );
+  }
+
+  // Widget pour afficher l'aperçu de la carte
+  Widget _buildMapPreview() {
+    if (_isLoadingCoordinates) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_hasError ||
+        _departureCoordinates == null ||
+        _arrivalCoordinates == null) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.map_outlined, size: 40, color: Colors.grey),
+              SizedBox(height: 8),
+              Text(
+                "Carte non disponible",
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _showFullScreenMap,
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: _departureCoordinates!,
+                  zoom: 12,
+                ),
+                markers: {
+                  Marker(
+                    markerId: MarkerId('departure'),
+                    position: _departureCoordinates!,
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueGreen,
+                    ),
+                  ),
+                  Marker(
+                    markerId: MarkerId('arrival'),
+                    position: _arrivalCoordinates!,
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueRed,
+                    ),
+                  ),
+                },
+                polylines: {
+                  Polyline(
+                    polylineId: PolylineId('route'),
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 5,
+                    points: [_departureCoordinates!, _arrivalCoordinates!],
+                    patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+                  ),
+                },
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                myLocationButtonEnabled: false,
+                compassEnabled: false,
+                onMapCreated: (controller) {
+                  // Ajuster la vue pour montrer les deux marqueurs
+                  LatLngBounds bounds = LatLngBounds(
+                    southwest: LatLng(
+                      _departureCoordinates!.latitude <
+                              _arrivalCoordinates!.latitude
+                          ? _departureCoordinates!.latitude
+                          : _arrivalCoordinates!.latitude,
+                      _departureCoordinates!.longitude <
+                              _arrivalCoordinates!.longitude
+                          ? _departureCoordinates!.longitude
+                          : _arrivalCoordinates!.longitude,
+                    ),
+                    northeast: LatLng(
+                      _departureCoordinates!.latitude >
+                              _arrivalCoordinates!.latitude
+                          ? _departureCoordinates!.latitude
+                          : _arrivalCoordinates!.latitude,
+                      _departureCoordinates!.longitude >
+                              _arrivalCoordinates!.longitude
+                          ? _departureCoordinates!.longitude
+                          : _arrivalCoordinates!.longitude,
+                    ),
+                  );
+                  controller.animateCamera(
+                    CameraUpdate.newLatLngBounds(bounds, 50),
+                  );
+                },
+              ),
+              Positioned(
+                bottom: 10,
+                right: 10,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.fullscreen, color: Colors.white, size: 18),
+                      SizedBox(width: 4),
+                      Text(
+                        'Agrandir',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final reservationData = reservation.data() as Map<String, dynamic>;
-    final tripData = trip.data() as Map<String, dynamic>;
-    final conductorData = conductor.data() as Map<String, dynamic>;
+    final reservationData = widget.reservation.data() as Map<String, dynamic>;
+    final tripData = widget.trip.data() as Map<String, dynamic>;
+    final conductorData = widget.conductor.data() as Map<String, dynamic>;
 
     final seatsReserved = reservationData['seatsReserved'];
     final price = tripData['prix'] as num? ?? 0;
@@ -92,8 +349,8 @@ class InfoConducteur extends StatelessWidget {
                         MaterialPageRoute(
                           builder:
                               (context) => InfoConducteurPage(
-                                conductorId: conductor.id,
-                                reservationId: reservation.id,
+                                conductorId: widget.conductor.id,
+                                reservationId: widget.reservation.id,
                                 currentUserId: reservationData['userId'],
                               ),
                         ),
@@ -109,7 +366,7 @@ class InfoConducteur extends StatelessWidget {
                         child: Row(
                           children: [
                             Hero(
-                              tag: 'conductor-${conductor.id}',
+                              tag: 'conductor-${widget.conductor.id}',
                               child: CircleAvatar(
                                 radius: 40,
                                 backgroundColor: theme.colorScheme.primary
@@ -145,7 +402,7 @@ class InfoConducteur extends StatelessWidget {
                                             .collection('reviews')
                                             .where(
                                               'ratedUserId',
-                                              isEqualTo: conductor.id,
+                                              isEqualTo: widget.conductor.id,
                                             )
                                             .get(),
                                     builder: (context, reviewsSnapshot) {
@@ -280,6 +537,20 @@ class InfoConducteur extends StatelessWidget {
                             tripData['heure'],
                           ),
                           const SizedBox(height: 20),
+
+                          // Ajout de la section carte ici
+                          Text(
+                            'Itinéraire',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildMapPreview(),
+                          const SizedBox(height: 20),
+
                           _buildTripDetails(context, tripData),
                           const SizedBox(height: 20),
                           _buildCarInfo(context, tripData),
@@ -316,8 +587,9 @@ class InfoConducteur extends StatelessWidget {
                                       MaterialPageRoute(
                                         builder:
                                             (context) => ChatPage(
-                                              reservationId: reservation.id,
-                                              otherUserId: conductor.id,
+                                              reservationId:
+                                                  widget.reservation.id,
+                                              otherUserId: widget.conductor.id,
                                             ),
                                       ),
                                     );

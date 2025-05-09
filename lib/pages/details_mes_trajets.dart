@@ -1159,33 +1159,192 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     }
   }
 
+  // Remplacer la méthode _showConfirmationDialog par cette version plus compacte
   void _showConfirmationDialog(String action, String newStatus) {
+    // Définir le titre, l'icône et la description en fonction de l'action
+    String title = '';
+    IconData icon = Icons.info_outline;
+    Color iconColor = Colors.blue;
+    String description = '';
+    String confirmButtonText = 'OK';
+    Color confirmButtonColor = Colors.blue;
+    Color backgroundColor = Colors.white;
+    Color cardColor = Colors.blue.withOpacity(0.05);
+
+    switch (newStatus) {
+      case STATUS_EN_ROUTE:
+        title = 'Commencer le trajet';
+        icon = Icons.play_circle_outline;
+        iconColor = Colors.blue;
+        cardColor = Colors.blue.withOpacity(0.05);
+        description =
+            'En commençant le trajet, vous indiquez à vos passagers que vous êtes en route. '
+            'Cela changera le statut du trajet à "en route" . '
+            'Assurez-vous d\'être prêt à partir.';
+        confirmButtonText = 'Commencer';
+        confirmButtonColor = Colors.blue;
+        break;
+      case STATUS_TERMINE:
+        title = 'Terminer le trajet';
+        icon = Icons.check_circle_outline;
+        iconColor = Colors.green;
+        cardColor = Colors.green.withOpacity(0.05);
+        description =
+            'En terminant le trajet, vous indiquez que vous êtes arrivé à destination et que le trajet est achevé. '
+            'Cela changera le statut du trajet à "terminé" et permettra aux passagers de laisser une évaluation. '
+            'Cette action est définitive.';
+        confirmButtonText = 'Terminer';
+        confirmButtonColor = Colors.green;
+        break;
+      case STATUS_BLOQUE:
+        title = 'Bloquer le trajet';
+        icon = Icons.block;
+        iconColor = const Color(0xFF9C27B0); // Purple color
+        cardColor = const Color(0xFFF3E5F5); // Light purple background
+        description =
+            'ATTENTION : Le blocage d\'un trajet est définitif et ne peut pas être annulé.\n\n'
+            'En bloquant le trajet, vous empêchez définitivement toute nouvelle réservation. '
+            'Les passagers déjà inscrits pourront toujours participer, mais aucun nouveau passager ne pourra réserver de place. '
+            'Cette action est irréversible et vous ne pourrez pas débloquer le trajet ultérieurement.';
+        confirmButtonText = 'Bloquer';
+        confirmButtonColor = const Color(0xFF9C27B0); // Purple color
+        break;
+    }
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(action),
-          content: Text('Êtes-vous sûr de vouloir $action ce trajet ?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Annuler'),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+          backgroundColor: const Color.fromARGB(255, 17, 17, 17),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: 320,
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _updateTripStatus(newStatus);
-              },
-              child: const Text('Confirmer'),
+            padding: const EdgeInsets.all(0),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              shape: BoxShape.rectangle,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color.fromARGB(255, 19, 19, 19),
+                  blurRadius: 10.0,
+                  offset: const Offset(0.0, 10.0),
+                ),
+              ],
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // En-tête
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(icon, color: iconColor, size: 24),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: iconColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Corps
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      color: const Color.fromARGB(255, 83, 83, 83),
+                    ),
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+                // Boutons
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Bouton Annuler
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        child: Text(
+                          'Annuler',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Bouton Confirmer
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _updateTripStatus(newStatus);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: confirmButtonColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          elevation: 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          confirmButtonText,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
+  // Remplacer la méthode _showCancellationDialog par cette version plus compacte
   void _showCancellationDialog() {
     final TextEditingController reasonController = TextEditingController();
     bool isReasonValid = false;
@@ -1195,82 +1354,186 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
-            return AlertDialog(
-              title: Row(
-                children: [
-                  Icon(Icons.warning_amber, color: Colors.red[700]),
-                  const SizedBox(width: 10),
-                  const Text('Annuler le trajet'),
-                ],
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Veuillez indiquer la raison de l\'annulation:',
-                    style: TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: reasonController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: 'Raison de l\'annulation...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: SingleChildScrollView(
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: 320),
+                  padding: const EdgeInsets.all(0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.rectangle,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color.fromARGB(255, 83, 83, 83),
+                        blurRadius: 10.0,
+                        offset: const Offset(0.0, 10.0),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor,
-                          width: 2,
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // En-tête
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red[50],
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.red[700],
+                              size: 24,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Annuler le trajet',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red[700],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      contentPadding: const EdgeInsets.all(16),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        isReasonValid = value.trim().length >= 10;
-                      });
-                    },
-                  ),
-                  if (!isReasonValid && reasonController.text.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        'La raison doit contenir au moins 10 caractères',
-                        style: TextStyle(color: Colors.red, fontSize: 12),
+                      // Avertissement
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Text(
+                          'L\'annulation est définitive..'
+                          'Tous les passagers seront notifiés et leurs réservations seront annulées automatiquement. '
+                          'Si vous souhaitez proposer un trajet similaire, vous devrez créer un nouveau trajet.',
+
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red[700],
+                          ),
+                        ),
                       ),
-                    ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Retour'),
-                ),
-                ElevatedButton(
-                  onPressed:
-                      isReasonValid
-                          ? () {
-                            Navigator.of(context).pop();
-                            _updateTripStatusWithReason(
-                              STATUS_ANNULE,
-                              reasonController.text,
-                            );
-                          }
-                          : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.red.withAlpha(128),
+                      // Champ de saisie
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Text(
+                          'Raison de l\'annulation:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: TextField(
+                          controller: reasonController,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            hintText: 'Raison...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            contentPadding: const EdgeInsets.all(12),
+                            isDense: true,
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              isReasonValid = value.trim().length >= 10;
+                            });
+                          },
+                        ),
+                      ),
+                      if (!isReasonValid && reasonController.text.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                          child: Text(
+                            'Minimum 10 caractères',
+                            style: TextStyle(color: Colors.red, fontSize: 12),
+                          ),
+                        ),
+                      // Boutons
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            // Bouton Retour
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: Text(
+                                'Retour',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Bouton Confirmer
+                            ElevatedButton(
+                              onPressed:
+                                  isReasonValid
+                                      ? () {
+                                        Navigator.of(context).pop();
+                                        _updateTripStatusWithReason(
+                                          STATUS_ANNULE,
+                                          reasonController.text,
+                                        );
+                                      }
+                                      : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red[700],
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: Colors.red.withOpacity(
+                                  0.5,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                elevation: 1,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Confirmer',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('Confirmer'),
                 ),
-              ],
+              ),
             );
           },
         );
@@ -1336,7 +1599,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('Commencer le trajet'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: Colors.blue, // Purple color
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -1375,7 +1638,8 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                 icon: const Icon(Icons.block),
                 label: const Text('Bloquer le trajet'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 14, 13, 13),
+                  backgroundColor:
+                      Colors.deepPurple, // A warning amber/orange color
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -1413,6 +1677,44 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
     );
   }
 
+  Widget _buildStatusBadge(String status) {
+    Color statusColor;
+    switch (status.toLowerCase()) {
+      case STATUS_TERMINE:
+        statusColor = Colors.green;
+        break;
+      case STATUS_COMPLETE:
+        statusColor = const Color.fromARGB(255, 15, 236, 225);
+        break;
+      case STATUS_EN_ROUTE:
+        statusColor = Colors.blue;
+        break;
+      case STATUS_ANNULE:
+        statusColor = Colors.red;
+        break;
+      case STATUS_BLOQUE:
+        statusColor = Colors.deepPurple; // Purple color;
+        break;
+      case STATUS_EN_ATTENTE:
+      default:
+        statusColor = Colors.orange;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: statusColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 
   Widget _buildPlacesInfo() {
     if (_tripData == null) return Container();
@@ -1500,18 +1802,25 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.blue),
         title: const Text(
           'Détails du trajet',
-          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.blue, // Titre bleu
+            fontWeight: FontWeight.bold,
+          ),
         ),
+        iconTheme: const IconThemeData(
+          color: Colors.blue,
+        ), // Flèche de retour bleue
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.blue),
             onPressed: _loadTripDetails,
             tooltip: 'Actualiser',
           ),
         ],
+        
+        elevation: 1,
       ),
       body: RefreshIndicator(
         onRefresh: _loadTripDetails,
@@ -1521,9 +1830,10 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // SUPPRESSION du titre 'Informations du trajet'
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [_buildStatusBadge(status)],
               ),
               const SizedBox(height: 24),
               // Ajout : Aperçu de la carte

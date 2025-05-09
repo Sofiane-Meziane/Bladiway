@@ -1178,10 +1178,7 @@ class _HomePageState extends State<HomePage>
                     color1: Theme.of(context).colorScheme.onSecondary,
                     color2: Theme.of(context).colorScheme.primary,
                     onPressed: _navigateToMesVoitures,
-                    buttonTextColor:
-                        Theme.of(
-                          context,
-                        ).colorScheme.error, // Texte en rouge du thème
+                    buttonTextColor: Theme.of(context).colorScheme.primary // Texte en bleu du thème
                   ),
                 ],
 

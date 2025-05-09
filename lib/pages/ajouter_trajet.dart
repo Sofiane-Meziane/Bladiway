@@ -1105,7 +1105,7 @@ class _InfoTrajetState extends State<InfoTrajet>
     }
   }
 
-  // Méthode pour construire un champ de texte
+  // Méthode pour construire un champ de texte de localisation cliquable
   Widget _buildTextField(
     String label,
     TextEditingController controller,
@@ -1115,6 +1115,64 @@ class _InfoTrajetState extends State<InfoTrajet>
     required Color primaryColor,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
+
+    // Si c'est un champ de localisation, on retourne un GestureDetector qui enveloppe le TextField
+    if (isLocationField) {
+      return GestureDetector(
+        // Rendre tout le champ cliquable
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => MapsScreen(
+                    isForDeparture: label.contains('départ'),
+                    onLocationSelected: (address) {
+                      controller.text = address;
+                    },
+                  ),
+            ),
+          );
+        },
+        child: AbsorbPointer(
+          // Empêche le TextField de recevoir des interactions directes
+          child: TextField(
+            controller: controller,
+            readOnly: true,
+            decoration: InputDecoration(
+              labelText: label,
+              labelStyle: TextStyle(
+                color: colorScheme.onSurface.withOpacity(0.7),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              prefixIcon: Icon(icon, color: colorScheme.primary),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: colorScheme.primary.withOpacity(0.2),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: colorScheme.primary, width: 2),
+              ),
+              suffixIcon: Icon(Icons.map_outlined, color: colorScheme.primary),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 12,
+              ),
+              filled: true,
+              fillColor: colorScheme.surface,
+            ),
+            style: TextStyle(color: colorScheme.onSurface),
+          ),
+        ),
+      );
+    }
+
+    // Si ce n'est pas un champ de localisation, on retourne le TextField normal
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
@@ -1131,26 +1189,6 @@ class _InfoTrajetState extends State<InfoTrajet>
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
-        suffixIcon:
-            isLocationField
-                ? IconButton(
-                  icon: Icon(Icons.map_outlined, color: colorScheme.primary),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => MapsScreen(
-                              isForDeparture: label.contains('départ'),
-                              onLocationSelected: (address) {
-                                controller.text = address;
-                              },
-                            ),
-                      ),
-                    );
-                  },
-                )
-                : null,
         contentPadding: const EdgeInsets.symmetric(
           vertical: 12,
           horizontal: 12,
@@ -1159,7 +1197,6 @@ class _InfoTrajetState extends State<InfoTrajet>
         fillColor: colorScheme.surface,
       ),
       style: TextStyle(color: colorScheme.onSurface),
-      readOnly: isLocationField,
     );
   }
 
@@ -1441,12 +1478,67 @@ class _InfoTrajetState extends State<InfoTrajet>
       // Vérifier que l'utilisateur est connecté
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Vous devez être connecté pour ajouter un trajet'),
-            backgroundColor: Theme.of(context).colorScheme.error,
+            backgroundColor: Colors.red,
           ),
         );
         return;
+      }
+
+      // Vérifier si l'utilisateur a déjà un trajet à la même date et heure
+      try {
+        // Formater la date et l'heure pour la comparaison
+        String dateToCheck = _dateController.text;
+        String timeToCheck = _timeController.text;
+
+        // Rechercher les trajets existants du conducteur à la même date et heure
+        QuerySnapshot existingTripsSnapshot =
+            await _firestore
+                .collection('trips')
+                .where('userId', isEqualTo: user!.uid)
+                .where('date', isEqualTo: dateToCheck)
+                .where('heure', isEqualTo: timeToCheck)
+                .get();
+
+        // Vérifier si un trajet existe déjà et n'est pas annulé
+        bool hasConflictingTrip = false;
+        for (var doc in existingTripsSnapshot.docs) {
+          Map<String, dynamic> tripData = doc.data() as Map<String, dynamic>;
+          String tripStatus = tripData['status'] ?? '';
+
+          // Si le statut n'est pas "annule", il y a conflit
+          if (tripStatus != 'annule') {
+            hasConflictingTrip = true;
+            break;
+          }
+        }
+
+        // Si un conflit est détecté, afficher un message et arrêter le processus
+        if (hasConflictingTrip) {
+          // Fermer le dialogue de chargement si ouvert
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Vous avez déjà un trajet prévu à cette date et heure. Veuillez choisir un autre moment ou annuler le trajet existant.',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        print('Erreur lors de la vérification des trajets existants: $e');
+        // Continuer malgré l'erreur pour ne pas bloquer l'utilisateur
       }
 
       // Afficher un indicateur de chargement
@@ -1507,15 +1599,20 @@ class _InfoTrajetState extends State<InfoTrajet>
         SnackBar(
           content: Row(
             children: const [
-              Icon(Icons.check_circle, color: Colors.green),
+              Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 12),
               Text(
                 'Trajet ajouté avec succès',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color:
+                      Colors
+                          .white, // Ensures text is readable on green background
+                ),
               ),
             ],
           ),
-          backgroundColor: Theme.of(context).colorScheme.secondary,
+          backgroundColor: Colors.green, // ✅ Green box
           duration: const Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -1537,7 +1634,7 @@ class _InfoTrajetState extends State<InfoTrajet>
             'Erreur lors de la publication: $e',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
       );
