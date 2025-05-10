@@ -637,14 +637,14 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // Ajout : Méthodes pour modification du numéro
   void _showPhoneEditDialog() {
-    final TextEditingController _newPhoneController = TextEditingController();
+    final TextEditingController newPhoneController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Modifier le numéro de téléphone'),
           content: TextField(
-            controller: _newPhoneController,
+            controller: newPhoneController,
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(
               labelText: 'Nouveau numéro',
@@ -658,7 +658,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             ElevatedButton(
               onPressed: () async {
-                final newPhone = _newPhoneController.text.trim();
+                final newPhone = newPhoneController.text.trim();
                 if (newPhone.isEmpty) {
                   CommunMethods().displaySnackBar(
                     'Veuillez entrer un numéro',
@@ -716,14 +716,14 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // Ajout : Méthodes pour modification de l'email
   void _showEmailEditDialog() {
-    final TextEditingController _newEmailController = TextEditingController();
+    final TextEditingController newEmailController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Modifier l\'adresse e-mail'),
           content: TextField(
-            controller: _newEmailController,
+            controller: newEmailController,
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
               labelText: 'Nouvel e-mail',
@@ -737,7 +737,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             ElevatedButton(
               onPressed: () async {
-                final newEmail = _newEmailController.text.trim();
+                final newEmail = newEmailController.text.trim();
                 if (newEmail.isEmpty) {
                   CommunMethods().displaySnackBar(
                     'Veuillez entrer un e-mail',

@@ -18,10 +18,10 @@ class TripMapPreview extends StatefulWidget {
   final String arrival;
 
   const TripMapPreview({
-    Key? key,
+    super.key,
     required this.departure,
     required this.arrival,
-  }) : super(key: key);
+  });
 
   @override
   _TripMapPreviewState createState() => _TripMapPreviewState();

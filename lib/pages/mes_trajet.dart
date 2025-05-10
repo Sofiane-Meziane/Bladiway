@@ -823,7 +823,7 @@ class _MesTrajetScreenState extends State<MesTrajetScreen> {
       case STATUS_ANNULE:
         return theme.colorScheme.error;
       case STATUS_BLOQUE:
-        return Colors.purpleAccent;
+        return const Color.fromARGB(255, 19, 37, 128);
       case STATUS_EN_ATTENTE:
       default:
         return Colors.orange.shade700;

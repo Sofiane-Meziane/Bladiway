@@ -1199,15 +1199,20 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
       case STATUS_BLOQUE:
         title = 'Bloquer le trajet';
         icon = Icons.block;
-        iconColor = const Color(0xFF9C27B0); // Purple color
-        cardColor = const Color(0xFFF3E5F5); // Light purple background
+        iconColor = const Color.fromARGB(255, 240, 240, 242); // Purple color
+        cardColor = const Color.fromARGB(
+          255,
+          19,
+          37,
+          128,
+        ); // Light purple background
         description =
             'ATTENTION : Le blocage d\'un trajet est définitif et ne peut pas être annulé.\n\n'
             'En bloquant le trajet, vous empêchez définitivement toute nouvelle réservation. '
             'Les passagers déjà inscrits pourront toujours participer, mais aucun nouveau passager ne pourra réserver de place. '
             'Cette action est irréversible et vous ne pourrez pas débloquer le trajet ultérieurement.';
         confirmButtonText = 'Bloquer';
-        confirmButtonColor = const Color(0xFF9C27B0); // Purple color
+        confirmButtonColor = const Color.fromARGB(255, 32, 54, 177); // Purple color
         break;
     }
 
@@ -1639,7 +1644,12 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
                 label: const Text('Bloquer le trajet'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      Colors.deepPurple, // A warning amber/orange color
+                      const Color.fromARGB(
+                    255,
+                    19,
+                    37,
+                    128,
+                  ), // A warning amber/orange color
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -1693,7 +1703,7 @@ class _TrajetDetailsScreenState extends State<TrajetDetailsScreen> {
         statusColor = Colors.red;
         break;
       case STATUS_BLOQUE:
-        statusColor = Colors.deepPurple; // Purple color;
+        statusColor = const Color.fromARGB(255, 19, 37, 128); // Purple color;
         break;
       case STATUS_EN_ATTENTE:
       default:

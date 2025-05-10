@@ -44,6 +44,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     String reservationId,
     int currentSeats,
     String tripId,
+    List<String> allReservationIds,
   ) async {
     final TextEditingController seatsController = TextEditingController(
       text: currentSeats.toString(),
@@ -62,7 +63,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     }
 
     final tripData = tripDoc.data() as Map<String, dynamic>;
-    final int placesDisponibles = tripData['nbrPlaces'] as int? ?? 0;
+    final int placesDisponibles = tripData['placesDisponibles'] as int? ?? 0;
     final int placesDisponiblesTotal = placesDisponibles + currentSeats;
 
     showDialog(
@@ -114,6 +115,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       newSeats,
                       tripId,
                       currentSeats,
+                      allReservationIds,
                     );
                     Navigator.pop(context);
                   }
@@ -130,6 +132,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     int newSeats,
     String tripId,
     int currentSeats,
+    List<String> allReservationIds,
   ) async {
     try {
       // Récupérer les informations du trajet et du passager pour la notification
@@ -191,12 +194,23 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           throw Exception('Pas assez de places disponibles');
         }
 
-        DocumentReference reservationRef = FirebaseFirestore.instance
+        // Conserver uniquement la première réservation et supprimer les autres
+        DocumentReference firstReservationRef = FirebaseFirestore.instance
             .collection('reservations')
-            .doc(reservationId);
+            .doc(allReservationIds.first);
 
-        // Mettre à jour d'abord le nombre de places réservées et disponibles
-        transaction.update(reservationRef, {'seatsReserved': newSeats});
+        // Mettre à jour la première réservation avec le nombre total de places
+        transaction.update(firstReservationRef, {'seatsReserved': newSeats});
+
+        // Supprimer toutes les autres réservations
+        for (int i = 1; i < allReservationIds.length; i++) {
+          DocumentReference otherReservationRef = FirebaseFirestore.instance
+              .collection('reservations')
+              .doc(allReservationIds[i]);
+          transaction.delete(otherReservationRef);
+        }
+
+        // Mettre à jour le nombre de places disponibles dans le trajet
         transaction.update(tripRef, {
           'placesDisponibles': newPlacesDisponibles,
         });
@@ -364,13 +378,66 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                   );
                 }
 
-                final reservations = snapshot.data!.docs;
+                // Regrouper les réservations par tripId
+                final allReservations = snapshot.data!.docs;
+                final Map<String, List<DocumentSnapshot>> groupedReservations =
+                    {};
+
+                // Regrouper les réservations par tripId
+                for (var doc in allReservations) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final tripId = data['tripId'] as String?;
+
+                  if (tripId != null) {
+                    if (!groupedReservations.containsKey(tripId)) {
+                      groupedReservations[tripId] = [];
+                    }
+                    groupedReservations[tripId]!.add(doc);
+                  }
+                }
+
+                // Créer une liste de réservations consolidées
+                final List<Map<String, dynamic>> consolidatedReservations = [];
+
+                groupedReservations.forEach((tripId, reservationDocs) {
+                  if (reservationDocs.isNotEmpty) {
+                    // Utiliser la première réservation comme base
+                    final firstReservation = reservationDocs.first;
+
+                    // Calculer le nombre total de places
+                    int totalSeats = 0;
+                    for (var doc in reservationDocs) {
+                      final data = doc.data() as Map<String, dynamic>;
+
+                      // Vérifier si seatsReserved existe dans les données
+                      if (data.containsKey('seatsReserved')) {
+                        final seats = data['seatsReserved'];
+                        if (seats is int) {
+                          totalSeats += seats;
+                        } else if (seats is String) {
+                          totalSeats += int.tryParse(seats) ?? 0;
+                        } else if (seats is num) {
+                          totalSeats += seats.toInt();
+                        }
+                      }
+                    }
+
+                    // Créer une réservation consolidée
+                    consolidatedReservations.add({
+                      'doc': firstReservation,
+                      'tripId': tripId,
+                      'seatsReserved': totalSeats,
+                      'allReservationIds':
+                          reservationDocs.map((doc) => doc.id).toList(),
+                      'reservationCount': reservationDocs.length,
+                    });
+                  }
+                });
+
                 // --- OPTIMISATION : Précharger tous les trajets et conducteurs en une fois ---
                 final tripIds =
-                    reservations
-                        .map((doc) => doc['tripId'] as String?)
-                        .where((id) => id != null)
-                        .cast<String>()
+                    consolidatedReservations
+                        .map((item) => item['tripId'] as String)
                         .toSet()
                         .toList();
 
@@ -448,21 +515,26 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                           for (var doc in usersSnapshot.data ?? []) doc.id: doc,
                         };
                         return ListView.builder(
-                          itemCount: reservations.length,
+                          itemCount: consolidatedReservations.length,
                           itemBuilder: (context, index) {
-                            final reservationDoc = reservations[index];
-                            final reservation =
-                                reservationDoc.data() as Map<String, dynamic>;
-                            final seatsReserved = reservation['seatsReserved'];
-                            final tripId = reservation['tripId'] as String?;
+                            final reservationData =
+                                consolidatedReservations[index];
+                            final reservationDoc =
+                                reservationData['doc'] as DocumentSnapshot;
+                            final seatsReserved =
+                                reservationData['seatsReserved'] as int;
+                            final tripId = reservationData['tripId'] as String;
                             final reservationId = reservationDoc.id;
-                            if (tripId == null) {
-                              return _buildErrorCard(
-                                context,
-                                'ID de trajet manquant',
-                                theme,
-                              );
-                            }
+                            final reservationCount =
+                                reservationData['reservationCount'] as int;
+                            final allReservationIds =
+                                reservationData['allReservationIds']
+                                    as List<dynamic>;
+                            final List<String> reservationIdsList =
+                                allReservationIds
+                                    .map((id) => id.toString())
+                                    .toList();
+
                             final tripDoc = trips[tripId];
                             if (tripDoc == null || !tripDoc.exists) {
                               return _buildErrorCard(
@@ -487,10 +559,20 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                 tripData['status'] as String? ?? 'En attente';
                             final addedBy = tripData['userId'] as String?;
                             final nbrPlaces =
-                                tripData['nbrPlaces'] as int? ?? 0;
+                                tripData['nbrPlaces'] is int
+                                    ? tripData['nbrPlaces']
+                                    : int.tryParse(
+                                          tripData['nbrPlaces'].toString(),
+                                        ) ??
+                                        0;
                             final placesDisponibles =
-                                tripData['placesDisponibles'] as int? ??
-                                nbrPlaces;
+                                tripData['placesDisponibles'] is int
+                                    ? tripData['placesDisponibles']
+                                    : int.tryParse(
+                                          tripData['placesDisponibles']
+                                              .toString(),
+                                        ) ??
+                                        nbrPlaces;
                             if (addedBy == null) {
                               return _buildErrorCard(
                                 context,
@@ -516,7 +598,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                             final phoneNumber =
                                 userData['phone'] as String? ??
                                 'Non disponible';
-                            // ...existing code for building the Card (copied from l.487)...
+
                             return Card(
                               margin: const EdgeInsets.symmetric(
                                 vertical: 8.0,
@@ -814,12 +896,50 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                               ),
                                               Row(
                                                 children: [
-                                                  _buildInfoItem(
-                                                    context,
-                                                    Icons.event_seat,
-                                                    seatsReserved.toString(),
-                                                    'Places',
-                                                    theme,
+                                                  Stack(
+                                                    children: [
+                                                      _buildInfoItem(
+                                                        context,
+                                                        Icons.event_seat,
+                                                        seatsReserved
+                                                            .toString(),
+                                                        'Places',
+                                                        theme,
+                                                      ),
+                                                      if (reservationCount > 1)
+                                                        Positioned(
+                                                          right: 0,
+                                                          top: 0,
+                                                          child: Container(
+                                                            padding:
+                                                                const EdgeInsets.all(
+                                                                  4,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color:
+                                                                  theme
+                                                                      .colorScheme
+                                                                      .primary,
+                                                              shape:
+                                                                  BoxShape
+                                                                      .circle,
+                                                            ),
+                                                            child: Text(
+                                                              reservationCount
+                                                                  .toString(),
+                                                              style: const TextStyle(
+                                                                color:
+                                                                    Colors
+                                                                        .white,
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                    ],
                                                   ),
                                                   IconButton(
                                                     icon: Icon(
@@ -845,6 +965,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                                 reservationId,
                                                                 seatsReserved,
                                                                 tripId,
+                                                                reservationIdsList,
                                                               );
                                                             },
                                                   ),
@@ -957,6 +1078,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                                     reservationId,
                                                     tripId,
                                                     seatsReserved,
+                                                    reservationIdsList,
                                                   );
                                                 },
                                               ),
@@ -1037,7 +1159,6 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       ),
     );
   }
-
 
   Widget _buildInfoItem(
     BuildContext context,
@@ -1195,7 +1316,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     BuildContext context,
     String reservationId,
     String tripId,
-    dynamic seatsReserved,
+    int seatsReserved,
+    List<String> allReservationIds,
   ) {
     showDialog(
       context: context,
@@ -1288,15 +1410,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                 ) ??
                                 totalPlaces;
 
-                    // Assurez-vous que seatsReserved est un int
-                    int seats =
-                        seatsReserved is int
-                            ? seatsReserved
-                            : (seatsReserved is num
-                                ? seatsReserved.toInt()
-                                : int.tryParse(seatsReserved.toString()) ?? 1);
-
-                    int newPlacesDisponibles = placesDisponibles + seats;
+                    int newPlacesDisponibles =
+                        placesDisponibles + seatsReserved;
 
                     // Mettre à jour d'abord le nombre de places disponibles
                     transaction.update(tripRef, {
@@ -1311,11 +1426,14 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       transaction.update(tripRef, {'status': 'en attente'});
                     }
 
-                    DocumentReference reservationRef = FirebaseFirestore
-                        .instance
-                        .collection('reservations')
-                        .doc(reservationId);
-                    transaction.delete(reservationRef);
+                    // Supprimer toutes les réservations de l'utilisateur pour ce trajet
+                    for (String resId in allReservationIds) {
+                      DocumentReference reservationRef = FirebaseFirestore
+                          .instance
+                          .collection('reservations')
+                          .doc(resId);
+                      transaction.delete(reservationRef);
+                    }
                   });
 
                   // Après la transaction réussie, envoyer la notification au conducteur
@@ -1327,13 +1445,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       tripId: tripId,
                       tripDestination: destination,
                       tripDate: date,
-                      seatsReserved:
-                          seatsReserved is int
-                              ? seatsReserved
-                              : (seatsReserved is num
-                                  ? seatsReserved.toInt()
-                                  : int.tryParse(seatsReserved.toString()) ??
-                                      1),
+                      seatsReserved: seatsReserved,
                     );
                   }
 
