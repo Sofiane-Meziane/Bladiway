@@ -276,48 +276,26 @@ class TripResultsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Filtrer les trajets pour ne garder que ceux qui ne sont pas passés
-    List<QueryDocumentSnapshot> activeTrips = [];
-
-    if (trips.isNotEmpty) {
-      for (var trip in trips) {
-        try {
-          final tripData = trip.data() as Map<String, dynamic>;
-          final String date = tripData['date'] as String? ?? 'Date inconnue';
-          final String heure = tripData['heure'] as String? ?? '00:00';
-
-          if (!_isTripPast(date, heure)) {
-            activeTrips.add(trip);
-          }
-        } catch (e) {
-          print("Error processing trip: $e");
-        }
-      }
-    }
-
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: Text(
           'Les trajets disponibles',
           style: TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
+        centerTitle: false,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
       body:
-          activeTrips.isEmpty
+          trips.isEmpty
               ? Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                  children: const [
                     Icon(Icons.search_off, size: 60, color: Colors.grey),
                     SizedBox(height: 16),
                     Text(
@@ -329,15 +307,25 @@ class TripResultsPage extends StatelessWidget {
               )
               : ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                itemCount: activeTrips.length,
+                itemCount: trips.length,
                 itemBuilder: (context, index) {
                   // Safely extract trip data with null checks
                   final Map<String, dynamic> trip;
                   try {
-                    trip = activeTrips[index].data() as Map<String, dynamic>;
+                    trip = trips[index].data() as Map<String, dynamic>;
                   } catch (e) {
                     print("Error converting trip data: $e");
                     return SizedBox.shrink(); // Skip this item if data is invalid
+                  }
+
+                  // Check if trip is in the past
+                  final String date = trip['date'] as String? ?? '';
+                  final String heure = trip['heure'] as String? ?? '';
+                  bool isPast = _isTripPast(date, heure);
+
+                  // Skip past trips if we're not showing a specific date search
+                  if (isPast && !_isSpecificDateSearch()) {
+                    return SizedBox.shrink(); // Don't show past trips
                   }
 
                   // Safely extract placesDisponibles with proper null handling
@@ -370,49 +358,25 @@ class TripResultsPage extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ModifiedTripCard(
                       trip: trip,
-                      tripId: activeTrips[index].id,
+                      tripId: trips[index].id,
                       placesDisponibles: placesDisponibles,
                       onTap:
                           () => _navigateToTripDetail(
                             context,
                             trip,
-                            activeTrips[index].id,
+                            trips[index].id,
                           ),
                       onDriverTap:
                           () => _navigateToInfoConducteur(
                             context,
                             trip['userId'] as String? ?? '',
-                            activeTrips[index].id,
+                            trips[index].id,
                           ),
                     ),
                   );
                 },
               ),
     );
-  }
-
-  bool _isTripPast(String tripDate, String tripTime) {
-    try {
-      final now = DateTime.now();
-      final dateParts = tripDate.split('/');
-      if (dateParts.length != 3) return false;
-
-      final day = int.tryParse(dateParts[0]) ?? 1;
-      final month = int.tryParse(dateParts[1]) ?? 1;
-      final year = int.tryParse(dateParts[2]) ?? 2025;
-
-      final timeParts = tripTime.split(':');
-      if (timeParts.length != 2) return false;
-
-      final hour = int.tryParse(timeParts[0]) ?? 0;
-      final minute = int.tryParse(timeParts[1]) ?? 0;
-
-      final tripDateTime = DateTime(year, month, day, hour, minute);
-      return tripDateTime.isBefore(now);
-    } catch (e) {
-      print("Erreur lors de la vérification de la date: $e");
-      return false;
-    }
   }
 
   // Navigation vers la page détaillée du trajet
@@ -488,6 +452,40 @@ class TripResultsPage extends StatelessWidget {
         context,
       ).showSnackBar(SnackBar(content: Text("Erreur: $e")));
     }
+  }
+
+  bool _isTripPast(String tripDate, String tripTime) {
+    try {
+      final now = DateTime.now();
+      final dateParts = tripDate.split('/');
+      if (dateParts.length != 3) return false;
+
+      final day = int.tryParse(dateParts[0]) ?? 1;
+      final month = int.tryParse(dateParts[1]) ?? 1;
+      final year = int.tryParse(dateParts[2]) ?? 2025;
+
+      final timeParts = tripTime.split(':');
+      if (timeParts.length != 2) return false;
+
+      final hour = int.tryParse(timeParts[0]) ?? 0;
+      final minute = int.tryParse(timeParts[1]) ?? 0;
+
+      final tripDateTime = DateTime(year, month, day, hour, minute);
+      return tripDateTime.isBefore(now);
+    } catch (e) {
+      print("Erreur lors de la vérification de la date: $e");
+      return false;
+    }
+  }
+
+  bool _isSpecificDateSearch() {
+    // Cette méthode détermine si l'utilisateur a spécifié une date dans sa recherche
+    // Vous devrez adapter cette logique en fonction de la façon dont vous gérez les recherches
+    // Par exemple, vous pourriez passer un paramètre supplémentaire au constructeur TripResultsPage
+
+    // Pour l'instant, nous supposons qu'aucune date spécifique n'est recherchée
+    // Modifiez cette logique selon votre implémentation de recherche
+    return false;
   }
 }
 
@@ -1009,7 +1007,14 @@ class TripDetailPage extends StatelessWidget {
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
                       ),
-
+                      const Text(
+                        'Bladiway',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       Row(
                         children: [
                           IconButton(
@@ -1758,6 +1763,28 @@ class TripDetailPage extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Vous devez être connecté pour réserver."),
+            ),
+          );
+          return;
+        }
+
+        // Vérifier si l'utilisateur a déjà réservé ce trajet
+        QuerySnapshot existingReservations =
+            await FirebaseFirestore.instance
+                .collection('reservations')
+                .where('tripId', isEqualTo: tripId)
+                .where('userId', isEqualTo: currentUser.uid)
+                .get();
+
+        if (existingReservations.docs.isNotEmpty) {
+          // L'utilisateur a déjà une réservation pour ce trajet
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Vous avez déjà réservé ce trajet. Vous pouvez modifier le nombre de places dans la page 'Mes réservations'.",
+              ),
+              duration: Duration(seconds: 5),
+              backgroundColor: Colors.orange,
             ),
           );
           return;
