@@ -14,7 +14,7 @@ Voici quelques captures d'écran des fonctionnalités clés de l'application.
 
 | Login / Inscription | Carte Interactive | Messagerie |
 | :---: | :---: | :---: |
-| ![Ecran de connexion](https://via.placeholder.com/300x600.png?text=Login+Screen) | ![Carte interactive pour les trajets](https://via.placeholder.com/300x600.png?text=Map+Screen) | ![Messagerie intégrée](https://via.placeholder.com/300x600.png?text=Chat+Screen) |
+| ![Ecran de connexion](https://github.com/Sofiane-Meziane/Bladiway/blob/73b9a532edd226ff08e72a730069748a4daa10eb/assets/images/ecran%20connexion%20inscription.png) | ![Carte interactive pour les trajets](https://via.placeholder.com/300x600.png?text=Map+Screen) | ![Messagerie intégrée](https://via.placeholder.com/300x600.png?text=Chat+Screen) |
 | **Thème Clair & Sombre** | **Profil Utilisateur & Avis** | **Tableau de Bord Admin (React)** |
 | ![Thème clair et sombre](https://via.placeholder.com/300x600.png?text=Themes) | ![Profil et évaluations](https://via.placeholder.com/300x600.png?text=Profile+Screen) | ![Tableau de bord admin](https://via.placeholder.com/800x500.png?text=Admin+Dashboard) |
 
