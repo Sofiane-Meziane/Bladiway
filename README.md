@@ -14,7 +14,7 @@ Voici quelques captures d'écran des fonctionnalités clés de l'application.
 
 | Login / Inscription | Carte Interactive | Messagerie |
 | :---: | :---: | :---: |
-| ![Ecran de connexion](https://github.com/Sofiane-Meziane/Bladiway/blob/276df26704bd9350ee89477b731b26d119aff16e/assets/images/ecran%20inscription.png) | ![Carte interactive pour les trajets](https://github.com/Sofiane-Meziane/Bladiway/blob/23054e33c571047654dd7d3331bc6562825dcd2c/assets/images/carte01.png) | ![Messagerie intégrée](https://via.placeholder.com/300x600.png?text=Chat+Screen) |
+| ![Ecran de connexion](https://github.com/Sofiane-Meziane/Bladiway/blob/276df26704bd9350ee89477b731b26d119aff16e/assets/images/ecran%20inscription.png) | ![Carte interactive pour les trajets](https://github.com/Sofiane-Meziane/Bladiway/blob/23054e33c571047654dd7d3331bc6562825dcd2c/assets/images/carte01.png) | ![Messagerie intégrée](https://github.com/Sofiane-Meziane/Bladiway/blob/23ad5a4dd6df459df89f77610ff0ae58b6febdd8/assets/images/messagerie.png) |
 | **Thème Clair & Sombre** | **Profil Utilisateur & Avis** | **Tableau de Bord Admin (React)** |
 | ![Thème clair et sombre](https://via.placeholder.com/300x600.png?text=Themes) | ![Profil et évaluations](https://via.placeholder.com/300x600.png?text=Profile+Screen) | ![Tableau de bord admin](https://via.placeholder.com/800x500.png?text=Admin+Dashboard) |
 
