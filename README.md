@@ -1,4 +1,4 @@
-# Bladiway
+# Bladiway - Covoiturage Simplifié
 
 A new Flutter project.
 
