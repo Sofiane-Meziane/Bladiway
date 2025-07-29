@@ -1,0 +1,8 @@
+class ApiKeys {
+  // TODO: Replace with your actual API keys
+  static const String webApiKey = 'YOUR_WEB_API_KEY';
+  static const String androidApiKey = 'YOUR_ANDROID_API_KEY';
+  static const String iosApiKey = 'YOUR_IOS_API_KEY';
+  static const String macosApiKey = 'YOUR_MACOS_API_KEY';
+  static const String windowsApiKey = 'YOUR_WINDOWS_API_KEY';
+}
