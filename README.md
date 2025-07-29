@@ -18,7 +18,6 @@ Voici quelques captures d'écran des fonctionnalités clés de l'application.
 | **Ecran d'accueil** | **Réservations** | **Paramètres** |
 | ![ecran d'accueil](https://github.com/Sofiane-Meziane/Bladiway/blob/8bf2a0c386b71506f19ee499303f23bcd561a851/assets/images/ecran%20d'accueil05.png) | ![Réservations](https://github.com/Sofiane-Meziane/Bladiway/blob/1142e034f8c33dccf058925206fb511f18684df6/assets/images/reservations%20reademe.png) | ![Paramètres](https://github.com/Sofiane-Meziane/Bladiway/blob/17ec91f586825f69398c471f7288f5c185f526ad/assets/images/parametres.png) |
 
-> **Note sur les images :** Pour remplacer ces images temporaires, téléversez vos captures d'écran dans votre repo GitHub (par exemple dans un dossier `assets` ou `screenshots`) et mettez le lien direct à la place des URLs `placeholder`.
 
 ---
 
