@@ -102,9 +102,3 @@ Si vous avez une suggestion pour améliorer cela, veuillez forker le repo et cr�
 Distribué sous la licence MIT. Voir `LICENSE.txt` pour plus d'informations.
 
 ---
-
-## 📧 Contact
-
-Nom de votre équipe - [@VotreProfilLinkedIn](https://www.linkedin.com/in/votreprofil/) - contact@bladiway.com
-
-Lien du projet : [https://github.com/bladiway/bladiway](https://github.com/bladiway/bladiway)
