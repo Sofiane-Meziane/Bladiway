@@ -3,7 +3,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ![Bannière de présentation de Bladiway](https://github.com/Sofiane-Meziane/Bladiway/blob/337c8168c82c4aca55044eaa9bf9d68934fc0ed6/assets/images/banniere%20readme.png)
-> **Note :** Remplacez le lien ci-dessus par une bannière de présentation attractive que vous pouvez créer sur un site comme Canva.
 
 **Bladiway** est une application mobile de covoiturage développée dans le cadre d'un projet de fin de cycle. Conçue avec **Flutter** et **Firebase**, elle a pour but de connecter conducteurs et passagers pour organiser des trajets partagés de manière simple, rapide et sécurisée.
 
