@@ -79,7 +79,7 @@ Instructions pour cloner et lancer le projet localement.
     ```sh
     flutter run
     ```
-    > **Important :** Assurez-vous d'avoir configuré un projet Firebase et ajouté votre fichier `google-services.json` (pour Android) et `GoogleService-Info.plist` (pour iOS) dans les répertoires appropriés.
+    > **Important :** Assurez-vous d'avoir configuré un projet Firebase et ajouté votre fichier `google-services.json`.
 
 ---
 
