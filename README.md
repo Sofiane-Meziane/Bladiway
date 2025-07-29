@@ -16,7 +16,7 @@ Voici quelques captures d'écran des fonctionnalités clés de l'application.
 | :---: | :---: | :---: |
 | ![Ecran de connexion](https://github.com/Sofiane-Meziane/Bladiway/blob/276df26704bd9350ee89477b731b26d119aff16e/assets/images/ecran%20inscription.png) | ![Carte interactive pour les trajets](https://github.com/Sofiane-Meziane/Bladiway/blob/23054e33c571047654dd7d3331bc6562825dcd2c/assets/images/carte01.png) | ![Messagerie intégrée](https://github.com/Sofiane-Meziane/Bladiway/blob/23ad5a4dd6df459df89f77610ff0ae58b6febdd8/assets/images/messagerie.png) |
 | **Ecran d'accueil** | **Profil Utilisateur & Avis** | **Tableau de Bord Admin (React)** |
-| ![ecran d'accueil](https://github.com/Sofiane-Meziane/Bladiway/blob/8bf2a0c386b71506f19ee499303f23bcd561a851/assets/images/ecran%20d'accueil05.png) | ![Profil et évaluations](https://via.placeholder.com/300x600.png?text=Profile+Screen) | ![Tableau de bord admin](https://via.placeholder.com/800x500.png?text=Admin+Dashboard) |
+| ![ecran d'accueil](https://github.com/Sofiane-Meziane/Bladiway/blob/8bf2a0c386b71506f19ee499303f23bcd561a851/assets/images/ecran%20d'accueil05.png) | ![Réservations](https://github.com/Sofiane-Meziane/Bladiway/blob/1142e034f8c33dccf058925206fb511f18684df6/assets/images/reservations%20reademe.png) | ![Tableau de bord admin](https://via.placeholder.com/800x500.png?text=Admin+Dashboard) |
 
 > **Note sur les images :** Pour remplacer ces images temporaires, téléversez vos captures d'écran dans votre repo GitHub (par exemple dans un dossier `assets` ou `screenshots`) et mettez le lien direct à la place des URLs `placeholder`.
 
