@@ -65,7 +65,7 @@ Instructions pour cloner et lancer le projet localement.
 
 1.  **Clonez le repository**
     ```sh
-    git clone [https://github.com/bladiway/bladiway.git](https://github.com/bladiway/bladiway.git)
+    git clone https://github.com/Sofiane-Meziane/Bladiway.git
     ```
 2.  **Allez dans le dossier du projet**
     ```sh
